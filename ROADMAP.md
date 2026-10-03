@@ -72,14 +72,14 @@ Testy muszą obejmować:
 
 ## Etap 5: Backend
 
-- [ ] Struktura MVC: `models/`, `controllers/`, `routes/`, `middleware/`
-- [ ] Połączenie z MongoDB, modele Mongoose dla `Event`, `Semester`, `User`
-- [ ] Endpointy: `GET/POST /events`, `PUT/DELETE /events/:id`, `GET/PUT /semester`
-- [ ] Rejestracja, logowanie, wylogowanie (argon2, sesja w ciasteczku `httpOnly`)
-- [ ] Walidacja wejścia schematami z `packages/shared`
-- [ ] `helmet`, rate limiting na logowaniu i rejestracji
-- [ ] Implementacja `EventRepository` oparta na API we frontendzie
-- [ ] Przeniesienie danych z localStorage do konta po pierwszym logowaniu
+- [x] Struktura MVC: `models/`, `controllers/`, `routes/`, `middleware/`
+- [x] Połączenie z MongoDB, modele Mongoose dla `Event`, `Semester`, `User`
+- [x] Endpointy: `GET/POST /events`, `PUT/DELETE /events/:id`, `GET/PUT /semester`
+- [x] Rejestracja, logowanie, wylogowanie (argon2, sesja w ciasteczku `httpOnly`)
+- [x] Walidacja wejścia schematami z `packages/shared`
+- [x] `helmet`, rate limiting na logowaniu i rejestracji
+- [x] Implementacja `EventRepository` oparta na API we frontendzie
+- [x] Przeniesienie danych z localStorage do konta po pierwszym logowaniu
 
 **Gotowe, gdy:** frontend działa na API, a testy integracyjne potwierdzają, że użytkownik A nie może odczytać ani zmienić danych użytkownika B.
 

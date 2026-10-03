@@ -97,11 +97,13 @@ Zasady, których trzeba przestrzegać:
 
 ## Komendy
 
-Wymagania: Node.js 22 lub nowszy oraz pnpm 10.
+Wymagania: Node.js 22 lub nowszy, pnpm 10 oraz MongoDB 7.0 lub nowszy (lokalnie albo w Atlasie).
+
+Backend czyta konfigurację z root `.env` (utwórz go na podstawie `.env.example`). Wymagane zmienne: `MONGODB_URI` i `SESSION_SECRET` (co najmniej 32 znaki); `WEB_ORIGIN` jest potrzebne przy osobnym originie frontendu.
 
 - Instalacja zależności: `pnpm install`
 - Uruchomienie frontendu i API: `pnpm dev` (frontend: http://localhost:5173, API: http://localhost:3001)
-- Testy wszystkich pakietów: `pnpm test`
+- Testy wszystkich pakietów: `pnpm test` (testy integracyjne API uruchamiają MongoDB przez `mongodb-memory-server`; przy pierwszym uruchomieniu pobiera on binarkę do `~/.cache/mongodb-binaries`, a każda instancja potrzebuje ok. 200 MB w `/tmp`)
 - Lint: `pnpm lint`
 - Build wszystkich pakietów: `pnpm build`
 - Kontrola formatowania: `pnpm exec prettier --check .`
