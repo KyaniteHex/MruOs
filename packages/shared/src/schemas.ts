@@ -115,3 +115,17 @@ export const SemesterSchema = z
     (semester) => new Set(semester.daysOff).size === semester.daysOff.length,
     { message: 'daysOff dates must be unique', path: ['daysOff'] },
   );
+
+export const EventSeriesSchema = z.object({
+  id: z.string().min(1),
+  event: EventSchema,
+});
+
+export const CalendarSnapshotSchema = z.object({
+  events: z.array(EventSeriesSchema),
+  semester: SemesterSchema,
+});
+
+export const CalendarBackupSchema = CalendarSnapshotSchema.extend({
+  version: z.literal(1),
+});

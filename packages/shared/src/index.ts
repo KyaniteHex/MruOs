@@ -1,7 +1,10 @@
 export {
+  CalendarBackupSchema,
+  CalendarSnapshotSchema,
   ClassTypeSchema,
   EventExceptionSchema,
   EventSchema,
+  EventSeriesSchema,
   ExceptionOverrideSchema,
   RecurrenceSchema,
   SemesterSchema,
@@ -10,10 +13,13 @@ export {
 export { expandOccurrences } from './recurrence.js';
 export { semesterWeeksToDateRange } from './semester.js';
 export type {
+  CalendarBackup,
+  CalendarSnapshot,
   ClassType,
   DateRange,
   Event,
   EventException,
+  EventSeries,
   ExceptionOverride,
   Occurrence,
   Recurrence,
