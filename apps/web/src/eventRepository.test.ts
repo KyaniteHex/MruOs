@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { LocalStorageEventRepository } from './eventRepository';
+import {
+  ApiEventRepository,
+  LocalStorageEventRepository,
+} from './eventRepository';
 import type { StoragePort } from './eventRepository';
 
 class MemoryStorage implements StoragePort {
@@ -98,5 +101,71 @@ describe('LocalStorageEventRepository', () => {
     repository.save(snapshot);
     expect(repository.clear()).toEqual({ success: true, value: undefined });
     expect(repository.load()).toEqual({ success: true, value: null });
+  });
+
+  it('remembers that the local plan was moved to an account', () => {
+    const storage = new MemoryStorage();
+    const repository = new LocalStorageEventRepository(storage);
+    repository.save(snapshot);
+
+    expect(repository.isMigratedToAccount()).toBe(false);
+    expect(repository.markMigratedToAccount()).toEqual({
+      success: true,
+      value: undefined,
+    });
+    expect(repository.isMigratedToAccount()).toBe(true);
+    expect(repository.load()).toEqual({ success: true, value: snapshot });
+  });
+});
+
+describe('ApiEventRepository', () => {
+  it('loads a validated snapshot with cookie credentials', async () => {
+    let requestInit: RequestInit | undefined;
+    const fetcher: typeof fetch = async (_input, init) => {
+      requestInit = init;
+      return new Response(JSON.stringify(snapshot), { status: 200 });
+    };
+    const repository = new ApiEventRepository('/api', fetcher);
+
+    expect(await repository.load()).toEqual({ success: true, value: snapshot });
+    expect(requestInit?.credentials).toBe('include');
+  });
+
+  it('maps unauthorized and network failures to repository errors', async () => {
+    const unauthorized = new ApiEventRepository(
+      '/api',
+      async () => new Response(null, { status: 401 }),
+    );
+    const offline = new ApiEventRepository('/api', async () => {
+      throw new Error('Network unavailable');
+    });
+
+    expect(await unauthorized.load()).toEqual({
+      success: false,
+      error: 'unauthorized',
+    });
+    expect(await offline.load()).toEqual({
+      success: false,
+      error: 'network-error',
+    });
+  });
+
+  it('saves a snapshot using the authenticated calendar endpoint', async () => {
+    let requestUrl: RequestInfo | URL | undefined;
+    let requestInit: RequestInit | undefined;
+    const fetcher: typeof fetch = async (input, init) => {
+      requestUrl = input;
+      requestInit = init;
+      return new Response(null, { status: 200 });
+    };
+    const repository = new ApiEventRepository('/api', fetcher);
+
+    expect(await repository.save(snapshot)).toEqual({
+      success: true,
+      value: undefined,
+    });
+    expect(requestUrl).toBe('/api/calendar');
+    expect(requestInit?.method).toBe('PUT');
+    expect(JSON.parse(String(requestInit?.body))).toEqual(snapshot);
   });
 });

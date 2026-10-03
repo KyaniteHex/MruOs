@@ -1,19 +1,28 @@
 import { CalendarBackupSchema } from '@mruos/shared';
+import { CalendarSnapshotSchema } from '@mruos/shared';
 import type { CalendarSnapshot } from '@mruos/shared';
 
 export type { CalendarSnapshot, EventSeries } from '@mruos/shared';
 
 export type RepositoryErrorCode =
-  'read-error' | 'invalid-data' | 'write-error' | 'clear-error';
+  | 'read-error'
+  | 'invalid-data'
+  | 'write-error'
+  | 'clear-error'
+  | 'unauthorized'
+  | 'network-error';
 
 export type RepositoryResult<Value> =
   | { success: true; value: Value }
   | { success: false; error: RepositoryErrorCode };
 
+export type RepositoryCall<Value> =
+  RepositoryResult<Value> | Promise<RepositoryResult<Value>>;
+
 export interface EventRepository {
-  load(): RepositoryResult<CalendarSnapshot | null>;
-  save(snapshot: CalendarSnapshot): RepositoryResult<void>;
-  clear(): RepositoryResult<void>;
+  load(): RepositoryCall<CalendarSnapshot | null>;
+  save(snapshot: CalendarSnapshot): RepositoryCall<void>;
+  clear(): RepositoryCall<void>;
 }
 
 export interface StoragePort {
@@ -91,5 +100,110 @@ export class LocalStorageEventRepository implements EventRepository {
     }
 
     return { success: true, value: undefined };
+  }
+
+  // The local plan is moved to an account at most once per browser, so an
+  // emptied or a different account never receives it again.
+  isMigratedToAccount(): boolean {
+    try {
+      return this.storage.getItem(`${this.key}:migrated`) !== null;
+    } catch {
+      return false;
+    }
+  }
+
+  markMigratedToAccount(): RepositoryResult<void> {
+    try {
+      this.storage.setItem(`${this.key}:migrated`, 'true');
+    } catch {
+      return { success: false, error: 'write-error' };
+    }
+
+    return { success: true, value: undefined };
+  }
+}
+
+export class ApiEventRepository implements EventRepository {
+  private readonly fetcher: typeof fetch;
+
+  constructor(
+    private readonly baseUrl = '/api',
+    fetcher?: typeof fetch,
+  ) {
+    this.fetcher = fetcher ?? globalThis.fetch.bind(globalThis);
+  }
+
+  async load(): Promise<RepositoryResult<CalendarSnapshot | null>> {
+    let response: Response;
+
+    try {
+      response = await this.fetcher(`${this.baseUrl}/calendar`, {
+        credentials: 'include',
+      });
+    } catch {
+      return { success: false, error: 'network-error' };
+    }
+
+    if (response.status === 401) {
+      return { success: false, error: 'unauthorized' };
+    }
+    if (!response.ok) {
+      return { success: false, error: 'network-error' };
+    }
+
+    try {
+      const parsed = CalendarSnapshotSchema.safeParse(await response.json());
+      return parsed.success
+        ? { success: true, value: parsed.data }
+        : { success: false, error: 'invalid-data' };
+    } catch {
+      return { success: false, error: 'invalid-data' };
+    }
+  }
+
+  async save(snapshot: CalendarSnapshot): Promise<RepositoryResult<void>> {
+    if (!CalendarSnapshotSchema.safeParse(snapshot).success) {
+      return { success: false, error: 'invalid-data' };
+    }
+
+    let response: Response;
+    try {
+      response = await this.fetcher(`${this.baseUrl}/calendar`, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(snapshot),
+      });
+    } catch {
+      return { success: false, error: 'network-error' };
+    }
+
+    if (response.status === 401) {
+      return { success: false, error: 'unauthorized' };
+    }
+
+    return response.ok
+      ? { success: true, value: undefined }
+      : { success: false, error: 'write-error' };
+  }
+
+  async clear(): Promise<RepositoryResult<void>> {
+    let response: Response;
+    try {
+      response = await this.fetcher(`${this.baseUrl}/calendar`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+    } catch {
+      return { success: false, error: 'network-error' };
+    }
+
+    if (response.status === 401) {
+      return { success: false, error: 'unauthorized' };
+    }
+
+    return response.ok
+      ? { success: true, value: undefined }
+      : { success: false, error: 'clear-error' };
   }
 }
