@@ -24,7 +24,35 @@ export {
   relativeLuminance,
 } from './color.js';
 export { expandOccurrences } from './recurrence.js';
-export { semesterWeeksToDateRange } from './semester.js';
+export {
+  displaySubject,
+  parseScheduleBlock,
+  parseWeekList,
+} from './scheduleBlock.js';
+export type {
+  BlockIssue,
+  BlockIssueCode,
+  ParsedBlock,
+  ParsedSession,
+  RoomChange,
+  ScheduleBlockInput,
+} from './scheduleBlock.js';
+export {
+  buildImportCandidates,
+  defaultSelection,
+  subjectKey,
+  summarizeSubjects,
+} from './scheduleImport.js';
+export type {
+  ImportCandidate,
+  ImportIssue,
+  ImportIssueCode,
+  ImportOptions,
+  ImportSelection,
+  ImportSubject,
+  SubjectChoice,
+} from './scheduleImport.js';
+export { semesterWeekRange, semesterWeeksToDateRange } from './semester.js';
 export type {
   CalendarBackup,
   CalendarSnapshot,
