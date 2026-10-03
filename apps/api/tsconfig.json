@@ -7,5 +7,6 @@
     "outDir": "dist",
     "types": ["node"]
   },
-  "include": ["src/app.ts", "src/server.ts"]
+  "include": ["src/**/*.ts"],
+  "exclude": ["src/**/*.test.ts"]
 }
