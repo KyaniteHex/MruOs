@@ -1,0 +1,107 @@
+# MruOS: kalendarz studencki
+
+Aplikacja webowa do zarządzania planem zajęć na studiach. Użytkownik ręcznie wprowadza zajęcia (przedmiot, typ, kolor, budynek, sala, godziny, zakres obowiązywania), a aplikacja pokazuje je w widoku miesiąca i w widoku dnia z podziałką godzinową. Każdy użytkownik konfiguruje swój kalendarz samodzielnie; plany nie są współdzielone.
+
+Aktualny etap prac: patrz `ROADMAP.md`.
+
+## Stos technologiczny
+
+- Monorepo: pnpm workspaces.
+- Język: TypeScript w trybie `strict` we wszystkich pakietach.
+- Frontend (`apps/web`): React, Vite, Tailwind CSS, FullCalendar z pluginem `@fullcalendar/rrule`.
+- Backend (`apps/api`): Node.js, Express, MongoDB z Mongoose.
+- Wspólny kod (`packages/shared`): typy domenowe, schematy walidacji (zod), logika rozwijania reguł powtarzania.
+- Daty i strefy czasowe: Luxon.
+- Testy: Vitest (jednostkowe i integracyjne), Playwright (E2E).
+- Jakość: ESLint, Prettier, GitHub Actions.
+
+## Struktura repozytorium
+
+```
+apps/
+  web/          frontend (widoki, komponenty, warstwa repozytorium danych)
+  api/          backend w układzie MVC: models/, controllers/, routes/, middleware/
+packages/
+  shared/       typy, schematy zod, logika domeny (bez zależności od React i Express)
+e2e/            testy Playwright
+```
+
+## Model domeny
+
+Kolekcja `events`, jeden dokument na serię zajęć:
+
+```json
+{
+  "userId": "ObjectId",
+  "kind": "class",
+  "subject": "Matematyka",
+  "classType": "cwiczenia",
+  "color": "#3b82f6",
+  "building": "Wydział Mechaniczny",
+  "room": "204",
+  "startTime": "08:00",
+  "endTime": "12:00",
+  "timezone": "Europe/Warsaw",
+  "recurrence": {
+    "freq": "WEEKLY",
+    "interval": 1,
+    "byDay": ["MO"],
+    "startDate": "2026-10-05",
+    "endDate": "2026-11-13"
+  },
+  "exceptions": [
+    { "date": "2026-11-02", "status": "cancelled" },
+    { "date": "2026-10-19", "override": { "room": "112" } }
+  ]
+}
+```
+
+Zasady, których trzeba przestrzegać:
+
+- `classType` przyjmuje wartości: `wyklad`, `cwiczenia`, `laboratorium`, `seminarium`.
+- `kind` na razie zawsze ma wartość `class`. Pole zostaje, bo w przyszłości mogą dojść inne rodzaje wydarzeń.
+- Godziny są przechowywane jako czas lokalny (`HH:mm`) razem ze strefą `Europe/Warsaw`, nigdy jako znacznik UTC. Zajęcia o 8:00 muszą zostać o 8:00 po zmianie czasu w październiku i marcu.
+- Nie wykonujemy arytmetyki na natywnym `Date`. Wszystkie obliczenia dat idą przez Luxon.
+- Konkretne terminy zajęć (wystąpienia) są wyliczane z `recurrence` i `exceptions`, a nie zapisywane w bazie.
+- `interval: 2` oznacza zajęcia co dwa tygodnie (tygodnie parzyste lub nieparzyste).
+- Edycja „tylko tego terminu” tworzy wpis w `exceptions`. Edycja „całej serii” zmienia dokument.
+- Semestr (`Semester`) przechowuje datę rozpoczęcia i dni wolne. Zakres „tygodnie 1 do 6” jest przeliczany na daty względem początku semestru.
+- Typy i schematy zod są zdefiniowane wyłącznie w `packages/shared` i importowane przez frontend oraz backend.
+
+## Konwencje kodu
+
+- Nazwy w kodzie (zmienne, funkcje, pliki) po angielsku. Teksty w interfejsie po polsku.
+- Bez `any`. Jeśli typ jest nieznany, używamy `unknown` i zawężamy.
+- Eksporty nazwane, bez `export default` (wyjątek: pliki, które wymagają go przez narzędzia).
+- Komponenty React jako funkcje, stan lokalny przez hooki.
+- Dostęp do danych na frontendzie tylko przez interfejs repozytorium (`EventRepository`), żeby implementację localStorage można było podmienić na API bez zmian w komponentach.
+- Testy obok kodu: `nazwa.ts` i `nazwa.test.ts`.
+- Logika domeny w `packages/shared` musi mieć testy jednostkowe przed użyciem w UI.
+
+## Bezpieczeństwo (backend)
+
+- Hasła hashowane przez argon2.
+- Sesja w ciasteczku `httpOnly`, `secure`, `sameSite`. Tokenów nie przechowujemy w localStorage.
+- Każde zapytanie do bazy dotyczące wydarzeń jest filtrowane po `userId` zalogowanego użytkownika.
+- Walidacja wejścia schematami zod na każdym endpoincie.
+- `helmet` oraz rate limiting na endpointach logowania i rejestracji.
+- Sekrety tylko w zmiennych środowiskowych, nigdy w repozytorium.
+
+## Sposób pracy
+
+- Pracujemy etapami z `ROADMAP.md`. Jeden etap to jedna gałąź i jeden pull request.
+- Etap jest ukończony dopiero wtedy, gdy spełnione są jego kryteria „Gotowe, gdy” i przechodzą testy.
+- Przed dodaniem nowej zależności zapytaj i uzasadnij wybór.
+- Małe, opisowe commity w konwencji Conventional Commits (np. `feat(shared): expand weekly recurrence`).
+- Jeśli wymaganie jest niejasne, zapytaj zamiast zgadywać.
+
+## Komendy
+
+Wymagania: Node.js 22 lub nowszy oraz pnpm 10.
+
+- Instalacja zależności: `pnpm install`
+- Uruchomienie frontendu i API: `pnpm dev` (frontend: http://localhost:5173, API: http://localhost:3001)
+- Testy wszystkich pakietów: `pnpm test`
+- Lint: `pnpm lint`
+- Build wszystkich pakietów: `pnpm build`
+- Kontrola formatowania: `pnpm exec prettier --check .`
