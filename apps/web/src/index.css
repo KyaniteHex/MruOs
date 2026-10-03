@@ -119,6 +119,104 @@ a {
     gap: 16px;
 }
 
+.data-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: -8px 0 18px;
+}
+
+.data-toolbar .secondary-button {
+    min-height: 34px;
+    padding: 0 10px;
+    font-size: 12px;
+}
+
+.storage-alert {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+    border-left: 3px solid #b17a27;
+    border-radius: 3px;
+    padding: 11px 13px;
+    background: #fbf6e9;
+    color: #65522e;
+    font-size: 12px;
+}
+
+.storage-alert .secondary-button {
+    flex: 0 0 auto;
+}
+
+.semester-days-off {
+    min-width: 0;
+    margin: 23px 0 0;
+    border: 0;
+    padding: 0;
+}
+
+.semester-days-off legend {
+    margin-bottom: 10px;
+    color: #43544a;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.day-off-entry {
+    display: flex;
+    align-items: end;
+    gap: 10px;
+}
+
+.day-off-entry .form-field {
+    flex: 1;
+}
+
+.days-off-list {
+    display: grid;
+    gap: 6px;
+    margin: 12px 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.days-off-list li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    border-bottom: 1px solid #edf0eb;
+    padding: 8px 0;
+    color: #43544a;
+    font-size: 13px;
+}
+
+.remove-day-off {
+    border: 0;
+    padding: 4px 2px;
+    background: transparent;
+    color: #9b4e38;
+    font: inherit;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.remove-day-off:hover {
+    text-decoration: underline;
+}
+
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    clip-path: inset(50%);
+}
+
 .calendar-layout {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 260px;
@@ -751,6 +849,28 @@ a {
 
     .timezone-note {
         font-size: 10px;
+    }
+
+    .data-toolbar {
+        gap: 6px;
+        margin-top: 0;
+    }
+
+    .data-toolbar .secondary-button {
+        min-height: 32px;
+        padding: 0 7px;
+        font-size: 10px;
+    }
+
+    .storage-alert,
+    .day-off-entry {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .storage-alert .secondary-button,
+    .day-off-entry .secondary-button {
+        align-self: start;
     }
 
     .page-heading-actions {

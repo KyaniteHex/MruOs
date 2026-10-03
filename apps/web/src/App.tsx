@@ -10,10 +10,12 @@ import type {
 } from '@fullcalendar/core';
 import plLocale from '@fullcalendar/core/locales/pl';
 import { useEffect, useRef, useState } from 'react';
-import type { CSSProperties } from 'react';
+import type { ChangeEvent, CSSProperties } from 'react';
 import { EventSchema, expandOccurrences } from '@mruos/shared';
-import type { Event } from '@mruos/shared';
+import type { Event, Semester } from '@mruos/shared';
+import { semesterWeeksToDateRange } from '@mruos/shared/semester';
 import { EventForm } from './EventForm';
+import { SemesterSettings } from './SemesterSettings';
 import type { EventEditScope } from './eventFormModel';
 import type { CalendarEventDetails, EventSeries } from './calendarEvents';
 import {
@@ -22,6 +24,10 @@ import {
     demoSemester,
     toCalendarEvents,
 } from './calendarEvents';
+import { exportCalendarBackup, importCalendarBackup } from './calendarBackup';
+import { downloadFile } from './fileDownload';
+import { LocalStorageEventRepository } from './eventRepository';
+import type { CalendarSnapshot, RepositoryErrorCode } from './eventRepository';
 
 type SelectedEvent = CalendarEventDetails & {
     title: string;
@@ -30,12 +36,12 @@ type SelectedEvent = CalendarEventDetails & {
 type FormSession =
     | { mode: 'create'; initialDate: string }
     | {
-        mode: 'edit';
-        initialEvent: Event;
-        occurrenceEvent: Event;
-        occurrenceDate: string;
-        seriesId: string;
-    };
+          mode: 'edit';
+          initialEvent: Event;
+          occurrenceEvent: Event;
+          occurrenceDate: string;
+          seriesId: string;
+      };
 
 function renderEventContent(info: EventContentArg) {
     const details = info.event.extendedProps as CalendarEventDetails;
@@ -48,25 +54,81 @@ function renderEventContent(info: EventContentArg) {
                 <strong>{info.event.title}</strong>
             </div>
             <span className="calendar-event-location">
-                {isDayView ? `${details.room} · ${details.building}` : details.room}
+                {isDayView
+                    ? `${details.room} · ${details.building}`
+                    : details.room}
             </span>
         </div>
     );
 }
 
+const repositoryErrorMessages: Record<RepositoryErrorCode, string> = {
+    'read-error': 'Nie można odczytać kalendarza z pamięci przeglądarki.',
+    'invalid-data':
+        'Zapisane dane są uszkodzone lub mają nieobsługiwaną wersję.',
+    'write-error':
+        'Nie udało się zapisać kalendarza. Sprawdź wolne miejsce w przeglądarce.',
+    'clear-error': 'Nie udało się wyczyścić lokalnego zapisu.',
+};
+
 export function App() {
     const calendarRef = useRef<FullCalendar>(null);
+    const backupInputRef = useRef<HTMLInputElement>(null);
+    const [repository] = useState(
+        () =>
+            new LocalStorageEventRepository({
+                getItem: (key) => window.localStorage.getItem(key),
+                setItem: (key, value) =>
+                    window.localStorage.setItem(key, value),
+                removeItem: (key) => window.localStorage.removeItem(key),
+            }),
+    );
+    const [loadResult] = useState(() => repository.load());
+    const savedSnapshot =
+        loadResult.success && loadResult.value ? loadResult.value : null;
     const [selectedEvent, setSelectedEvent] = useState<SelectedEvent | null>(
         null,
     );
-    const [eventSeries, setEventSeries] =
-        useState<EventSeries[]>(demoEventSeries);
+    const [eventSeries, setEventSeries] = useState<EventSeries[]>(
+        savedSnapshot?.events ?? demoEventSeries,
+    );
+    const [semester, setSemester] = useState<Semester>(
+        savedSnapshot?.semester ?? demoSemester,
+    );
     const [formSession, setFormSession] = useState<FormSession | null>(null);
-    const [activeDate, setActiveDate] = useState(demoRange.startDate);
+    const [settingsOpen, setSettingsOpen] = useState(false);
+    const [pendingImport, setPendingImport] = useState<CalendarSnapshot | null>(
+        null,
+    );
+    const [storageError, setStorageError] =
+        useState<RepositoryErrorCode | null>(
+            loadResult.success ? null : loadResult.error,
+        );
+    const [activeDate, setActiveDate] = useState(
+        savedSnapshot?.semester.startDate ?? demoRange.startDate,
+    );
+    const semesterEndDate = semesterWeeksToDateRange(semester, 1, 20).endDate;
 
     useEffect(() => {
         calendarRef.current?.getApi().refetchEvents();
-    }, [eventSeries]);
+    }, [eventSeries, semester]);
+
+    function persistSnapshot(
+        events: EventSeries[],
+        nextSemester: Semester,
+    ): boolean {
+        const result = repository.save({ events, semester: nextSemester });
+
+        if (!result.success) {
+            setStorageError(result.error);
+            return false;
+        }
+
+        setEventSeries(events);
+        setSemester(nextSemester);
+        setStorageError(null);
+        return true;
+    }
 
     function handleDateClick(info: { dateStr: string }) {
         setActiveDate(info.dateStr);
@@ -121,28 +183,32 @@ export function App() {
         }
 
         if (formSession.mode === 'create') {
-            setEventSeries((current) => [
-                ...current,
+            const nextSeries = [
+                ...eventSeries,
                 { id: crypto.randomUUID(), event },
-            ]);
+            ];
+            if (!persistSnapshot(nextSeries, semester)) {
+                return;
+            }
         } else {
-            setEventSeries((current) =>
-                current.map((series) => {
-                    if (series.id !== formSession.seriesId) {
-                        return series;
-                    }
+            const nextSeries = eventSeries.map((series) => {
+                if (series.id !== formSession.seriesId) {
+                    return series;
+                }
 
-                    const updatedEvent =
-                        scope === 'occurrence'
-                            ? EventSchema.parse({
-                                ...series.event,
-                                exceptions: event.exceptions,
-                            })
-                            : event;
+                const updatedEvent =
+                    scope === 'occurrence'
+                        ? EventSchema.parse({
+                              ...series.event,
+                              exceptions: event.exceptions,
+                          })
+                        : event;
 
-                    return { ...series, event: updatedEvent };
-                }),
-            );
+                return { ...series, event: updatedEvent };
+            });
+            if (!persistSnapshot(nextSeries, semester)) {
+                return;
+            }
         }
 
         setFormSession(null);
@@ -154,34 +220,126 @@ export function App() {
             return;
         }
 
-        if (scope === 'series') {
-            setEventSeries((current) =>
-                current.filter((series) => series.id !== formSession.seriesId),
-            );
-        } else {
-            setEventSeries((current) =>
-                current.map((series) => {
-                    if (series.id !== formSession.seriesId) {
-                        return series;
-                    }
+        const nextSeries =
+            scope === 'series'
+                ? eventSeries.filter(
+                      (series) => series.id !== formSession.seriesId,
+                  )
+                : eventSeries.map((series) => {
+                      if (series.id !== formSession.seriesId) return series;
 
-                    const exceptions = [
-                        ...series.event.exceptions.filter(
-                            (exception) => exception.date !== formSession.occurrenceDate,
-                        ),
-                        { date: formSession.occurrenceDate, status: 'cancelled' as const },
-                    ];
+                      const exceptions = [
+                          ...series.event.exceptions.filter(
+                              (exception) =>
+                                  exception.date !== formSession.occurrenceDate,
+                          ),
+                          {
+                              date: formSession.occurrenceDate,
+                              status: 'cancelled' as const,
+                          },
+                      ];
 
-                    return {
-                        ...series,
-                        event: EventSchema.parse({ ...series.event, exceptions }),
-                    };
-                }),
-            );
+                      return {
+                          ...series,
+                          event: EventSchema.parse({
+                              ...series.event,
+                              exceptions,
+                          }),
+                      };
+                  });
+
+        if (!persistSnapshot(nextSeries, semester)) {
+            return;
         }
 
         setFormSession(null);
         setSelectedEvent(null);
+    }
+
+    function handleSemesterSave(nextSemester: Semester) {
+        if (persistSnapshot(eventSeries, nextSemester)) {
+            setActiveDate(nextSemester.startDate);
+            calendarRef.current?.getApi().gotoDate(nextSemester.startDate);
+            setSettingsOpen(false);
+        }
+    }
+
+    function handleExportJson() {
+        downloadFile(
+            'mruos-plan.json',
+            'application/json;charset=utf-8',
+            exportCalendarBackup({ events: eventSeries, semester }),
+        );
+    }
+
+    async function handleExportIcs() {
+        const { exportCalendarIcs } = await import('./calendarIcs');
+
+        downloadFile(
+            'mruos-plan.ics',
+            'text/calendar;charset=utf-8',
+            exportCalendarIcs(eventSeries, semester.daysOff),
+        );
+    }
+
+    async function handleImportJson(event: ChangeEvent<HTMLInputElement>) {
+        const file = event.currentTarget.files?.[0];
+        event.currentTarget.value = '';
+
+        if (!file) {
+            return;
+        }
+
+        let serialized: string;
+        try {
+            serialized = await file.text();
+        } catch {
+            setStorageError('invalid-data');
+            return;
+        }
+
+        const imported = importCalendarBackup(serialized);
+
+        if (!imported.success) {
+            setStorageError(imported.error);
+            return;
+        }
+
+        setStorageError(null);
+        setPendingImport(imported.value);
+    }
+
+    function confirmImport() {
+        if (!pendingImport) {
+            return;
+        }
+
+        if (!persistSnapshot(pendingImport.events, pendingImport.semester)) {
+            return;
+        }
+
+        setPendingImport(null);
+        setSelectedEvent(null);
+        setFormSession(null);
+        setActiveDate(pendingImport.semester.startDate);
+        calendarRef.current
+            ?.getApi()
+            .gotoDate(pendingImport.semester.startDate);
+    }
+
+    function handleRestoreDemo() {
+        const result = repository.clear();
+
+        if (!result.success) {
+            setStorageError(result.error);
+            return;
+        }
+
+        setEventSeries(demoEventSeries);
+        setSemester(demoSemester);
+        setActiveDate(demoRange.startDate);
+        calendarRef.current?.getApi().gotoDate(demoRange.startDate);
+        setStorageError(null);
     }
 
     return (
@@ -195,7 +353,8 @@ export function App() {
                 </a>
                 <div className="topbar-term">
                     <span className="term-dot" aria-hidden="true" />
-                    Semestr zimowy <span className="term-year">2026/27</span>
+                    Semestr od{' '}
+                    <span className="term-year">{semester.startDate}</span>
                 </div>
             </header>
 
@@ -211,7 +370,10 @@ export function App() {
                             className="primary-button add-event-button"
                             type="button"
                             onClick={() =>
-                                setFormSession({ mode: 'create', initialDate: activeDate })
+                                setFormSession({
+                                    mode: 'create',
+                                    initialDate: activeDate,
+                                })
                             }
                         >
                             <span aria-hidden="true">+</span>
@@ -220,8 +382,64 @@ export function App() {
                     </div>
                 </div>
 
+                <div className="data-toolbar" aria-label="Dane kalendarza">
+                    <button
+                        className="secondary-button"
+                        type="button"
+                        onClick={() => setSettingsOpen(true)}
+                    >
+                        Semestr
+                    </button>
+                    <button
+                        className="secondary-button"
+                        type="button"
+                        onClick={handleExportJson}
+                    >
+                        Eksport JSON
+                    </button>
+                    <button
+                        className="secondary-button"
+                        type="button"
+                        onClick={() => backupInputRef.current?.click()}
+                    >
+                        Import JSON
+                    </button>
+                    <button
+                        className="secondary-button"
+                        type="button"
+                        onClick={handleExportIcs}
+                    >
+                        Eksport ICS
+                    </button>
+                    <input
+                        ref={backupInputRef}
+                        accept="application/json,.json"
+                        className="visually-hidden"
+                        onChange={handleImportJson}
+                        type="file"
+                    />
+                </div>
+
+                {storageError && (
+                    <div className="storage-alert" role="alert">
+                        <span>{repositoryErrorMessages[storageError]}</span>
+                        {storageError === 'invalid-data' && (
+                            <button
+                                className="secondary-button"
+                                type="button"
+                                onClick={handleRestoreDemo}
+                            >
+                                Wczytaj plan demonstracyjny
+                            </button>
+                        )}
+                    </div>
+                )}
+
                 <div className="calendar-layout">
-                    <section className="calendar-panel" aria-label="Kalendarz zajęć">
+                    <section
+                        className="calendar-panel"
+                        aria-label="Kalendarz zajęć"
+                    >
                         <FullCalendar
                             ref={calendarRef}
                             plugins={[
@@ -231,24 +449,38 @@ export function App() {
                                 rrulePlugin,
                             ]}
                             initialView="dayGridMonth"
+                            initialDate={activeDate}
                             headerToolbar={{
                                 left: 'prev,next today',
                                 center: 'title',
                                 right: 'dayGridMonth,timeGridDay',
                             }}
-                            buttonText={{ today: 'Dziś', month: 'Miesiąc', day: 'Dzień' }}
+                            buttonText={{
+                                today: 'Dziś',
+                                month: 'Miesiąc',
+                                day: 'Dzień',
+                            }}
                             locale={plLocale}
                             timeZone="Europe/Warsaw"
                             firstDay={1}
-                            events={(fetchInfo: EventSourceFuncArg, successCallback) => {
+                            events={(
+                                fetchInfo: EventSourceFuncArg,
+                                successCallback,
+                            ) => {
                                 successCallback(
                                     toCalendarEvents(
                                         eventSeries,
                                         {
-                                            startDate: fetchInfo.startStr.slice(0, 10),
-                                            endDate: fetchInfo.endStr.slice(0, 10),
+                                            startDate: fetchInfo.startStr.slice(
+                                                0,
+                                                10,
+                                            ),
+                                            endDate: fetchInfo.endStr.slice(
+                                                0,
+                                                10,
+                                            ),
                                         },
-                                        demoSemester,
+                                        semester,
                                     ),
                                 );
                             }}
@@ -282,7 +514,10 @@ export function App() {
                                 <span
                                     className="event-type"
                                     style={
-                                        { '--event-color': selectedEvent.color } as CSSProperties
+                                        {
+                                            '--event-color':
+                                                selectedEvent.color,
+                                        } as CSSProperties
                                     }
                                 >
                                     {selectedEvent.classType}
@@ -296,7 +531,8 @@ export function App() {
                                     <div>
                                         <dt>Godziny</dt>
                                         <dd>
-                                            {selectedEvent.startTime}–{selectedEvent.endTime}
+                                            {selectedEvent.startTime}–
+                                            {selectedEvent.endTime}
                                         </dd>
                                     </div>
                                     <div>
@@ -319,7 +555,9 @@ export function App() {
                                 </div>
                             </div>
                         ) : (
-                            <p className="details-empty">Wybierz zajęcia w kalendarzu</p>
+                            <p className="details-empty">
+                                Wybierz zajęcia w kalendarzu
+                            </p>
                         )}
                     </aside>
                 </div>
@@ -337,11 +575,13 @@ export function App() {
                             ? formSession.occurrenceDate
                             : formSession.initialDate
                     }
-                    semesterEndDate={demoRange.endDate}
-                    semester={demoSemester}
+                    semesterEndDate={semesterEndDate}
+                    semester={semester}
                     series={eventSeries}
                     initialEvent={
-                        formSession.mode === 'edit' ? formSession.initialEvent : undefined
+                        formSession.mode === 'edit'
+                            ? formSession.initialEvent
+                            : undefined
                     }
                     occurrenceEvent={
                         formSession.mode === 'edit'
@@ -354,12 +594,78 @@ export function App() {
                             : formSession.initialDate
                     }
                     seriesId={
-                        formSession.mode === 'edit' ? formSession.seriesId : undefined
+                        formSession.mode === 'edit'
+                            ? formSession.seriesId
+                            : undefined
                     }
                     onCancel={() => setFormSession(null)}
                     onSave={handleFormSave}
                     onDelete={handleFormDelete}
+                    saveError={
+                        storageError
+                            ? repositoryErrorMessages[storageError]
+                            : undefined
+                    }
                 />
+            )}
+            {settingsOpen && (
+                <SemesterSettings
+                    semester={semester}
+                    saveError={
+                        storageError
+                            ? repositoryErrorMessages[storageError]
+                            : undefined
+                    }
+                    onCancel={() => setSettingsOpen(false)}
+                    onSave={handleSemesterSave}
+                />
+            )}
+            {pendingImport && (
+                <div className="modal-backdrop">
+                    <section
+                        className="event-form-modal backup-confirmation"
+                        role="alertdialog"
+                        aria-modal="true"
+                        aria-labelledby="backup-confirm-title"
+                    >
+                        <header className="form-header">
+                            <div>
+                                <p className="eyebrow">IMPORT KOPII</p>
+                                <h2 id="backup-confirm-title">
+                                    Zastąpić obecny plan?
+                                </h2>
+                            </div>
+                        </header>
+                        <div className="event-form">
+                            <p>
+                                Zaimportowany plan i semestr zastąpią obecne
+                                dane zapisane w tej przeglądarce.
+                            </p>
+                            {storageError && (
+                                <p className="form-errors" role="alert">
+                                    {repositoryErrorMessages[storageError]}
+                                </p>
+                            )}
+                            <footer className="form-actions">
+                                <span className="form-action-spacer" />
+                                <button
+                                    className="secondary-button"
+                                    type="button"
+                                    onClick={() => setPendingImport(null)}
+                                >
+                                    Anuluj
+                                </button>
+                                <button
+                                    className="primary-button"
+                                    type="button"
+                                    onClick={confirmImport}
+                                >
+                                    Importuj plan
+                                </button>
+                            </footer>
+                        </div>
+                    </section>
+                </div>
             )}
         </div>
     );

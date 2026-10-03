@@ -25,6 +25,7 @@ type EventFormProps = {
     onCancel: () => void;
     onSave: (event: Event, scope: EventEditScope) => void;
     onDelete?: (scope: EventEditScope) => void;
+    saveError?: string;
 };
 
 const weekdays: { value: Weekday; label: string }[] = [
@@ -50,6 +51,7 @@ export function EventForm({
     onCancel,
     onSave,
     onDelete,
+    saveError,
 }: EventFormProps) {
     const [scope, setScope] = useState<EventEditScope>(
         mode === 'edit' ? 'occurrence' : 'series',
@@ -72,12 +74,12 @@ export function EventForm({
     );
     const conflicts = result.success
         ? findScheduleConflicts(
-            result.event,
-            series,
-            result.range,
-            semester,
-            seriesId,
-        )
+              result.event,
+              series,
+              result.range,
+              semester,
+              seriesId,
+          )
         : [];
 
     function updateDraft<Key extends keyof EventFormDraft>(
@@ -142,10 +144,16 @@ export function EventForm({
                             {mode === 'create' ? 'NOWY WPIS' : 'ZMIANA WPISU'}
                         </p>
                         <h2 id="event-form-title">
-                            {mode === 'create' ? 'Dodaj zajęcia' : 'Edytuj zajęcia'}
+                            {mode === 'create'
+                                ? 'Dodaj zajęcia'
+                                : 'Edytuj zajęcia'}
                         </h2>
                     </div>
-                    <button className="icon-close" type="button" onClick={onCancel}>
+                    <button
+                        className="icon-close"
+                        type="button"
+                        onClick={onCancel}
+                    >
                         Zamknij
                     </button>
                 </header>
@@ -180,7 +188,9 @@ export function EventForm({
                             <span>Przedmiot</span>
                             <input
                                 autoFocus
-                                onChange={(event) => updateDraft('subject', event.target.value)}
+                                onChange={(event) =>
+                                    updateDraft('subject', event.target.value)
+                                }
                                 value={draft.subject}
                             />
                         </label>
@@ -212,7 +222,9 @@ export function EventForm({
                             <span>Kolor</span>
                             <input
                                 aria-label="Kolor zajęć"
-                                onChange={(event) => updateDraft('color', event.target.value)}
+                                onChange={(event) =>
+                                    updateDraft('color', event.target.value)
+                                }
                                 type="color"
                                 value={draft.color}
                             />
@@ -231,7 +243,9 @@ export function EventForm({
                         <label className="form-field">
                             <span>Sala</span>
                             <input
-                                onChange={(event) => updateDraft('room', event.target.value)}
+                                onChange={(event) =>
+                                    updateDraft('room', event.target.value)
+                                }
                                 value={draft.room}
                             />
                         </label>
@@ -250,7 +264,9 @@ export function EventForm({
                         <label className="form-field">
                             <span>Do</span>
                             <input
-                                onChange={(event) => updateDraft('endTime', event.target.value)}
+                                onChange={(event) =>
+                                    updateDraft('endTime', event.target.value)
+                                }
                                 type="time"
                                 value={draft.endTime}
                             />
@@ -265,13 +281,21 @@ export function EventForm({
                                     {weekdays.map((weekday) => (
                                         <label
                                             className={
-                                                draft.byDay.includes(weekday.value) ? 'is-selected' : ''
+                                                draft.byDay.includes(
+                                                    weekday.value,
+                                                )
+                                                    ? 'is-selected'
+                                                    : ''
                                             }
                                             key={weekday.value}
                                         >
                                             <input
-                                                checked={draft.byDay.includes(weekday.value)}
-                                                onChange={() => toggleWeekday(weekday.value)}
+                                                checked={draft.byDay.includes(
+                                                    weekday.value,
+                                                )}
+                                                onChange={() =>
+                                                    toggleWeekday(weekday.value)
+                                                }
                                                 type="checkbox"
                                             />
                                             {weekday.label}
@@ -284,7 +308,10 @@ export function EventForm({
                                 <input
                                     checked={draft.interval === 2}
                                     onChange={(event) =>
-                                        updateDraft('interval', event.target.checked ? 2 : 1)
+                                        updateDraft(
+                                            'interval',
+                                            event.target.checked ? 2 : 1,
+                                        )
                                     }
                                     type="checkbox"
                                 />
@@ -295,23 +322,45 @@ export function EventForm({
                                 <legend>Zakres obowiązywania</legend>
                                 <div className="range-options">
                                     <label
-                                        className={draft.rangeMode === 'dates' ? 'is-selected' : ''}
+                                        className={
+                                            draft.rangeMode === 'dates'
+                                                ? 'is-selected'
+                                                : ''
+                                        }
                                     >
                                         <input
-                                            checked={draft.rangeMode === 'dates'}
+                                            checked={
+                                                draft.rangeMode === 'dates'
+                                            }
                                             name="range-mode"
-                                            onChange={() => updateDraft('rangeMode', 'dates')}
+                                            onChange={() =>
+                                                updateDraft(
+                                                    'rangeMode',
+                                                    'dates',
+                                                )
+                                            }
                                             type="radio"
                                         />
                                         Daty
                                     </label>
                                     <label
-                                        className={draft.rangeMode === 'weeks' ? 'is-selected' : ''}
+                                        className={
+                                            draft.rangeMode === 'weeks'
+                                                ? 'is-selected'
+                                                : ''
+                                        }
                                     >
                                         <input
-                                            checked={draft.rangeMode === 'weeks'}
+                                            checked={
+                                                draft.rangeMode === 'weeks'
+                                            }
                                             name="range-mode"
-                                            onChange={() => updateDraft('rangeMode', 'weeks')}
+                                            onChange={() =>
+                                                updateDraft(
+                                                    'rangeMode',
+                                                    'weeks',
+                                                )
+                                            }
                                             type="radio"
                                         />
                                         Tygodnie semestru
@@ -323,7 +372,10 @@ export function EventForm({
                                             <span>Od dnia</span>
                                             <input
                                                 onChange={(event) =>
-                                                    updateDraft('startDate', event.target.value)
+                                                    updateDraft(
+                                                        'startDate',
+                                                        event.target.value,
+                                                    )
                                                 }
                                                 type="date"
                                                 value={draft.startDate}
@@ -333,7 +385,10 @@ export function EventForm({
                                             <span>Do dnia</span>
                                             <input
                                                 onChange={(event) =>
-                                                    updateDraft('endDate', event.target.value)
+                                                    updateDraft(
+                                                        'endDate',
+                                                        event.target.value,
+                                                    )
                                                 }
                                                 type="date"
                                                 value={draft.endDate}
@@ -347,7 +402,10 @@ export function EventForm({
                                             <input
                                                 min="1"
                                                 onChange={(event) =>
-                                                    updateDraft('firstWeek', event.target.value)
+                                                    updateDraft(
+                                                        'firstWeek',
+                                                        event.target.value,
+                                                    )
                                                 }
                                                 step="1"
                                                 type="number"
@@ -359,7 +417,10 @@ export function EventForm({
                                             <input
                                                 min="1"
                                                 onChange={(event) =>
-                                                    updateDraft('lastWeek', event.target.value)
+                                                    updateDraft(
+                                                        'lastWeek',
+                                                        event.target.value,
+                                                    )
                                                 }
                                                 step="1"
                                                 type="number"
@@ -372,8 +433,9 @@ export function EventForm({
                         </>
                     )}
 
-                    {errors.length > 0 && (
+                    {(errors.length > 0 || saveError) && (
                         <ul className="form-errors" role="alert">
+                            {saveError && <li>{saveError}</li>}
                             {errors.map((error) => (
                                 <li key={error}>{error}</li>
                             ))}
@@ -385,14 +447,18 @@ export function EventForm({
                             <strong>Możliwa kolizja z innymi zajęciami</strong>
                             <ul>
                                 {conflicts.slice(0, 3).map((conflict) => (
-                                    <li key={`${conflict.seriesId}-${conflict.date}`}>
-                                        {conflict.subject}, {conflict.date}, {conflict.startTime}–
-                                        {conflict.endTime}
+                                    <li
+                                        key={`${conflict.seriesId}-${conflict.date}`}
+                                    >
+                                        {conflict.subject}, {conflict.date},{' '}
+                                        {conflict.startTime}–{conflict.endTime}
                                     </li>
                                 ))}
                             </ul>
                             {conflicts.length > 3 && (
-                                <span>i {conflicts.length - 3} kolejnych terminów</span>
+                                <span>
+                                    i {conflicts.length - 3} kolejnych terminów
+                                </span>
                             )}
                         </div>
                     )}
@@ -401,9 +467,15 @@ export function EventForm({
                         <div className="delete-confirmation" role="alertdialog">
                             <p>
                                 Usunąć{' '}
-                                {scope === 'occurrence' ? 'tylko ten termin' : 'całą serię'}?
+                                {scope === 'occurrence'
+                                    ? 'tylko ten termin'
+                                    : 'całą serię'}
+                                ?
                             </p>
-                            <button type="button" onClick={() => setConfirmingDelete(false)}>
+                            <button
+                                type="button"
+                                onClick={() => setConfirmingDelete(false)}
+                            >
                                 Anuluj
                             </button>
                             <button
@@ -434,7 +506,9 @@ export function EventForm({
                                 Anuluj
                             </button>
                             <button className="primary-button" type="submit">
-                                {mode === 'create' ? 'Dodaj zajęcia' : 'Zapisz zmiany'}
+                                {mode === 'create'
+                                    ? 'Dodaj zajęcia'
+                                    : 'Zapisz zmiany'}
                             </button>
                         </footer>
                     )}
