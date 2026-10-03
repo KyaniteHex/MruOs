@@ -37,13 +37,13 @@ Testy muszą obejmować:
 
 ## Etap 2: Kalendarz (widoki)
 
-- [ ] Widok miesiąca z przewijaniem miesięcy i kolorowymi oznaczeniami zajęć
-- [ ] Kliknięcie dnia otwiera widok dnia
-- [ ] Widok dnia z podziałką godzinową (domyślnie 7:00 do 21:00)
-- [ ] Blok zajęć: przedmiot, sala, godziny, budynek, kolor tła
-- [ ] Kliknięcie bloku otwiera panel szczegółów
-- [ ] Zajęcia nakładające się w czasie wyświetlane obok siebie
-- [ ] Układ działający na telefonie i desktopie
+- [x] Widok miesiąca z przewijaniem miesięcy i kolorowymi oznaczeniami zajęć
+- [x] Kliknięcie dnia otwiera widok dnia
+- [x] Widok dnia z podziałką godzinową (domyślnie 7:00 do 21:00)
+- [x] Blok zajęć: przedmiot, sala, godziny, budynek, kolor tła
+- [x] Kliknięcie bloku otwiera panel szczegółów
+- [x] Zajęcia nakładające się w czasie wyświetlane obok siebie
+- [x] Układ działający na telefonie i desktopie
 
 **Gotowe, gdy:** na danych testowych widoki działają płynnie na szerokości telefonu i desktopu.
 
