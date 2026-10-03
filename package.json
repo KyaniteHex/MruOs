@@ -7,9 +7,9 @@
     "node": ">=22"
   },
   "scripts": {
-    "dev": "pnpm --parallel --filter @mruos/web --filter @mruos/api dev",
+    "dev": "pnpm --filter @mruos/shared build && pnpm --parallel --filter @mruos/web --filter @mruos/api dev",
     "lint": "pnpm -r lint",
-    "test": "pnpm -r test",
+    "test": "pnpm --filter @mruos/shared build && pnpm -r test",
     "build": "pnpm -r build"
   },
   "devDependencies": {

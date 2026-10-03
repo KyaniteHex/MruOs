@@ -2,6 +2,22 @@
   "name": "@mruos/shared",
   "private": true,
   "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./recurrence": {
+      "types": "./dist/recurrence.d.ts",
+      "import": "./dist/recurrence.js"
+    },
+    "./semester": {
+      "types": "./dist/semester.d.ts",
+      "import": "./dist/semester.js"
+    }
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "lint": "eslint src",
