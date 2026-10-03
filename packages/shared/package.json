@@ -16,6 +16,10 @@
     "./semester": {
       "types": "./dist/semester.d.ts",
       "import": "./dist/semester.js"
+    },
+    "./color": {
+      "types": "./dist/color.d.ts",
+      "import": "./dist/color.js"
     }
   },
   "scripts": {

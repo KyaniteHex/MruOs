@@ -16,6 +16,13 @@ export {
   SemesterSchema,
   WeekdaySchema,
 } from './schemas.js';
+export {
+  contrastRatio,
+  darkEventTextColor,
+  lightEventTextColor,
+  readableTextColor,
+  relativeLuminance,
+} from './color.js';
 export { expandOccurrences } from './recurrence.js';
 export { semesterWeeksToDateRange } from './semester.js';
 export type {
