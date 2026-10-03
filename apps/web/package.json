@@ -17,6 +17,7 @@
     "@fullcalendar/timegrid": "~6.1.19",
     "@tailwindcss/vite": "^4.1.13",
     "@mruos/shared": "workspace:*",
+    "ical.js": "^2.2.1",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "rrule": "^2.8.1",
