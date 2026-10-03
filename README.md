@@ -1,6 +1,6 @@
 # MruOS
 
-Kalendarz studencki do zarządzania planem zajęć. Wpisujesz zajęcia raz, jako serię (przedmiot, typ, sala, godziny, dni tygodnia, zakres semestru), a MruOS pokazuje je w widoku miesiąca i dnia, uwzględniając dni wolne, zajęcia co dwa tygodnie i pojedyncze zmiany terminów.
+Kalendarz studencki do zarządzania planem zajęć (wersja produkcyjna: https://mru-os.vercel.app). Wpisujesz zajęcia raz, jako serię (przedmiot, typ, sala, godziny, dni tygodnia, zakres semestru), a MruOS pokazuje je w widoku miesiąca i dnia, uwzględniając dni wolne, zajęcia co dwa tygodnie i pojedyncze zmiany terminów.
 
 ## Funkcje
 
@@ -58,7 +58,7 @@ CI (GitHub Actions) uruchamia lint, testy, build oraz testy E2E dla każdego pus
 
 | Środowisko | Gałąź        | Frontend (Vercel)                 | API (Render)        | Baza (Atlas)    |
 | ---------- | ------------ | --------------------------------- | ------------------- | --------------- |
-| Produkcja  | `production` | domena produkcyjna                | `mruos-api`         | `mruos`         |
+| Produkcja  | `production` | https://mru-os.vercel.app         | `mruos-api`         | `mruos`         |
 | Testowe    | `main`       | podglądy (`main` i pull requesty) | `mruos-api-staging` | `mruos-staging` |
 
 Zmiany trafiają do `main` przez pull request i lądują w środowisku testowym. Po sprawdzeniu wydanie produkcyjne to:
