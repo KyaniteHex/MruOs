@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { SemesterSchema } from '@mruos/shared';
 import type { Semester } from '@mruos/shared';
+import { useDialogKeyboard } from './useDialogKeyboard';
 
 type SemesterSettingsProps = {
   semester: Semester;
@@ -16,6 +17,7 @@ export function SemesterSettings({
   onCancel,
   onSave,
 }: SemesterSettingsProps) {
+  useDialogKeyboard(onCancel);
   const [startDate, setStartDate] = useState(semester.startDate);
   const [daysOff, setDaysOff] = useState(semester.daysOff);
   const [newDayOff, setNewDayOff] = useState('');
@@ -69,6 +71,7 @@ export function SemesterSettings({
           <label className="form-field">
             <span>Pierwszy dzień semestru</span>
             <input
+              autoFocus
               onChange={(event) => setStartDate(event.target.value)}
               required
               type="date"

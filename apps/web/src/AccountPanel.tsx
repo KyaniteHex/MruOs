@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { AuthResponseSchema } from '@mruos/shared';
 import type { AuthenticatedUser } from '@mruos/shared';
+import { DialogKeyboard } from './useDialogKeyboard';
 
 type AccountPanelProps = {
   user: AuthenticatedUser | null;
@@ -57,6 +58,8 @@ export function AccountPanel({
 
       if (await onAuthenticated(authResponse.data.user)) {
         setOpen(false);
+        // The next dialog, after logging out, should offer logging in.
+        setMode('login');
         setEmail('');
         setPassword('');
       } else {
@@ -122,6 +125,7 @@ export function AccountPanel({
       </button>
       {open && (
         <div className="modal-backdrop">
+          <DialogKeyboard onClose={() => setOpen(false)} />
           <section
             className="event-form-modal account-modal"
             role="dialog"
@@ -148,6 +152,7 @@ export function AccountPanel({
                 <span>E-mail</span>
                 <input
                   autoComplete="email"
+                  autoFocus
                   onChange={(change) => setEmail(change.target.value)}
                   required
                   type="email"

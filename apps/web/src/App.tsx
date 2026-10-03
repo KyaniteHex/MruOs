@@ -22,6 +22,7 @@ import { semesterWeeksToDateRange } from '@mruos/shared/semester';
 import { AccountPanel } from './AccountPanel';
 import { EventForm } from './EventForm';
 import { SemesterSettings } from './SemesterSettings';
+import { DialogKeyboard } from './useDialogKeyboard';
 import type { EventEditScope } from './eventFormModel';
 import type { CalendarEventDetails, EventSeries } from './calendarEvents';
 import {
@@ -269,7 +270,7 @@ export function App() {
           startDate: selectedEvent.date,
           endDate: selectedEvent.date,
         },
-        demoSemester,
+        semester,
       )[0]?.event ?? series.event;
 
     setFormSession({
@@ -570,6 +571,13 @@ export function App() {
                 );
               }}
               dateClick={handleDateClick}
+              navLinks
+              navLinkDayClick={(date) =>
+                // With a named time zone and no zone plugin FullCalendar passes
+                // UTC-coerced dates, so the UTC date is the Warsaw calendar day.
+                handleDateClick({ dateStr: date.toISOString().slice(0, 10) })
+              }
+              eventInteractive
               eventClick={handleEventClick}
               eventContent={renderEventContent}
               eventTimeFormat={{
@@ -695,6 +703,7 @@ export function App() {
       )}
       {pendingImport && (
         <div className="modal-backdrop">
+          <DialogKeyboard onClose={() => setPendingImport(null)} />
           <section
             className="event-form-modal backup-confirmation"
             role="alertdialog"
@@ -720,6 +729,7 @@ export function App() {
               <footer className="form-actions">
                 <span className="form-action-spacer" />
                 <button
+                  autoFocus
                   className="secondary-button"
                   type="button"
                   onClick={() => setPendingImport(null)}

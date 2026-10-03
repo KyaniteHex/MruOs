@@ -2,7 +2,7 @@ import express from 'express';
 import session from 'express-session';
 import helmet from 'helmet';
 import type { Store } from 'express-session';
-import { authRoutes } from './routes/authRoutes.js';
+import { createAuthRoutes } from './routes/authRoutes.js';
 import { calendarRoutes } from './routes/calendarRoutes.js';
 import { eventRoutes } from './routes/eventRoutes.js';
 import { semesterRoutes } from './routes/semesterRoutes.js';
@@ -13,6 +13,8 @@ export type AppOptions = {
   sessionStore?: Store;
   secureCookies?: boolean;
   webOrigin?: string;
+  /** Login and registration attempts per IP in a 15-minute window. */
+  authAttemptLimit?: number;
 };
 
 export function createApp(options: AppOptions) {
@@ -66,7 +68,7 @@ export function createApp(options: AppOptions) {
   app.get('/health', (_request, response) => {
     response.json({ status: 'ok' });
   });
-  app.use('/auth', authRoutes);
+  app.use('/auth', createAuthRoutes(options.authAttemptLimit ?? 10));
   app.use('/events', eventRoutes);
   app.use('/semester', semesterRoutes);
   app.use('/calendar', calendarRoutes);

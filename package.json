@@ -8,12 +8,15 @@
   },
   "scripts": {
     "dev": "pnpm --filter @mruos/shared build && pnpm --parallel --filter @mruos/web --filter @mruos/api dev",
-    "lint": "pnpm -r lint",
+    "lint": "pnpm -r lint && eslint e2e playwright.config.ts && tsc -p e2e/tsconfig.json",
     "test": "pnpm --filter @mruos/shared build && pnpm -r test",
-    "build": "pnpm -r build"
+    "build": "pnpm -r build",
+    "test:e2e": "pnpm --filter @mruos/shared build && playwright test"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^22.20.5",
     "eslint": "^10.12.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.4.20",

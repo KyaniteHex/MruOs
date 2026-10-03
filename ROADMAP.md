@@ -85,12 +85,12 @@ Testy muszą obejmować:
 
 ## Etap 6: Testy E2E i jakość
 
-- [ ] Playwright: rejestracja i logowanie
-- [ ] Playwright: dodanie zajęć cyklicznych i ich widoczność w kalendarzu
-- [ ] Playwright: edycja jednego terminu i całej serii
-- [ ] Playwright: przewijanie miesięcy i widok dnia
-- [ ] Uruchomienie testów na emulacji telefonu
-- [ ] Dostępność: nawigacja klawiaturą, czytelny kontrast tekstu na kolorach użytkownika
+- [x] Playwright: rejestracja i logowanie
+- [x] Playwright: dodanie zajęć cyklicznych i ich widoczność w kalendarzu
+- [x] Playwright: edycja jednego terminu i całej serii
+- [x] Playwright: przewijanie miesięcy i widok dnia
+- [x] Uruchomienie testów na emulacji telefonu
+- [x] Dostępność: nawigacja klawiaturą, czytelny kontrast tekstu na kolorach użytkownika
 - [ ] Testy E2E w CI blokujące merge przy błędzie
 
 **Gotowe, gdy:** wszystkie scenariusze przechodzą w CI.

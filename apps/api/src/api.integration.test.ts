@@ -44,14 +44,7 @@ async function registerAgent(
 
 describe('API integration and user isolation', () => {
   beforeAll(async () => {
-    mongoServer = await MongoMemoryServer.create({
-      binary:
-        process.platform === 'linux'
-          ? {
-              distro: process.env.MONGOMS_DISTRO ?? 'ubuntu-22.04',
-            }
-          : {},
-    });
+    mongoServer = await MongoMemoryServer.create();
     await mongoose.connect(mongoServer.getUri());
     await Promise.all([
       UserModel.init(),
@@ -128,6 +121,21 @@ describe('API integration and user isolation', () => {
       daysOff: [],
     });
     expect((await userA.get('/calendar')).body.events).toHaveLength(1);
+  });
+
+  it('rate limits repeated login attempts', async () => {
+    const limitedApp = createApp({
+      sessionSecret: 'integration-test-secret-value-is-long-enough',
+      authAttemptLimit: 2,
+    });
+    const attempt = () =>
+      request(limitedApp)
+        .post('/auth/login')
+        .send({ email: 'nobody@example.com', password: 'wrong-password' });
+
+    expect((await attempt()).status).toBe(401);
+    expect((await attempt()).status).toBe(401);
+    expect((await attempt()).status).toBe(429);
   });
 
   it('rejects invalid credentials and malformed event payloads', async () => {

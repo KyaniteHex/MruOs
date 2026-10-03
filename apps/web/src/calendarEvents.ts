@@ -1,4 +1,5 @@
 import type { EventInput } from '@fullcalendar/core';
+import { readableTextColor } from '@mruos/shared/color';
 import { expandOccurrences } from '@mruos/shared/recurrence';
 import { semesterWeeksToDateRange } from '@mruos/shared/semester';
 import type { DateRange, Event, Semester } from '@mruos/shared';
@@ -32,6 +33,7 @@ export function toCalendarEvents(
       end: occurrence.end.toISO() ?? undefined,
       backgroundColor: occurrence.event.color,
       borderColor: occurrence.event.color,
+      textColor: readableTextColor(occurrence.event.color),
       extendedProps: {
         building: occurrence.event.building,
         classType: occurrence.event.classType,
