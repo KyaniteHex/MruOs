@@ -94,6 +94,7 @@ Zasady, których trzeba przestrzegać:
 - Przed dodaniem nowej zależności zapytaj i uzasadnij wybór.
 - Małe, opisowe commity w konwencji Conventional Commits (np. `feat(shared): expand weekly recurrence`).
 - Jeśli wymaganie jest niejasne, zapytaj zamiast zgadywać.
+- Wydania: `main` to środowisko testowe (Render `mruos-api-staging`, podglądy Vercel), gałąź `production` to produkcja. Wdrożenie produkcyjne: `git push origin main:production` po sprawdzeniu zmian w środowisku testowym.
 
 ## Komendy
 
