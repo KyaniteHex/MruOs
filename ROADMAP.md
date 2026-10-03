@@ -49,14 +49,14 @@ Testy muszą obejmować:
 
 ## Etap 3: Formularz zajęć
 
-- [ ] Dodawanie zajęć: przedmiot, typ, kolor, budynek, sala, godziny, dzień tygodnia
-- [ ] Zakres obowiązywania jako daty albo jako tygodnie semestru
-- [ ] Opcja „co dwa tygodnie”
-- [ ] Domyślny kolor zależny od typu zajęć, z możliwością zmiany
-- [ ] Edycja z wyborem: „tylko ten termin” albo „cała seria”
-- [ ] Usuwanie terminu lub całej serii
-- [ ] Walidacja: koniec po początku, data końcowa nie wcześniejsza od początkowej
-- [ ] Ostrzeżenie o kolizji z innymi zajęciami
+- [x] Dodawanie zajęć: przedmiot, typ, kolor, budynek, sala, godziny, dzień tygodnia
+- [x] Zakres obowiązywania jako daty albo jako tygodnie semestru
+- [x] Opcja „co dwa tygodnie”
+- [x] Domyślny kolor zależny od typu zajęć, z możliwością zmiany
+- [x] Edycja z wyborem: „tylko ten termin” albo „cała seria”
+- [x] Usuwanie terminu lub całej serii
+- [x] Walidacja: koniec po początku, data końcowa nie wcześniejsza od początkowej
+- [x] Ostrzeżenie o kolizji z innymi zajęciami
 
 **Gotowe, gdy:** da się wprowadzić prawdziwy plan jednego semestru, łącznie z zajęciami zmieniającymi się w trakcie semestru.
 
