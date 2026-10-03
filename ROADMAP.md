@@ -17,21 +17,21 @@ Zakres MVP: plan zajęć z ręcznym dodawaniem, widok miesiąca i dnia, zapis lo
 
 ## Etap 1: Model domeny i logika
 
-- [ ] Typy `Event`, `Recurrence`, `Exception`, `Semester` w `packages/shared`
-- [ ] Schematy zod odpowiadające typom
-- [ ] Funkcja wyliczająca wystąpienia zajęć w zadanym zakresie dat
-- [ ] Obsługa wyjątków: odwołanie terminu i nadpisanie pól (np. sali)
-- [ ] Przeliczanie „tygodnie N do M semestru” na daty
-- [ ] Pominięcie dni wolnych z ustawień semestru
+- [x] Typy `Event`, `Recurrence`, `Exception`, `Semester` w `packages/shared`
+- [x] Schematy zod odpowiadające typom
+- [x] Funkcja wyliczająca wystąpienia zajęć w zadanym zakresie dat
+- [x] Obsługa wyjątków: odwołanie terminu i nadpisanie pól (np. sali)
+- [x] Przeliczanie „tygodnie N do M semestru” na daty
+- [x] Pominięcie dni wolnych z ustawień semestru
 
 Testy muszą obejmować:
 
-- [ ] zajęcia co tydzień i co dwa tygodnie
-- [ ] koniec zakresu (ostatni termin włącznie)
-- [ ] odwołany termin i zmienioną salę w jednym dniu
-- [ ] konwersję tygodni semestru na daty
-- [ ] zmianę czasu pod koniec października i marca (godzina zajęć bez zmian)
-- [ ] przypadek „zajęcia X do 6 tygodnia, od 7 tygodnia zajęcia Y”
+- [x] zajęcia co tydzień i co dwa tygodnie
+- [x] koniec zakresu (ostatni termin włącznie)
+- [x] odwołany termin i zmienioną salę w jednym dniu
+- [x] konwersję tygodni semestru na daty
+- [x] zmianę czasu pod koniec października i marca (godzina zajęć bez zmian)
+- [x] przypadek „zajęcia X do 6 tygodnia, od 7 tygodnia zajęcia Y”
 
 **Gotowe, gdy:** wszystkie powyższe testy przechodzą, a logika nie zależy od React ani Express.
 
