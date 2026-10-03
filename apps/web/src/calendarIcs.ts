@@ -1,5 +1,6 @@
 import ICAL from 'ical.js';
 import { expandOccurrences } from '@mruos/shared/recurrence';
+import { classTypeLabels } from './eventFormModel';
 import type { EventSeries } from './eventRepository';
 
 export function exportCalendarIcs(
@@ -43,7 +44,7 @@ export function exportCalendarIcs(
       );
       event.addPropertyWithValue(
         'description',
-        `Typ zajęć: ${occurrence.event.classType}`,
+        `Typ zajęć: ${classTypeLabels[occurrence.event.classType]}`,
       );
 
       calendar.addSubcomponent(event);

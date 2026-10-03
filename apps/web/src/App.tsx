@@ -23,6 +23,7 @@ import { AccountPanel } from './AccountPanel';
 import { EventForm } from './EventForm';
 import { SemesterSettings } from './SemesterSettings';
 import { DialogKeyboard } from './useDialogKeyboard';
+import { classTypeLabels } from './eventFormModel';
 import type { EventEditScope } from './eventFormModel';
 import type { CalendarEventDetails, EventSeries } from './calendarEvents';
 import {
@@ -612,7 +613,7 @@ export function App() {
                     } as CSSProperties
                   }
                 >
-                  {selectedEvent.classType}
+                  {classTypeLabels[selectedEvent.classType]}
                 </span>
                 <h3>{selectedEvent.title}</h3>
                 <dl>

@@ -58,7 +58,7 @@ Kolekcja `events`, jeden dokument na serię zajęć:
 
 Zasady, których trzeba przestrzegać:
 
-- `classType` przyjmuje wartości: `wyklad`, `cwiczenia`, `laboratorium`, `seminarium`.
+- `classType` przyjmuje wartości: `wyklad`, `cwiczenia`, `laboratorium`, `seminarium`, `zajecia-praktyczne`.
 - `kind` na razie zawsze ma wartość `class`. Pole zostaje, bo w przyszłości mogą dojść inne rodzaje wydarzeń.
 - Godziny są przechowywane jako czas lokalny (`HH:mm`) razem ze strefą `Europe/Warsaw`, nigdy jako znacznik UTC. Zajęcia o 8:00 muszą zostać o 8:00 po zmianie czasu w październiku i marcu.
 - Nie wykonujemy arytmetyki na natywnym `Date`. Wszystkie obliczenia dat idą przez Luxon.

@@ -38,6 +38,7 @@ export const classTypes: ClassType[] = [
   'cwiczenia',
   'laboratorium',
   'seminarium',
+  'zajecia-praktyczne',
 ];
 
 export const classTypeLabels: Record<ClassType, string> = {
@@ -45,6 +46,7 @@ export const classTypeLabels: Record<ClassType, string> = {
   cwiczenia: 'Ćwiczenia',
   laboratorium: 'Laboratorium',
   seminarium: 'Seminarium',
+  'zajecia-praktyczne': 'Zajęcia praktyczne',
 };
 
 export const defaultClassColors: Record<ClassType, string> = {
@@ -52,6 +54,7 @@ export const defaultClassColors: Record<ClassType, string> = {
   cwiczenia: '#bf6548',
   laboratorium: '#39789a',
   seminarium: '#96703e',
+  'zajecia-praktyczne': '#7a5c99',
 };
 
 export function createEventFormDraft(

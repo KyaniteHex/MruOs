@@ -51,6 +51,9 @@ describe('exportCalendarIcs', () => {
     expect(events[0]?.getFirstPropertyValue('location')).toBe(
       'Wydział Matematyki, 204',
     );
+    expect(String(events[0]?.getFirstPropertyValue('description'))).toContain(
+      'Typ zajęć: Wykład',
+    );
   });
 
   it('omits cancelled occurrences and semester days off', () => {
