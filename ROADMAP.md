@@ -101,7 +101,7 @@ Testy muszą obejmować:
 - [ ] Backend na Render lub Railway
 - [ ] Baza w MongoDB Atlas
 - [ ] Zmienne środowiskowe i osobne środowisko testowe
-- [ ] README z opisem projektu i instrukcją uruchomienia
+- [x] README z opisem projektu i instrukcją uruchomienia
 
 **Gotowe, gdy:** aplikacja działa pod publicznym adresem, a nowa osoba może się zarejestrować i wprowadzić plan.
 

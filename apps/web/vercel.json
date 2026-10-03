@@ -1,0 +1,23 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vite",
+  "installCommand": "pnpm install --frozen-lockfile",
+  "buildCommand": "pnpm --filter @mruos/shared build && pnpm --filter @mruos/web build",
+  "outputDirectory": "dist",
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "${API_ORIGIN}/$1",
+      "env": ["API_ORIGIN"],
+      "transforms": [
+        {
+          "type": "request.headers",
+          "op": "set",
+          "target": { "key": "x-origin-secret" },
+          "args": "${ORIGIN_SECRET}",
+          "env": ["ORIGIN_SECRET"]
+        }
+      ]
+    }
+  ]
+}

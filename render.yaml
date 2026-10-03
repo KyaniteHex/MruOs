@@ -1,0 +1,56 @@
+# Render Blueprint for the MruOS API.
+# - mruos-api:         production, deployed from the `production` branch
+# - mruos-api-staging: test environment, deployed from `main`
+# Secrets marked `sync: false` are entered in the Render dashboard; see README.
+services:
+  - type: web
+    name: mruos-api
+    runtime: node
+    plan: free
+    region: frankfurt
+    branch: production
+    buildCommand: >-
+      npm install -g pnpm@10.30.0 &&
+      pnpm install --frozen-lockfile --prod=false &&
+      pnpm --filter @mruos/shared build &&
+      pnpm --filter @mruos/api build
+    startCommand: node apps/api/dist/server.js
+    healthCheckPath: /health
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: NODE_VERSION
+        value: '22'
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: ORIGIN_SECRET
+        sync: false
+
+  - type: web
+    name: mruos-api-staging
+    runtime: node
+    plan: free
+    region: frankfurt
+    branch: main
+    buildCommand: >-
+      npm install -g pnpm@10.30.0 &&
+      pnpm install --frozen-lockfile --prod=false &&
+      pnpm --filter @mruos/shared build &&
+      pnpm --filter @mruos/api build
+    startCommand: node apps/api/dist/server.js
+    healthCheckPath: /health
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: NODE_VERSION
+        value: '22'
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: ORIGIN_SECRET
+        sync: false
