@@ -91,16 +91,16 @@ Testy muszą obejmować:
 - [x] Playwright: przewijanie miesięcy i widok dnia
 - [x] Uruchomienie testów na emulacji telefonu
 - [x] Dostępność: nawigacja klawiaturą, czytelny kontrast tekstu na kolorach użytkownika
-- [ ] Testy E2E w CI blokujące merge przy błędzie
+- [x] Testy E2E w CI blokujące merge przy błędzie
 
 **Gotowe, gdy:** wszystkie scenariusze przechodzą w CI.
 
 ## Etap 7: Wdrożenie
 
-- [ ] Frontend na Vercel
-- [ ] Backend na Render lub Railway
-- [ ] Baza w MongoDB Atlas
-- [ ] Zmienne środowiskowe i osobne środowisko testowe
+- [x] Frontend na Vercel
+- [x] Backend na Render lub Railway
+- [x] Baza w MongoDB Atlas
+- [x] Zmienne środowiskowe i osobne środowisko testowe
 - [x] README z opisem projektu i instrukcją uruchomienia
 
 **Gotowe, gdy:** aplikacja działa pod publicznym adresem, a nowa osoba może się zarejestrować i wprowadzić plan.
