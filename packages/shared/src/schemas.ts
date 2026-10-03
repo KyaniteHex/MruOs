@@ -66,7 +66,7 @@ export const EventExceptionSchema = z.union([
 ]);
 
 export const EventSchema = z
-  .object({
+  .strictObject({
     kind: z.literal('class'),
     subject: z.string().trim().min(1),
     classType: ClassTypeSchema,
@@ -128,4 +128,34 @@ export const CalendarSnapshotSchema = z.object({
 
 export const CalendarBackupSchema = CalendarSnapshotSchema.extend({
   version: z.literal(1),
+});
+
+const emailSchema = z.string().trim().toLowerCase().email();
+
+export const RegistrationInputSchema = z.strictObject({
+  email: emailSchema,
+  password: z.string().min(12).max(128),
+});
+
+export const LoginInputSchema = z.strictObject({
+  email: emailSchema,
+  password: z.string().min(1).max(128),
+});
+
+export const AuthenticatedUserSchema = z.strictObject({
+  id: z.string().min(1),
+  email: emailSchema,
+});
+
+export const AuthResponseSchema = z.strictObject({
+  user: AuthenticatedUserSchema,
+});
+
+export const EventCreateInputSchema = z.strictObject({
+  id: z.string().trim().min(1).optional(),
+  event: EventSchema,
+});
+
+export const EventUpdateInputSchema = z.strictObject({
+  event: EventSchema,
 });
