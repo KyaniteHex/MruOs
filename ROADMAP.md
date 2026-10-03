@@ -107,10 +107,10 @@ Testy muszą obejmować:
 
 ## Etap 8: Import z Excela (po MVP)
 
-- [ ] Wgranie pliku .xlsx i wybór arkusza
-- [ ] Mapowanie kolumn przez użytkownika
-- [ ] Wybór grupy z planu obejmującego wiele grup
-- [ ] Podgląd wynikowych zajęć przed zapisem
-- [ ] Testy na prawdziwych plikach z kilku wydziałów
+- [x] Wgranie pliku .xlsx i wybór arkusza
+- [x] Rozpoznanie zajęć z bloków planu (przedmiot, typ, grupa, godziny, tygodnie, sala); zmienione z „mapowania kolumn”, bo plany uczelni to bloki tekstu na siatce, a nie kolumny
+- [x] Wybór grupy z planu obejmującego wiele grup (osobno dla każdego przedmiotu)
+- [x] Podgląd wynikowych zajęć przed zapisem, z oznaczeniem miejsc do poprawy
+- [x] Testy na prawdziwych plikach (Farmacja, Kosmetologia I i II stopnia)
 
 **Gotowe, gdy:** import planu z prawdziwego pliku uczelni daje poprawny kalendarz bez ręcznych poprawek albo z jasno wskazanymi miejscami do poprawy.
