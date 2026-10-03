@@ -62,11 +62,11 @@ Testy muszą obejmować:
 
 ## Etap 4: Zapis lokalny i ustawienia
 
-- [ ] Interfejs `EventRepository` i implementacja na localStorage
-- [ ] Ekran ustawień semestru: data rozpoczęcia, dni wolne
-- [ ] Eksport i import kopii zapasowej (JSON)
-- [ ] Eksport do pliku .ics
-- [ ] Obsługa błędów zapisu (np. brak miejsca, uszkodzone dane)
+- [x] Interfejs `EventRepository` i implementacja na localStorage
+- [x] Ekran ustawień semestru: data rozpoczęcia, dni wolne
+- [x] Eksport i import kopii zapasowej (JSON)
+- [x] Eksport do pliku .ics
+- [x] Obsługa błędów zapisu (np. brak miejsca, uszkodzone dane)
 
 **Gotowe, gdy:** aplikacja jest w pełni używalna bez backendu i przetestowana na prawdziwym planie zajęć.
 
