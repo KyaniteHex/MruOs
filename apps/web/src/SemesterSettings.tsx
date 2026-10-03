@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { SemesterSchema } from '@mruos/shared';
+import { SemesterSchema, datesBetween } from '@mruos/shared';
 import type { Semester } from '@mruos/shared';
 import { useDialogKeyboard } from './useDialogKeyboard';
 
@@ -21,6 +21,8 @@ export function SemesterSettings({
   const [startDate, setStartDate] = useState(semester.startDate);
   const [daysOff, setDaysOff] = useState(semester.daysOff);
   const [newDayOff, setNewDayOff] = useState('');
+  const [breakStart, setBreakStart] = useState('');
+  const [breakEnd, setBreakEnd] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   function addDayOff() {
@@ -30,6 +32,20 @@ export function SemesterSettings({
 
     setDaysOff((current) => [...current, newDayOff].sort());
     setNewDayOff('');
+    setError(null);
+  }
+
+  function addBreak() {
+    const dates = datesBetween(breakStart, breakEnd);
+
+    if (dates.length === 0) {
+      setError('Podaj poprawny zakres przerwy (najwyżej 120 dni).');
+      return;
+    }
+
+    setDaysOff((current) => [...new Set([...current, ...dates])].sort());
+    setBreakStart('');
+    setBreakEnd('');
     setError(null);
   }
 
@@ -99,6 +115,36 @@ export function SemesterSettings({
                 Dodaj dzień
               </button>
             </div>
+            <div className="day-off-entry">
+              <label className="form-field">
+                <span>Przerwa od</span>
+                <input
+                  onChange={(event) => setBreakStart(event.target.value)}
+                  type="date"
+                  value={breakStart}
+                />
+              </label>
+              <label className="form-field">
+                <span>Przerwa do</span>
+                <input
+                  onChange={(event) => setBreakEnd(event.target.value)}
+                  type="date"
+                  value={breakEnd}
+                />
+              </label>
+              <button
+                className="secondary-button"
+                disabled={!breakStart || !breakEnd}
+                type="button"
+                onClick={addBreak}
+              >
+                Dodaj przerwę
+              </button>
+            </div>
+            <p className="field-hint">
+              Tygodnie, w których wszystkie dni robocze są wolne, nie są liczone
+              jako tygodnie semestru.
+            </p>
 
             {daysOff.length > 0 ? (
               <ul className="days-off-list">

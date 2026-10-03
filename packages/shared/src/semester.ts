@@ -82,3 +82,22 @@ export function semesterWeeksToDateRange(
     endDate: semesterWeekRange(semester, lastWeek).endDate,
   };
 }
+
+// Longest break the settings accept at once, as a guard against typos.
+const maxBreakDays = 120;
+
+/** All dates from `startDate` to `endDate` inclusive, e.g. a winter break. */
+export function datesBetween(startDate: string, endDate: string): string[] {
+  const start = DateTime.fromISO(startDate, { zone: 'Europe/Warsaw' });
+  const end = DateTime.fromISO(endDate, { zone: 'Europe/Warsaw' });
+  const days = Math.round(end.diff(start, 'days').days);
+
+  if (!start.isValid || !end.isValid || days < 0 || days >= maxBreakDays) {
+    return [];
+  }
+
+  return Array.from(
+    { length: days + 1 },
+    (_, offset) => start.plus({ days: offset }).toISODate() ?? '',
+  );
+}

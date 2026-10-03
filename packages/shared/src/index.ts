@@ -52,7 +52,11 @@ export type {
   ImportSubject,
   SubjectChoice,
 } from './scheduleImport.js';
-export { semesterWeekRange, semesterWeeksToDateRange } from './semester.js';
+export {
+  datesBetween,
+  semesterWeekRange,
+  semesterWeeksToDateRange,
+} from './semester.js';
 export type {
   CalendarBackup,
   CalendarSnapshot,

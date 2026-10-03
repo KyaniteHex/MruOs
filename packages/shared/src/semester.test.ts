@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { semesterWeekRange, semesterWeeksToDateRange } from './semester.js';
+import {
+  datesBetween,
+  semesterWeekRange,
+  semesterWeeksToDateRange,
+} from './semester.js';
 
 describe('semesterWeeksToDateRange', () => {
   const semester = { startDate: '2026-09-28' };
@@ -54,5 +58,22 @@ describe('semesterWeeksToDateRange', () => {
     expect(semesterWeekRange(withHoliday, 6)).toEqual(
       semesterWeekRange({ startDate: '2026-10-05' }, 6),
     );
+  });
+});
+
+describe('datesBetween', () => {
+  it('lists every date of a break, including both ends', () => {
+    expect(datesBetween('2026-12-30', '2027-01-02')).toEqual([
+      '2026-12-30',
+      '2026-12-31',
+      '2027-01-01',
+      '2027-01-02',
+    ]);
+  });
+
+  it('returns nothing for reversed, invalid or overly long ranges', () => {
+    expect(datesBetween('2027-01-02', '2026-12-30')).toEqual([]);
+    expect(datesBetween('nie-data', '2026-12-30')).toEqual([]);
+    expect(datesBetween('2026-01-01', '2026-12-31')).toEqual([]);
   });
 });
