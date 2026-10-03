@@ -104,6 +104,7 @@ Backend czyta konfigurację z root `.env` (utwórz go na podstawie `.env.example
 - Instalacja zależności: `pnpm install`
 - Uruchomienie frontendu i API: `pnpm dev` (frontend: http://localhost:5173, API: http://localhost:3001)
 - Testy wszystkich pakietów: `pnpm test` (testy integracyjne API uruchamiają MongoDB przez `mongodb-memory-server`; przy pierwszym uruchomieniu pobiera on binarkę do `~/.cache/mongodb-binaries`, a każda instancja potrzebuje ok. 200 MB w `/tmp`)
+- Testy E2E (Playwright, desktop i emulacja telefonu): `pnpm test:e2e`; przy pierwszym uruchomieniu zainstaluj przeglądarkę: `pnpm exec playwright install chromium`. Testy startują własne API (port 3101, MongoDB w pamięci) i frontend (port 5174), więc nie kolidują z `pnpm dev`
 - Lint: `pnpm lint`
 - Build wszystkich pakietów: `pnpm build`
 - Kontrola formatowania: `pnpm exec prettier --check .`
