@@ -15,6 +15,14 @@ if (!sessionSecret || sessionSecret.length < 32) {
   throw new Error('SESSION_SECRET must contain at least 32 characters');
 }
 
+const isProduction = process.env.NODE_ENV === 'production';
+const originSecret = process.env.ORIGIN_SECRET;
+
+// Production traffic must arrive through the Vercel proxy; see requireOriginSecret.
+if (isProduction && (!originSecret || originSecret.length < 32)) {
+  throw new Error('ORIGIN_SECRET must contain at least 32 characters');
+}
+
 await connectToDatabase(mongoUri);
 
 const sessionStore = MongoStore.create({
@@ -25,8 +33,9 @@ const sessionStore = MongoStore.create({
 const app = createApp({
   sessionSecret,
   sessionStore,
-  secureCookies: process.env.NODE_ENV === 'production',
+  secureCookies: isProduction,
   webOrigin: process.env.WEB_ORIGIN,
+  originSecret,
 });
 const server = app.listen(port, () => {
   console.log(`MruOS API listening on port ${port}`);

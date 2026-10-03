@@ -138,6 +138,72 @@ describe('API integration and user isolation', () => {
     expect((await attempt()).status).toBe(429);
   });
 
+  describe('behind the Vercel proxy', () => {
+    const originSecret = 'proxy-origin-secret-value-at-least-32-chars';
+    const proxiedApp = () =>
+      createApp({
+        sessionSecret: 'integration-test-secret-value-is-long-enough',
+        secureCookies: true,
+        originSecret,
+        authAttemptLimit: 2,
+      });
+    const login = (
+      app: Express,
+      visitorIp: string,
+      secret: string | null = originSecret,
+    ) => {
+      const pending = request(app)
+        .post('/auth/login')
+        .set('X-Forwarded-For', visitorIp)
+        .set('X-Forwarded-Proto', 'https')
+        .send({ email: 'nobody@example.com', password: 'wrong-password' });
+
+      return secret ? pending.set('X-Origin-Secret', secret) : pending;
+    };
+
+    it('rejects requests that bypass the proxy but keeps /health open', async () => {
+      const app = proxiedApp();
+
+      expect((await request(app).get('/health')).status).toBe(200);
+      expect((await login(app, '203.0.113.1', null)).status).toBe(403);
+      expect((await login(app, '203.0.113.1', 'wrong-secret')).status).toBe(
+        403,
+      );
+      expect((await login(app, '203.0.113.1')).status).toBe(401);
+    });
+
+    it('issues secure cookies for proxied HTTPS requests', async () => {
+      const response = await request(proxiedApp())
+        .post('/auth/register')
+        .set('X-Origin-Secret', originSecret)
+        .set('X-Forwarded-Proto', 'https')
+        .send({
+          email: 'proxied@example.com',
+          password: 'correct-horse-battery',
+        });
+
+      expect(response.status).toBe(201);
+      expect(response.headers['set-cookie']?.[0]).toContain('Secure');
+    });
+
+    it('rate limits each visitor separately', async () => {
+      const app = proxiedApp();
+
+      expect((await login(app, '203.0.113.1')).status).toBe(401);
+      expect((await login(app, '203.0.113.1')).status).toBe(401);
+      expect((await login(app, '203.0.113.1')).status).toBe(429);
+      expect((await login(app, '198.51.100.7')).status).toBe(401);
+    });
+  });
+
+  it('forbids caching of API responses', async () => {
+    const { agent } = await registerAgent('cache@example.com');
+
+    expect((await agent.get('/calendar')).headers['cache-control']).toBe(
+      'no-store',
+    );
+  });
+
   it('rejects invalid credentials and malformed event payloads', async () => {
     const { agent } = await registerAgent('student@example.com');
     const invalidLogin = await request(app)
