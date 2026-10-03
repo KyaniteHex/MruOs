@@ -31,6 +31,7 @@ describe('toCalendarEvents', () => {
     expect(calendarEvent?.title).toBe('Matematyka');
     expect(String(calendarEvent?.start)).toContain('T08:00:00');
     expect(calendarEvent?.backgroundColor).toBe('#25745b');
+    expect(calendarEvent?.textColor).toBe('#ffffff');
     expect(calendarEvent?.extendedProps).toEqual(
       expect.objectContaining({
         building: 'Wydział Matematyki',

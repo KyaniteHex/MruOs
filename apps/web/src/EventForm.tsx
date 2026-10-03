@@ -11,6 +11,7 @@ import {
 } from './eventFormModel';
 import type { EventEditScope, EventFormDraft } from './eventFormModel';
 import { findScheduleConflicts } from './scheduleConflicts';
+import { useDialogKeyboard } from './useDialogKeyboard';
 
 type EventFormProps = {
   mode: 'create' | 'edit';
@@ -53,6 +54,7 @@ export function EventForm({
   onDelete,
   saveError,
 }: EventFormProps) {
+  useDialogKeyboard(onCancel);
   const [scope, setScope] = useState<EventEditScope>(
     mode === 'edit' ? 'occurrence' : 'series',
   );
