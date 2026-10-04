@@ -15,7 +15,10 @@ export async function register(page: Page, email = uniqueEmail()) {
   await registerDialog.getByLabel('E-mail').fill(email);
   await registerDialog.getByLabel('Hasło').fill(password);
   await registerDialog.getByRole('button', { name: 'Zarejestruj' }).click();
-  await expect(page.getByRole('button', { name: 'Wyloguj' })).toBeVisible();
+  // Password hashing makes registration slower than other requests.
+  await expect(page.getByRole('button', { name: 'Wyloguj' })).toBeVisible({
+    timeout: 15_000,
+  });
 
   return email;
 }
@@ -76,4 +79,12 @@ export async function openDetails(page: Page, date: string, subject: string) {
   await expect(details).toContainText(date);
 
   return details;
+}
+
+/** Reloads and waits for the session to be restored from the API. */
+export async function reloadSignedIn(page: Page) {
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Wyloguj' })).toBeVisible({
+    timeout: 15_000,
+  });
 }

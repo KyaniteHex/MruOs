@@ -8,9 +8,13 @@ const isCi = Boolean(process.env.CI);
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
+  // Several tests register accounts at once and argon2 hashing is costly
+  // by design, so give each test room and cap local parallelism.
+  timeout: 60_000,
+  expect: { timeout: 10_000 },
   forbidOnly: isCi,
   retries: isCi ? 1 : 0,
-  workers: isCi ? 2 : undefined,
+  workers: isCi ? 2 : 4,
   reporter: isCi
     ? [['github'], ['html', { open: 'never' }]]
     : [['list'], ['html', { open: 'never' }]],

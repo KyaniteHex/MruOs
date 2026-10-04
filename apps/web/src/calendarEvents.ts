@@ -2,11 +2,11 @@ import type { EventInput } from '@fullcalendar/core';
 import { readableTextColor } from '@mruos/shared/color';
 import { expandOccurrences } from '@mruos/shared/recurrence';
 import { semesterWeeksToDateRange } from '@mruos/shared/semester';
-import type { DateRange, Event, Semester } from '@mruos/shared';
+import type { ClassType, DateRange, Event, Semester } from '@mruos/shared';
 
 export type CalendarEventDetails = {
   building: string;
-  classType: string;
+  classType: ClassType;
   color: string;
   date: string;
   endTime: string;

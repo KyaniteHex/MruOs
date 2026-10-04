@@ -17,12 +17,15 @@ import {
   expandOccurrences,
 } from '@mruos/shared';
 import type { AuthenticatedUser } from '@mruos/shared';
-import type { Event, Semester } from '@mruos/shared';
+import type { ClassType, Event, Semester } from '@mruos/shared';
 import { semesterWeeksToDateRange } from '@mruos/shared/semester';
 import { AccountPanel } from './AccountPanel';
 import { EventForm } from './EventForm';
 import { SemesterSettings } from './SemesterSettings';
 import { DialogKeyboard } from './useDialogKeyboard';
+import { ScheduleImport } from './ScheduleImport';
+import type { ScheduleImportResult } from './ScheduleImport';
+import { classTypeLabels, defaultClassColors } from './eventFormModel';
 import type { EventEditScope } from './eventFormModel';
 import type { CalendarEventDetails, EventSeries } from './calendarEvents';
 import {
@@ -56,6 +59,10 @@ type FormSession =
       occurrenceDate: string;
       seriesId: string;
     };
+
+function importColor(classType: ClassType): string {
+  return defaultClassColors[classType];
+}
 
 function renderEventContent(info: EventContentArg) {
   const details = info.event.extendedProps as CalendarEventDetails;
@@ -115,6 +122,7 @@ export function App() {
   );
   const [formSession, setFormSession] = useState<FormSession | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [scheduleImportOpen, setScheduleImportOpen] = useState(false);
   const [pendingImport, setPendingImport] = useState<CalendarSnapshot | null>(
     null,
   );
@@ -426,6 +434,29 @@ export function App() {
     calendarRef.current?.getApi().gotoDate(pendingImport.semester.startDate);
   }
 
+  async function handleScheduleImport(result: ScheduleImportResult) {
+    const imported = result.events.map((event) => ({
+      id: crypto.randomUUID(),
+      event,
+    }));
+    const nextSeries = result.replace
+      ? imported
+      : [...eventSeries, ...imported];
+    const nextSemester = { ...semester, startDate: result.semesterStartDate };
+
+    if (!(await persistSnapshot(nextSeries, nextSemester))) {
+      return;
+    }
+
+    const firstDate =
+      imported.map((series) => series.event.recurrence.startDate).sort()[0] ??
+      nextSemester.startDate;
+    setScheduleImportOpen(false);
+    setSelectedEvent(null);
+    setActiveDate(firstDate);
+    calendarRef.current?.getApi().gotoDate(firstDate);
+  }
+
   async function handleRestoreDemo() {
     if (await persistSnapshot(demoEventSeries, demoSemester)) {
       setActiveDate(demoRange.startDate);
@@ -508,6 +539,13 @@ export function App() {
             onClick={handleExportIcs}
           >
             Eksport ICS
+          </button>
+          <button
+            className="secondary-button"
+            type="button"
+            onClick={() => setScheduleImportOpen(true)}
+          >
+            Import z Excela
           </button>
           <input
             ref={backupInputRef}
@@ -612,7 +650,7 @@ export function App() {
                     } as CSSProperties
                   }
                 >
-                  {selectedEvent.classType}
+                  {classTypeLabels[selectedEvent.classType]}
                 </span>
                 <h3>{selectedEvent.title}</h3>
                 <dl>
@@ -699,6 +737,18 @@ export function App() {
           }
           onCancel={() => setSettingsOpen(false)}
           onSave={handleSemesterSave}
+        />
+      )}
+      {scheduleImportOpen && (
+        <ScheduleImport
+          semester={semester}
+          existingSeries={eventSeries}
+          colorFor={importColor}
+          saveError={
+            storageError ? repositoryErrorMessages[storageError] : undefined
+          }
+          onCancel={() => setScheduleImportOpen(false)}
+          onImport={(result) => void handleScheduleImport(result)}
         />
       )}
       {pendingImport && (

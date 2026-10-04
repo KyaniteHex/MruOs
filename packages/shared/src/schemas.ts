@@ -10,6 +10,7 @@ export const ClassTypeSchema = z.enum([
   'cwiczenia',
   'laboratorium',
   'seminarium',
+  'zajecia-praktyczne',
 ]);
 
 export const RecurrenceSchema = z

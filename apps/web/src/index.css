@@ -236,6 +236,16 @@ a {
   flex: 1;
 }
 
+.day-off-entry + .day-off-entry {
+  margin-top: 10px;
+}
+
+.field-hint {
+  margin: 8px 0 0;
+  color: #4f5d53;
+  font-size: 12px;
+}
+
 .days-off-list {
   display: grid;
   gap: 6px;
@@ -844,6 +854,141 @@ a {
   }
 }
 
+.schedule-import-modal {
+  width: min(900px, 100%);
+}
+
+.schedule-import input[type='file'] {
+  padding: 8px 0;
+}
+
+.schedule-import > .form-field,
+.schedule-import > .form-grid {
+  margin-bottom: 12px;
+}
+
+.schedule-import .field-hint {
+  margin: 0 0 20px;
+}
+
+.import-subjects,
+.import-preview,
+.import-issues {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.import-subjects {
+  display: grid;
+  gap: 6px;
+}
+
+.import-subjects > li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid #edf1ec;
+  padding: 6px 0;
+}
+
+.import-subject-name {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  color: #26342b;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.import-subjects select {
+  flex: 0 0 auto;
+  font-size: 13px;
+  min-height: 34px;
+  border: 1px solid #cfd8ce;
+  border-radius: 4px;
+  padding: 0 8px;
+  background: #fff;
+}
+
+.import-badge {
+  color: #65522e;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.import-preview {
+  display: grid;
+  gap: 8px;
+}
+
+.import-preview > li {
+  border: 1px solid #e3e9e2;
+  border-radius: 4px;
+  padding: 8px 10px;
+}
+
+.import-preview > li.has-issues {
+  border-left: 3px solid #b17a27;
+  background: #fbf6e9;
+}
+
+.import-preview label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.import-preview input {
+  margin-top: 3px;
+}
+
+.import-preview-main {
+  display: grid;
+  gap: 2px;
+  color: #3b4a40;
+  font-size: 12px;
+}
+
+.import-preview-main strong {
+  color: #1d2a22;
+  font-size: 13px;
+}
+
+.import-preview > li.has-conflicts {
+  border-left: 3px solid #b5523a;
+  background: #fbf0eb;
+}
+
+.import-conflicts {
+  display: grid;
+  gap: 2px;
+  margin: 6px 0 0 26px;
+  padding: 0;
+  color: #8f3f2b;
+  font-size: 12px;
+  font-weight: 600;
+  list-style: none;
+}
+
+.import-subjects .import-conflicts {
+  flex-basis: 100%;
+  margin: 0 0 0 26px;
+}
+
+.import-issues {
+  display: grid;
+  gap: 2px;
+  margin: 6px 0 0 26px;
+  color: #65522e;
+  font-size: 12px;
+}
+
 @media (max-width: 600px) {
   .topbar {
     height: 56px;
@@ -860,6 +1005,12 @@ a {
 
   .account-controls {
     gap: 5px;
+  }
+
+  .import-subjects > li {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 6px;
   }
 
   .account-email {

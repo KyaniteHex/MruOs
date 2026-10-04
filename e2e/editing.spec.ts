@@ -1,5 +1,11 @@
 import { expect, test } from '@playwright/test';
-import { addClass, goToNextMonth, openDetails, register } from './helpers';
+import {
+  addClass,
+  goToNextMonth,
+  openDetails,
+  register,
+  reloadSignedIn,
+} from './helpers';
 
 async function editOccurrence(
   page: import('@playwright/test').Page,
@@ -55,7 +61,7 @@ test('changes the whole series and keeps single-occurrence changes', async ({
     await openDetails(page, '2026-10-13', 'Bazy danych'),
   ).toContainText('999');
 
-  await page.reload();
+  await reloadSignedIn(page);
   await goToNextMonth(page);
   await expect(
     await openDetails(page, '2026-10-27', 'Bazy danych'),

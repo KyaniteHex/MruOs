@@ -9,6 +9,7 @@ Kalendarz studencki do zarządzania planem zajęć (wersja produkcyjna: https://
 - Edycja „tylko ten termin” (np. zmiana sali) albo „cała seria”, odwoływanie terminów.
 - Ostrzeżenia o kolizjach, ustawienia semestru i dni wolnych.
 - Praca bez konta (zapis w przeglądarce) albo z kontem: plan na serwerze, przeniesienie lokalnego planu przy pierwszym logowaniu.
+- Import planu z pliku Excel (.xlsx) w formacie siatki dni × godzin z blokami zajęć: wybór grup dla każdego przedmiotu, podgląd i oznaczenie miejsc do poprawy.
 - Kopia zapasowa JSON i eksport do kalendarza (.ics).
 - Obsługa klawiaturą i układ dla telefonu.
 
@@ -32,13 +33,14 @@ Frontend i API działają pod jednym adresem, więc ciasteczko sesji jest `httpO
 
 ## Uruchomienie lokalne
 
-Wymagania: Node.js 22+, pnpm 10, MongoDB 7.0+ (lokalnie albo Atlas).
+Wymagania: Node.js 22+ i pnpm 10.
 
 ```bash
 pnpm install
-cp .env.example .env   # uzupełnij MONGODB_URI i SESSION_SECRET (min. 32 znaki)
-pnpm dev               # frontend: http://localhost:5173, API: http://localhost:3001
+pnpm dev   # frontend: http://localhost:5173, API: http://localhost:3001
 ```
+
+Bez pliku `.env` API startuje z tymczasową bazą MongoDB w pamięci: konta i plany działają, ale znikają przy każdym restarcie API (także po zmianie kodu). Żeby dane przetrwały, skopiuj `.env.example` do `.env` i ustaw `MONGODB_URI` (np. osobna baza `mruos-dev` w Atlasie) oraz `SESSION_SECRET` (min. 32 znaki).
 
 Bez działającego API aplikacja nadal działa w trybie lokalnym (zapis w przeglądarce).
 
@@ -119,8 +121,8 @@ GitHub → Settings → Branches → reguła dla `main` (i `production`): wymaga
 
 | Zmienna          | Wymagana    | Opis                                                             |
 | ---------------- | ----------- | ---------------------------------------------------------------- |
-| `MONGODB_URI`    | tak         | Connection string z nazwą bazy                                   |
-| `SESSION_SECRET` | tak         | Min. 32 znaki, podpis ciasteczka sesji                           |
+| `MONGODB_URI`    | w produkcji | Connection string z nazwą bazy; lokalnie bez niej baza w pamięci |
+| `SESSION_SECRET` | w produkcji | Min. 32 znaki, podpis ciasteczka sesji; lokalnie losowy          |
 | `ORIGIN_SECRET`  | w produkcji | Min. 32 znaki, taki sam jak w odpowiednim środowisku Vercel      |
 | `NODE_ENV`       | nie         | `production` włącza ciasteczka `Secure` i wymaga `ORIGIN_SECRET` |
 | `PORT`           | nie         | Domyślnie 3001 (Render ustawia sam)                              |

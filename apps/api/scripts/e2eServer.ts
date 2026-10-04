@@ -1,22 +1,16 @@
-// API for Playwright runs: an in-memory MongoDB, so E2E needs no database
-// service locally or in CI. Never use it outside tests.
-import { mkdtemp, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+// API for Playwright runs on a throwaway in-memory MongoDB, so E2E needs no
+// database service locally or in CI. Never use it outside tests.
 import mongoose from 'mongoose';
-import { MongoMemoryServer } from 'mongodb-memory-server';
 import { createApp } from '../src/app.js';
+import { startInMemoryDatabase } from '../src/inMemoryDatabase.js';
 import { EventModel } from '../src/models/event.js';
 import { SemesterModel } from '../src/models/semester.js';
 import { UserModel } from '../src/models/user.js';
 
 const port = Number(process.env.PORT ?? 3101);
-// An own dbPath is removed on shutdown even when mongod is already gone:
-// Playwright signals the whole process group, mongod included.
-const dbPath = await mkdtemp(join(tmpdir(), 'mruos-e2e-'));
-const mongoServer = await MongoMemoryServer.create({ instance: { dbPath } });
+const database = await startInMemoryDatabase();
 
-await mongoose.connect(mongoServer.getUri());
+await mongoose.connect(database.uri);
 await Promise.all([UserModel.init(), EventModel.init(), SemesterModel.init()]);
 
 const app = createApp({
@@ -32,8 +26,7 @@ async function shutdown() {
   server.closeAllConnections();
   server.close();
   await mongoose.disconnect().catch(() => undefined);
-  await mongoServer.stop({ force: true }).catch(() => undefined);
-  await rm(dbPath, { recursive: true, force: true });
+  await database.stop();
   process.exit(0);
 }
 
