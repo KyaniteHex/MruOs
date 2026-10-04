@@ -17,6 +17,10 @@ test('dates an imported timetable by the academic calendar', async ({
   await fillUmkWinterSemester(settings);
   await settings.getByRole('button', { name: 'Zapisz harmonogram' }).click();
   await expect(settings).toBeHidden();
+  // The demo plan keeps its dates, and the app says so.
+  await expect(
+    page.getByRole('status').filter({ hasText: 'zachowują swoje daty' }),
+  ).toBeVisible();
 
   // Days off and breaks are shown in the calendar.
   await goToNextMonth(page);

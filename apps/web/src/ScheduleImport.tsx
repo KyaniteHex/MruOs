@@ -55,6 +55,8 @@ type ScheduleImportProps = {
   saveError?: string;
   onCancel: () => void;
   onImport: (result: ScheduleImportResult) => void;
+  /** Opens the academic year settings, e.g. before importing a plan. */
+  onOpenAcademicYear?: () => void;
 };
 
 const readErrorMessages: Record<ScheduleReadError | 'read-failed', string> = {
@@ -178,6 +180,7 @@ export function ScheduleImport({
   saveError,
   onCancel,
   onImport,
+  onOpenAcademicYear,
 }: ScheduleImportProps) {
   useDialogKeyboard(onCancel);
   const [sheets, setSheets] = useState<ScheduleSheet[]>([]);
@@ -422,6 +425,25 @@ export function ScheduleImport({
         </header>
 
         <div className="event-form schedule-import">
+          {!academicYear && (
+            <div className="import-calendar-hint" role="note">
+              <p>
+                Nie masz jeszcze harmonogramu roku akademickiego. Bez niego
+                tygodnie planu są liczone od daty początku semestru, bez przerw
+                i dni wolnych uczelni. Zaimportowane zajęcia zachowają te daty
+                także po późniejszym ustawieniu harmonogramu.
+              </p>
+              {onOpenAcademicYear && (
+                <button
+                  className="secondary-button"
+                  type="button"
+                  onClick={onOpenAcademicYear}
+                >
+                  Uzupełnij harmonogram
+                </button>
+              )}
+            </div>
+          )}
           <label className="form-field">
             <span>Plik planu (.xlsx)</span>
             <input

@@ -156,6 +156,7 @@ export function App() {
   const [formSession, setFormSession] = useState<FormSession | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [scheduleImportOpen, setScheduleImportOpen] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
   const [pendingImport, setPendingImport] = useState<CalendarSnapshot | null>(
     null,
   );
@@ -410,6 +411,13 @@ export function App() {
       todayInWarsaw(),
     );
     if (await persistSnapshot(eventSeries, nextSemester)) {
+      // Saved classes keep their dates; a plan imported before the calendar
+      // existed was dated from the semester start instead.
+      setNotice(
+        eventSeries.length > 0
+          ? 'Harmonogram zapisany. Zajęcia, które już są w planie, zachowują swoje daty. Jeśli plan był importowany przed ustawieniem harmonogramu, zaimportuj go ponownie z opcją „Zastąp obecny plan”.'
+          : null,
+      );
       setActiveDate(nextSemester.startDate);
       calendarRef.current?.getApi().gotoDate(nextSemester.startDate);
       setSettingsOpen(false);
@@ -499,6 +507,7 @@ export function App() {
       imported.map((series) => series.event.recurrence.startDate).sort()[0] ??
       nextSemester.startDate;
     setScheduleImportOpen(false);
+    setNotice(null);
     setSelectedEvent(null);
     setActiveDate(firstDate);
     calendarRef.current?.getApi().gotoDate(firstDate);
@@ -603,6 +612,18 @@ export function App() {
           />
         </div>
 
+        {notice && (
+          <div className="app-notice" role="status">
+            <span>{notice}</span>
+            <button
+              className="secondary-button"
+              type="button"
+              onClick={() => setNotice(null)}
+            >
+              OK
+            </button>
+          </div>
+        )}
         {storageError && (
           <div className="storage-alert" role="alert">
             <span>{repositoryErrorMessages[storageError]}</span>
@@ -822,6 +843,10 @@ export function App() {
           }
           onCancel={() => setScheduleImportOpen(false)}
           onImport={(result) => void handleScheduleImport(result)}
+          onOpenAcademicYear={() => {
+            setScheduleImportOpen(false);
+            setSettingsOpen(true);
+          }}
         />
       )}
       {pendingImport && (

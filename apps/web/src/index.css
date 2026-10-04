@@ -194,6 +194,46 @@ a {
   font-size: 12px;
 }
 
+.app-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  border-left: 3px solid #4f7d99;
+  border-radius: 3px;
+  padding: 11px 13px;
+  background: #e3edf3;
+  color: #1f4257;
+  font-size: 13px;
+}
+
+.app-notice .secondary-button {
+  flex: 0 0 auto;
+}
+
+.import-calendar-hint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  border-left: 3px solid #b17a27;
+  border-radius: 4px;
+  padding: 10px 12px;
+  background: #fbf6e9;
+  color: #65522e;
+  font-size: 12px;
+}
+
+.import-calendar-hint p {
+  margin: 0;
+}
+
+.import-calendar-hint .secondary-button {
+  flex: 0 0 auto;
+}
+
 .storage-alert {
   display: flex;
   align-items: center;
@@ -1134,7 +1174,9 @@ a {
     font-size: 10px;
   }
 
-  .storage-alert {
+  .storage-alert,
+  .app-notice,
+  .import-calendar-hint {
     align-items: stretch;
     flex-direction: column;
   }

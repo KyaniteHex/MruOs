@@ -140,4 +140,50 @@ describe('ScheduleImport', () => {
     expect(warnings.length).toBeGreaterThan(0);
     expect(screen.getByText(/z kolizją/)).toBeTruthy();
   });
+
+  it('suggests setting up the academic calendar before importing', () => {
+    const onOpenAcademicYear = vi.fn();
+    const { rerender } = render(
+      <ScheduleImport
+        semester={{ startDate: '2026-10-05', daysOff: [] }}
+        existingSeries={[]}
+        colorFor={() => '#25745b'}
+        onCancel={vi.fn()}
+        onImport={vi.fn()}
+        onOpenAcademicYear={onOpenAcademicYear}
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Uzupełnij harmonogram' }),
+    );
+    expect(onOpenAcademicYear).toHaveBeenCalledTimes(1);
+
+    rerender(
+      <ScheduleImport
+        semester={{
+          startDate: '2026-10-01',
+          daysOff: [],
+          academicYear: {
+            startYear: 2026,
+            semesters: [
+              {
+                term: 'winter',
+                startDate: '2026-10-01',
+                endDate: '2027-02-21',
+                periods: [],
+              },
+            ],
+            daysOff: [],
+          },
+        }}
+        existingSeries={[]}
+        colorFor={() => '#25745b'}
+        onCancel={vi.fn()}
+        onImport={vi.fn()}
+        onOpenAcademicYear={onOpenAcademicYear}
+      />,
+    );
+    expect(screen.queryByRole('note')).toBeNull();
+  });
 });
