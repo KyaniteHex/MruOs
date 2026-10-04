@@ -1,14 +1,15 @@
 import mongoose from 'mongoose';
-import { MongoMemoryServer } from 'mongodb-memory-server';
 import request from 'supertest';
 import type { Express } from 'express';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { createApp } from './app.js';
+import { startInMemoryDatabase } from './inMemoryDatabase.js';
+import type { InMemoryDatabase } from './inMemoryDatabase.js';
 import { EventModel } from './models/event.js';
 import { SemesterModel } from './models/semester.js';
 import { UserModel } from './models/user.js';
 
-let mongoServer: MongoMemoryServer | undefined;
+let database: InMemoryDatabase | undefined;
 let app: Express;
 
 const event = {
@@ -44,8 +45,8 @@ async function registerAgent(
 
 describe('API integration and user isolation', () => {
   beforeAll(async () => {
-    mongoServer = await MongoMemoryServer.create();
-    await mongoose.connect(mongoServer.getUri());
+    database = await startInMemoryDatabase();
+    await mongoose.connect(database.uri);
     await Promise.all([
       UserModel.init(),
       EventModel.init(),
@@ -67,7 +68,7 @@ describe('API integration and user isolation', () => {
 
   afterAll(async () => {
     await mongoose.disconnect();
-    await mongoServer?.stop({ doCleanup: true, force: true });
+    await database?.stop();
   }, 30000);
 
   it('hashes passwords and uses a protected session cookie', async () => {
