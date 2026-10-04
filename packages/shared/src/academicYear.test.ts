@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   academicAnnotations,
+  academicStartYear,
+  dayAfter,
   academicWeekCalendar,
   academicYearDaysOff,
   semesterFromAcademicYear,
@@ -190,5 +192,15 @@ describe('academicAnnotations', () => {
     expect(annotations.some((a) => a.label === 'Zajęcia dydaktyczne')).toBe(
       false,
     );
+  });
+});
+
+describe('date helpers', () => {
+  it('finds the academic year of a date and the following day', () => {
+    expect(academicStartYear('2026-10-04')).toBe(2026);
+    expect(academicStartYear('2027-06-30')).toBe(2026);
+    expect(academicStartYear('2027-09-01')).toBe(2027);
+    expect(dayAfter('2026-12-31')).toBe('2027-01-01');
+    expect(dayAfter('2026-10-24')).toBe('2026-10-25');
   });
 });

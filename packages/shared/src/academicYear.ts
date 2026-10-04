@@ -214,3 +214,20 @@ export function academicAnnotations(year: AcademicYear): CalendarAnnotation[] {
     left.startDate.localeCompare(right.startDate),
   );
 }
+
+/** Today's date in the app's time zone. */
+export function todayInWarsaw(): string {
+  return isoDate(DateTime.now().setZone(zone));
+}
+
+/** The academic year in progress on `date`; September already belongs to the next one. */
+export function academicStartYear(date: string): number {
+  const day = DateTime.fromISO(date, { zone });
+
+  return day.month >= 9 ? day.year : day.year - 1;
+}
+
+/** The date after `date`, e.g. the exclusive end of an all-day period. */
+export function dayAfter(date: string): string {
+  return isoDate(DateTime.fromISO(date, { zone }).plus({ days: 1 }));
+}

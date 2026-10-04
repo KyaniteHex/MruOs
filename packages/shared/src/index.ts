@@ -31,6 +31,8 @@ export {
 } from './color.js';
 export {
   academicAnnotations,
+  academicStartYear,
+  dayAfter,
   academicWeekCalendar,
   academicYearDaysOff,
   findSemester,
@@ -38,6 +40,7 @@ export {
   semesterWeekCalendar,
   teachingDates,
   termForDate,
+  todayInWarsaw,
   weeksToDateRange,
 } from './academicYear.js';
 export type { CalendarAnnotation, WeekCalendar } from './academicYear.js';
