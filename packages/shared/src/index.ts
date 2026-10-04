@@ -1,4 +1,10 @@
 export {
+  AcademicDayOffSchema,
+  AcademicPeriodKindSchema,
+  AcademicPeriodSchema,
+  AcademicSemesterSchema,
+  AcademicTermSchema,
+  AcademicYearSchema,
   CalendarBackupSchema,
   CalendarSnapshotSchema,
   AuthenticatedUserSchema,
@@ -23,6 +29,19 @@ export {
   readableTextColor,
   relativeLuminance,
 } from './color.js';
+export {
+  academicAnnotations,
+  academicWeekCalendar,
+  academicYearDaysOff,
+  findSemester,
+  semesterFromAcademicYear,
+  semesterWeekCalendar,
+  teachingDates,
+  termForDate,
+  weeksToDateRange,
+} from './academicYear.js';
+export type { CalendarAnnotation, WeekCalendar } from './academicYear.js';
+export { easterSunday, polishPublicHolidays } from './holidays.js';
 export { expandOccurrences } from './recurrence.js';
 export {
   displaySubject,
@@ -58,6 +77,12 @@ export {
   semesterWeeksToDateRange,
 } from './semester.js';
 export type {
+  AcademicDayOff,
+  AcademicPeriod,
+  AcademicPeriodKind,
+  AcademicSemester,
+  AcademicTerm,
+  AcademicYear,
   CalendarBackup,
   CalendarSnapshot,
   AuthenticatedUser,

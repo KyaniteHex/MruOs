@@ -107,10 +107,90 @@ export const EventSchema = z
     },
   );
 
+export const AcademicTermSchema = z.enum(['winter', 'summer']);
+
+// teaching: numbers semester weeks; break and exams: informational periods;
+// event: e.g. the inauguration; day-off: cancels classes like a holiday.
+export const AcademicPeriodKindSchema = z.enum([
+  'teaching',
+  'break',
+  'exams',
+  'event',
+  'day-off',
+]);
+
+const academicLabelSchema = z.string().trim().min(1).max(120);
+
+export const AcademicPeriodSchema = z
+  .strictObject({
+    label: academicLabelSchema,
+    kind: AcademicPeriodKindSchema,
+    startDate: dateSchema,
+    endDate: dateSchema,
+  })
+  .refine((period) => period.endDate >= period.startDate, {
+    message: 'endDate must not be before startDate',
+    path: ['endDate'],
+  });
+
+export const AcademicSemesterSchema = z
+  .strictObject({
+    term: AcademicTermSchema,
+    startDate: dateSchema,
+    endDate: dateSchema,
+    periods: z.array(AcademicPeriodSchema).max(40),
+  })
+  .refine((semester) => semester.endDate >= semester.startDate, {
+    message: 'endDate must not be before startDate',
+    path: ['endDate'],
+  })
+  .refine(
+    (semester) => {
+      const teaching = semester.periods
+        .filter((period) => period.kind === 'teaching')
+        .sort((left, right) => left.startDate.localeCompare(right.startDate));
+      return teaching.every(
+        (period, index) =>
+          index === 0 ||
+          period.startDate > (teaching[index - 1]?.endDate ?? ''),
+      );
+    },
+    { message: 'teaching periods must not overlap', path: ['periods'] },
+  );
+
+export const AcademicDayOffSchema = z.strictObject({
+  date: dateSchema,
+  label: academicLabelSchema,
+});
+
+export const AcademicYearSchema = z.strictObject({
+  /** 2026 for the 2026/2027 academic year. */
+  startYear: z.number().int().min(2000).max(2100),
+  semesters: z
+    .array(AcademicSemesterSchema)
+    .max(2)
+    .refine(
+      (semesters) =>
+        new Set(semesters.map((semester) => semester.term)).size ===
+        semesters.length,
+      { message: 'each term may appear once' },
+    ),
+  daysOff: z
+    .array(AcademicDayOffSchema)
+    .max(200)
+    .refine(
+      (daysOff) =>
+        new Set(daysOff.map((dayOff) => dayOff.date)).size === daysOff.length,
+      { message: 'days off must be unique' },
+    ),
+});
+
 export const SemesterSchema = z
   .object({
     startDate: dateSchema,
     daysOff: z.array(dateSchema),
+    /** Optional academic calendar; daysOff is derived from it when set. */
+    academicYear: AcademicYearSchema.optional(),
   })
   .refine(
     (semester) => new Set(semester.daysOff).size === semester.daysOff.length,

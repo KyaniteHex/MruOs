@@ -2,14 +2,8 @@ import { DateTime } from 'luxon';
 import { displaySubject } from './scheduleBlock.js';
 import type { BlockIssueCode, ParsedBlock } from './scheduleBlock.js';
 import { EventSchema } from './schemas.js';
-import { semesterWeekRange } from './semester.js';
-import type {
-  ClassType,
-  Event,
-  EventException,
-  Semester,
-  Weekday,
-} from './types.js';
+import type { WeekCalendar } from './academicYear.js';
+import type { ClassType, Event, EventException, Weekday } from './types.js';
 
 // Turns parsed timetable blocks into class series for the chosen groups.
 // Every block that cannot become a valid series is still returned as a
@@ -28,7 +22,10 @@ export type SubjectChoice = { include: boolean; group: string | null };
 export type ImportSelection = Record<string, SubjectChoice>;
 
 export type ImportIssueCode =
-  BlockIssueCode | 'invalid-event' | 'room-change-unmatched';
+  | BlockIssueCode
+  | 'invalid-event'
+  | 'room-change-unmatched'
+  | 'week-out-of-range';
 
 export type ImportIssue = { code: ImportIssueCode; detail?: string };
 
@@ -51,7 +48,8 @@ export type ImportCandidate = {
 };
 
 export type ImportOptions = {
-  semester: Pick<Semester, 'startDate'> & Partial<Pick<Semester, 'daysOff'>>;
+  /** Date of semester week N for a weekday; null beyond the semester. */
+  weekDate: WeekCalendar;
   selection: ImportSelection;
   colorFor: (classType: ClassType) => string;
   /** Subject names written elsewhere in the sheet, used for nicer casing. */
@@ -150,20 +148,6 @@ export function defaultSelection(
   );
 }
 
-function classDate(
-  semester: ImportOptions['semester'],
-  week: number,
-  weekday: Weekday,
-): DateTime {
-  const window = DateTime.fromISO(semesterWeekRange(semester, week).startDate, {
-    zone: 'Europe/Warsaw',
-  });
-
-  return window.plus({
-    days: (weekdayNumbers[weekday] - window.weekday + 7) % 7,
-  });
-}
-
 function buildEvent(
   base: Omit<ImportCandidate, 'event' | 'issues' | 'id'>,
   block: ParsedBlock,
@@ -175,23 +159,46 @@ function buildEvent(
     return null;
   }
 
-  const first = weeks[0] ?? 1;
-  const last = weeks[weeks.length - 1] ?? first;
-  const dates = new Map<number, DateTime>();
-  for (let week = first; week <= last; week += 1) {
-    dates.set(week, classDate(options.semester, week, weekday));
+  const classDates = new Map<number, string>();
+  const missingWeeks: number[] = [];
+  for (const week of weeks) {
+    const date = options.weekDate(week, weekday);
+    if (date) {
+      classDates.set(week, date);
+    } else {
+      missingWeeks.push(week);
+    }
+  }
+  if (missingWeeks.length > 0) {
+    issues.push({ code: 'week-out-of-range', detail: missingWeeks.join(', ') });
+  }
+  const dates = [...classDates.values()].sort();
+  const first = dates[0];
+  const last = dates.at(-1);
+  if (!first || !last) {
+    return null;
   }
 
+  // A weekly series runs through breaks between teaching periods, so every
+  // date between the first and last class that is not a class is cancelled.
   const exceptions: EventException[] = [];
-  for (const [week, date] of dates) {
-    if (!weeks.includes(week)) {
-      exceptions.push({ date: date.toISODate() ?? '', status: 'cancelled' });
+  const classDays = new Set(dates);
+  const lastDay = DateTime.fromISO(last, { zone: 'Europe/Warsaw' });
+  for (
+    let day = DateTime.fromISO(first, { zone: 'Europe/Warsaw' });
+    day <= lastDay;
+    day = day.plus({ weeks: 1 })
+  ) {
+    const date = day.toISODate() ?? '';
+    if (!classDays.has(date)) {
+      exceptions.push({ date, status: 'cancelled' });
     }
   }
   for (const change of block.roomChanges) {
-    const match = weeks
-      .map((week) => dates.get(week))
-      .find((date) => date?.day === change.day && date.month === change.month);
+    const match = dates.find((date) => {
+      const day = DateTime.fromISO(date, { zone: 'Europe/Warsaw' });
+      return day.day === change.day && day.month === change.month;
+    });
     if (!match) {
       issues.push({
         code: 'room-change-unmatched',
@@ -200,7 +207,7 @@ function buildEvent(
       continue;
     }
     exceptions.push({
-      date: match.toISODate() ?? '',
+      date: match,
       override: {
         room: change.room,
         ...(change.building ? { building: change.building } : {}),
@@ -223,8 +230,8 @@ function buildEvent(
       freq: 'WEEKLY',
       interval: 1,
       byDay: [weekday],
-      startDate: dates.get(first)?.toISODate(),
-      endDate: dates.get(last)?.toISODate(),
+      startDate: first,
+      endDate: last,
     },
     exceptions,
   });
