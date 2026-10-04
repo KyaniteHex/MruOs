@@ -65,7 +65,8 @@ Zasady, których trzeba przestrzegać:
 - Konkretne terminy zajęć (wystąpienia) są wyliczane z `recurrence` i `exceptions`, a nie zapisywane w bazie.
 - `interval: 2` oznacza zajęcia co dwa tygodnie (tygodnie parzyste lub nieparzyste).
 - Edycja „tylko tego terminu” tworzy wpis w `exceptions`. Edycja „całej serii” zmienia dokument.
-- Semestr (`Semester`) przechowuje datę rozpoczęcia i dni wolne. Zakres „tygodnie 1 do 6” jest przeliczany na daty względem początku semestru.
+- Semestr (`Semester`) przechowuje datę rozpoczęcia, dni wolne i opcjonalny harmonogram roku akademickiego (`academicYear`: semestry z okresami `teaching`, `break`, `exams`, `event`, `day-off` oraz nazwane dni wolne). Gdy harmonogram istnieje, `daysOff` jest z niego wyliczane.
+- Z harmonogramem „tydzień N” zajęć w danym dniu tygodnia to N-ta data tego dnia w okresach `teaching` semestru; dzień wolny w okresie zajęć liczy się jako tydzień, a zajęcia tego dnia przepadają. Bez harmonogramu tygodnie to 7-dniowe okna od początku semestru, z pominięciem okien, w których wszystkie dni robocze są wolne.
 - Typy i schematy zod są zdefiniowane wyłącznie w `packages/shared` i importowane przez frontend oraz backend.
 
 ## Konwencje kodu

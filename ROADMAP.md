@@ -115,3 +115,14 @@ Testy muszą obejmować:
 - [x] Testy na prawdziwych plikach (Farmacja, Kosmetologia I i II stopnia)
 
 **Gotowe, gdy:** import planu z prawdziwego pliku uczelni daje poprawny kalendarz bez ręcznych poprawek albo z jasno wskazanymi miejscami do poprawy.
+
+## Etap 9: Harmonogram roku akademickiego
+
+- [x] Okno „Rok akademicki” zamiast „Semestr”: semestr zimowy i letni z pozycjami (nazwa, rodzaj: zajęcia, przerwa, sesja, wydarzenie, dzień wolny, daty od–do), dodawanie i usuwanie pozycji
+- [x] Dni wolne od zajęć: święta ustawowe wyliczane dla wybranego roku (z Wielkanocą, Wigilią i 15 sierpnia), z możliwością edycji, usuwania, dodawania i przywrócenia
+- [x] Numeracja tygodni według okresów zajęć: tydzień N to N-ty dzień zajęć w okresach „Zajęcia”; święto w okresie zajęć liczy się jako tydzień, a zajęcia przepadają
+- [x] Import z Excela i formularz zajęć liczą tygodnie z harmonogramu (wybór semestru zamiast daty początku)
+- [x] Dni wolne jako bloki z nazwą, przerwy, sesje i wydarzenia jako paski w kalendarzu; szczegóły po kliknięciu
+- [x] Zapis harmonogramu w koncie i w przeglądarce, zgodny wstecz ze starymi danymi
+
+**Gotowe, gdy:** harmonogram UMK 2026/27 wpisany w formularzu daje poprawne daty importu planu Farmacji (zmiana sali 2.02 trafia w tydzień 15), a dni wolne i przerwy są widoczne w kalendarzu na desktopie i telefonie.
