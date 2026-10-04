@@ -197,6 +197,57 @@ describe('API integration and user isolation', () => {
     });
   });
 
+  it('stores the academic calendar with the semester', async () => {
+    const { agent } = await registerAgent('calendar@example.com');
+    const academicYear = {
+      startYear: 2026,
+      semesters: [
+        {
+          term: 'winter',
+          startDate: '2026-10-01',
+          endDate: '2027-02-21',
+          periods: [
+            {
+              label: 'Zajęcia dydaktyczne',
+              kind: 'teaching',
+              startDate: '2026-10-02',
+              endDate: '2026-12-20',
+            },
+          ],
+        },
+      ],
+      daysOff: [
+        { date: '2026-11-11', label: 'Narodowe Święto Niepodległości' },
+      ],
+    };
+    const semester = {
+      startDate: '2026-10-01',
+      daysOff: ['2026-11-11'],
+      academicYear,
+    };
+
+    expect(
+      (await agent.put('/calendar').send({ events: [], semester })).status,
+    ).toBe(200);
+    expect((await agent.get('/calendar')).body.semester).toEqual(semester);
+    expect((await agent.get('/semester')).body.academicYear).toEqual(
+      academicYear,
+    );
+
+    const withoutCalendar = { startDate: '2026-10-01', daysOff: [] };
+    expect((await agent.put('/semester').send(withoutCalendar)).body).toEqual(
+      withoutCalendar,
+    );
+    expect(
+      (
+        await agent.put('/semester').send({
+          ...semester,
+          academicYear: { ...academicYear, startYear: 'x' },
+        })
+      ).status,
+    ).toBe(400);
+  });
+
   it('forbids caching of API responses', async () => {
     const { agent } = await registerAgent('cache@example.com');
 

@@ -1,12 +1,9 @@
 import type { RequestHandler } from 'express';
 import mongoose from 'mongoose';
-import {
-  CalendarSnapshotSchema,
-  EventSchema,
-  SemesterSchema,
-} from '@mruos/shared';
+import { CalendarSnapshotSchema, EventSchema } from '@mruos/shared';
 import { EventModel } from '../models/event.js';
 import { SemesterModel } from '../models/semester.js';
+import { semesterFromRecord, semesterUpdate } from './semesterData.js';
 
 export const getCalendar: RequestHandler = async (request, response, next) => {
   const userId = request.session.userId;
@@ -24,12 +21,7 @@ export const getCalendar: RequestHandler = async (request, response, next) => {
       id: record.clientId,
       event: EventSchema.parse(record.event),
     }));
-    const semester = semesterRecord
-      ? SemesterSchema.parse({
-          startDate: semesterRecord.startDate,
-          daysOff: semesterRecord.daysOff,
-        })
-      : { startDate: '2026-09-28', daysOff: [] };
+    const semester = semesterFromRecord(semesterRecord);
 
     response.json(CalendarSnapshotSchema.parse({ events, semester }));
   } catch (error) {
@@ -73,10 +65,7 @@ export const replaceCalendar: RequestHandler = async (
 
     await SemesterModel.findOneAndUpdate(
       { userId },
-      {
-        $set: input.data.semester,
-        $setOnInsert: { userId },
-      },
+      semesterUpdate(input.data.semester, userId),
       { upsert: true, runValidators: true },
     );
 

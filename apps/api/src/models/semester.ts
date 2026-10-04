@@ -11,6 +11,8 @@ const semesterSchema = new mongoose.Schema(
     },
     startDate: { type: String, required: true },
     daysOff: { type: [String], required: true, default: [] },
+    // Validated by AcademicYearSchema from @mruos/shared on every write.
+    academicYear: { type: mongoose.Schema.Types.Mixed, required: false },
   },
   { timestamps: true },
 );
