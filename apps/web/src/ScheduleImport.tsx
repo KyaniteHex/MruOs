@@ -1,13 +1,19 @@
 import { useMemo, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import {
+  academicWeekCalendar,
   buildImportCandidates,
   defaultSelection,
   parseScheduleBlock,
+  semesterWeekCalendar,
   subjectKey,
   summarizeSubjects,
+  termForDate,
+  todayInWarsaw,
 } from '@mruos/shared';
 import type {
+  AcademicTerm,
+  AcademicYear,
   ClassType,
   Event,
   ImportCandidate,
@@ -36,7 +42,8 @@ import type { ScheduleReadError, ScheduleSheet } from './xlsxSchedule';
 
 export type ScheduleImportResult = {
   events: Event[];
-  semesterStartDate: string;
+  /** Set when weeks were counted from a start date, not the calendar. */
+  semesterStartDate?: string;
   replace: boolean;
 };
 
@@ -48,6 +55,8 @@ type ScheduleImportProps = {
   saveError?: string;
   onCancel: () => void;
   onImport: (result: ScheduleImportResult) => void;
+  /** Opens the academic year settings, e.g. before importing a plan. */
+  onOpenAcademicYear?: () => void;
 };
 
 const readErrorMessages: Record<ScheduleReadError | 'read-failed', string> = {
@@ -91,6 +100,8 @@ function issueMessage(issue: ImportIssue): string {
       return `Nierozpoznany tekst: „${issue.detail ?? ''}”.`;
     case 'invalid-event':
       return 'Niepoprawne dane zajęć (np. koniec przed początkiem).';
+    case 'week-out-of-range':
+      return `Semestr ma mniej tygodni zajęć niż plan (tydz. ${issue.detail ?? ''}).`;
     case 'room-change-unmatched':
       return `Zmiana sali ${issue.detail ?? ''} nie pasuje do terminów zajęć.`;
   }
@@ -129,6 +140,22 @@ function conflictMessage(conflict: EntryConflict): string {
   return `${conflict.subject}${owner}, ${conflict.startTime}–${conflict.endTime}: ${datesLabel(conflict.dates.length)}, od ${formatDate(conflict.dates[0] ?? '')}`;
 }
 
+// "…_rok5_sem9.xlsx": odd semesters are winter ones at Polish universities.
+function guessTerm(fileName: string, year: AcademicYear): AcademicTerm {
+  const available = year.semesters.map((semester) => semester.term);
+  const number = Number(/sem(?:estr)?\D?(\d+)/i.exec(fileName)?.[1]);
+  const fromName: AcademicTerm | null = Number.isInteger(number)
+    ? number % 2 === 1
+      ? 'winter'
+      : 'summer'
+    : null;
+  const preferred = fromName ?? termForDate(year, todayInWarsaw());
+
+  return preferred && available.includes(preferred)
+    ? preferred
+    : (available[0] ?? 'winter');
+}
+
 /** "1–10, 12" style summary of sorted week numbers. */
 function formatWeeks(weeks: readonly number[]): string {
   const ranges: [number, number][] = [];
@@ -153,13 +180,32 @@ export function ScheduleImport({
   saveError,
   onCancel,
   onImport,
+  onOpenAcademicYear,
 }: ScheduleImportProps) {
   useDialogKeyboard(onCancel);
   const [sheets, setSheets] = useState<ScheduleSheet[]>([]);
   const [sheetName, setSheetName] = useState('');
   const [readError, setReadError] = useState<string | null>(null);
   const [reading, setReading] = useState(false);
+  const academicYear =
+    semester.academicYear && semester.academicYear.semesters.length > 0
+      ? semester.academicYear
+      : null;
   const [startDate, setStartDate] = useState(semester.startDate);
+  const [term, setTerm] = useState<AcademicTerm>(
+    () => academicYear?.semesters[0]?.term ?? 'winter',
+  );
+  // Weeks follow the academic calendar when there is one, otherwise 7-day
+  // windows from the start date entered here.
+  const weekDate = useMemo(
+    () =>
+      academicYear
+        ? academicWeekCalendar(academicYear, term)
+        : /^\d{4}-\d{2}-\d{2}$/.test(startDate)
+          ? semesterWeekCalendar({ startDate, daysOff: semester.daysOff })
+          : null,
+    [academicYear, term, startDate, semester.daysOff],
+  );
   const [selection, setSelection] = useState<ImportSelection>({});
   const [excluded, setExcluded] = useState<ReadonlySet<string>>(new Set());
   const [replace, setReplace] = useState(false);
@@ -175,15 +221,15 @@ export function ScheduleImport({
   );
   const candidates = useMemo(
     () =>
-      /^\d{4}-\d{2}-\d{2}$/.test(startDate)
+      weekDate
         ? buildImportCandidates(blocks, {
-            semester: { startDate, daysOff: semester.daysOff },
+            weekDate,
             selection,
             colorFor,
             knownSubjects: sheet?.knownSubjects,
           })
         : [],
-    [blocks, startDate, semester.daysOff, selection, colorFor, sheet],
+    [blocks, weekDate, selection, colorFor, sheet],
   );
   const chosen = useMemo(
     () =>
@@ -244,7 +290,7 @@ export function ScheduleImport({
   // semester only, so changing the chosen groups does not rebuild them.
   const groupOptionSlots = useMemo(() => {
     const options = new Map<string, Map<string, OccurrenceSlot[][]>>();
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate)) {
+    if (!weekDate) {
       return options;
     }
     for (const subject of subjects.filter((s) => s.groups.length > 0)) {
@@ -256,7 +302,7 @@ export function ScheduleImport({
         groups.set(
           group,
           buildImportCandidates(subjectBlocks, {
-            semester: { startDate, daysOff: semester.daysOff },
+            weekDate,
             selection: { [subject.key]: { include: true, group } },
             colorFor,
           }).flatMap((option) =>
@@ -268,7 +314,7 @@ export function ScheduleImport({
     }
 
     return options;
-  }, [subjects, blocks, startDate, semester, colorFor]);
+  }, [subjects, blocks, weekDate, semester, colorFor]);
 
   // Groups that would overlap the classes chosen for other subjects, so the
   // student sees which groups fit before picking one.
@@ -335,6 +381,9 @@ export function ScheduleImport({
       }
       setSheets(result.sheets);
       selectSheet(result.sheets[0]?.name ?? '', result.sheets);
+      if (academicYear) {
+        setTerm(guessTerm(file.name, academicYear));
+      }
     } catch {
       setReadError(readErrorMessages['read-failed']);
     } finally {
@@ -376,6 +425,25 @@ export function ScheduleImport({
         </header>
 
         <div className="event-form schedule-import">
+          {!academicYear && (
+            <div className="import-calendar-hint" role="note">
+              <p>
+                Nie masz jeszcze harmonogramu roku akademickiego. Bez niego
+                tygodnie planu są liczone od daty początku semestru, bez przerw
+                i dni wolnych uczelni. Zaimportowane zajęcia zachowają te daty
+                także po późniejszym ustawieniu harmonogramu.
+              </p>
+              {onOpenAcademicYear && (
+                <button
+                  className="secondary-button"
+                  type="button"
+                  onClick={onOpenAcademicYear}
+                >
+                  Uzupełnij harmonogram
+                </button>
+              )}
+            </div>
+          )}
           <label className="form-field">
             <span>Plik planu (.xlsx)</span>
             <input
@@ -413,19 +481,42 @@ export function ScheduleImport({
                     </select>
                   </label>
                 )}
-                <label className="form-field">
-                  <span>Początek semestru (tydzień 1)</span>
-                  <input
-                    onChange={(event) => setStartDate(event.target.value)}
-                    required
-                    type="date"
-                    value={startDate}
-                  />
-                </label>
+                {academicYear ? (
+                  <label className="form-field">
+                    <span>Semestr</span>
+                    <select
+                      onChange={(event) =>
+                        setTerm(event.target.value as AcademicTerm)
+                      }
+                      value={term}
+                    >
+                      {academicYear.semesters.map((candidate) => (
+                        <option key={candidate.term} value={candidate.term}>
+                          {candidate.term === 'winter'
+                            ? 'Semestr zimowy'
+                            : 'Semestr letni'}{' '}
+                          ({formatDate(candidate.startDate)} –{' '}
+                          {formatDate(candidate.endDate)})
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ) : (
+                  <label className="form-field">
+                    <span>Początek semestru (tydzień 1)</span>
+                    <input
+                      onChange={(event) => setStartDate(event.target.value)}
+                      required
+                      type="date"
+                      value={startDate}
+                    />
+                  </label>
+                )}
               </div>
               <p className="field-hint">
-                Tygodnie z planu liczone są od tej daty. Tygodnie w całości
-                wolne, np. przerwa świąteczna z ustawień semestru, są pomijane.
+                {academicYear
+                  ? 'Tydzień N to N-ty dzień zajęć w okresach „Zajęcia” wybranego semestru z harmonogramu roku akademickiego. W dni wolne zajęcia są odwołane.'
+                  : 'Tygodnie z planu liczone są od tej daty. Uzupełnij harmonogram roku akademickiego, aby liczyć je według okresów zajęć.'}
               </p>
 
               <fieldset className="form-section">
@@ -615,7 +706,7 @@ export function ScheduleImport({
               onClick={() =>
                 onImport({
                   events: chosen.map((candidate) => candidate.event),
-                  semesterStartDate: startDate,
+                  ...(academicYear ? {} : { semesterStartDate: startDate }),
                   replace,
                 })
               }

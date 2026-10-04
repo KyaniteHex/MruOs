@@ -1,4 +1,6 @@
 import type { EventInput } from '@fullcalendar/core';
+import { academicAnnotations, dayAfter } from '@mruos/shared';
+import type { CalendarAnnotation } from '@mruos/shared';
 import { readableTextColor } from '@mruos/shared/color';
 import { expandOccurrences } from '@mruos/shared/recurrence';
 import { semesterWeeksToDateRange } from '@mruos/shared/semester';
@@ -46,6 +48,53 @@ export function toCalendarEvents(
       } satisfies CalendarEventDetails,
     })),
   );
+}
+
+export type AnnotationDetails = {
+  annotation: true;
+  kind: CalendarAnnotation['kind'];
+  label: string;
+  startDate: string;
+  endDate: string;
+};
+
+/**
+ * Days off as blocks and breaks, exams and events as bars. Without an
+ * academic calendar the semester's days off get a generic name.
+ */
+export function toAnnotationEvents(semester: Semester): EventInput[] {
+  const annotations: CalendarAnnotation[] = semester.academicYear
+    ? academicAnnotations(semester.academicYear)
+    : semester.daysOff.map((date) => ({
+        kind: 'day-off',
+        label: 'Dzień wolny',
+        startDate: date,
+        endDate: date,
+      }));
+
+  return annotations.map((annotation, index) => ({
+    id: `annotation-${index}`,
+    title:
+      annotation.kind === 'day-off' && annotation.label !== 'Dzień wolny'
+        ? `Dzień wolny: ${annotation.label}`
+        : annotation.label,
+    start: annotation.startDate,
+    // FullCalendar ends all-day events on the following day, exclusively.
+    end: dayAfter(annotation.endDate),
+    allDay: true,
+    display: 'block',
+    classNames: [
+      'calendar-annotation',
+      `calendar-annotation-${annotation.kind}`,
+    ],
+    extendedProps: {
+      annotation: true,
+      kind: annotation.kind,
+      label: annotation.label,
+      startDate: annotation.startDate,
+      endDate: annotation.endDate,
+    } satisfies AnnotationDetails,
+  }));
 }
 
 export const demoSemester: Semester = {

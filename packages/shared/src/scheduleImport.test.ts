@@ -1,5 +1,6 @@
 import { DateTime } from 'luxon';
 import { describe, expect, it } from 'vitest';
+import { academicWeekCalendar, semesterWeekCalendar } from './academicYear.js';
 import { parseScheduleBlock } from './scheduleBlock.js';
 import {
   buildImportCandidates,
@@ -7,7 +8,7 @@ import {
   summarizeSubjects,
 } from './scheduleImport.js';
 import type { ImportSelection } from './scheduleImport.js';
-import type { Weekday } from './types.js';
+import type { AcademicYear, Weekday } from './types.js';
 
 const semester = { startDate: '2026-10-05' };
 const colorFor = () => '#25745b';
@@ -22,7 +23,10 @@ function build(
   options: { daysOff?: string[]; knownSubjects?: string[] } = {},
 ) {
   return buildImportCandidates(blocks, {
-    semester: { ...semester, daysOff: options.daysOff ?? [] },
+    weekDate: semesterWeekCalendar({
+      ...semester,
+      daysOff: options.daysOff ?? [],
+    }),
     selection,
     colorFor,
     knownSubjects: options.knownSubjects,
@@ -164,7 +168,11 @@ describe('buildImportCandidates', () => {
       daysOff: weekdaysBetween('2026-12-21', '2027-01-08'),
     });
     expect(withBreak?.event?.recurrence.endDate).toBe('2027-02-02');
+    // Weekly dates inside the break are not classes, so they are cancelled.
     expect(withBreak?.event?.exceptions).toEqual([
+      { date: '2026-12-22', status: 'cancelled' },
+      { date: '2026-12-29', status: 'cancelled' },
+      { date: '2027-01-05', status: 'cancelled' },
       {
         date: '2027-02-02',
         override: { room: '-1.2', building: 'Jagiellońska 13' },
@@ -206,5 +214,58 @@ describe('buildImportCandidates', () => {
       room: 'online',
       building: 'Zajęcia zdalne',
     });
+  });
+
+  it('dates weeks by the teaching periods of an academic calendar', () => {
+    const winter: AcademicYear = {
+      startYear: 2026,
+      semesters: [
+        {
+          term: 'winter',
+          startDate: '2026-10-01',
+          endDate: '2027-02-21',
+          periods: [
+            {
+              label: 'Zajęcia dydaktyczne',
+              kind: 'teaching',
+              startDate: '2026-10-02',
+              endDate: '2026-12-20',
+            },
+            {
+              label: 'Zajęcia dydaktyczne',
+              kind: 'teaching',
+              startDate: '2027-01-07',
+              endDate: '2027-02-04',
+            },
+          ],
+        },
+      ],
+      daysOff: [],
+    };
+    const ethics = block(
+      'ethics',
+      'Etyka zawodu ćw.  gr.  3\n12.00-13.30   (tydz.11-16)\n-1.5/ Jagiellońska 13, wyj. 2.02. - -1.2/ Jagiellońska 13',
+      'TU',
+    );
+    const key = summarizeSubjects([ethics])[0]?.key ?? '';
+
+    const [candidate] = buildImportCandidates([ethics], {
+      weekDate: academicWeekCalendar(winter, 'winter'),
+      selection: { [key]: { include: true, group: '3' } },
+      colorFor,
+    });
+
+    expect(candidate?.event?.recurrence).toMatchObject({
+      startDate: '2026-12-15',
+      endDate: '2027-02-02',
+    });
+    expect(candidate?.event?.exceptions).toContainEqual({
+      date: '2027-02-02',
+      override: { room: '-1.2', building: 'Jagiellońska 13' },
+    });
+    // The winter semester has only 15 teaching Tuesdays.
+    expect(candidate?.issues).toEqual([
+      { code: 'week-out-of-range', detail: '16' },
+    ]);
   });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { EventSchema, SemesterSchema } from './schemas.js';
+import { AcademicYearSchema, EventSchema, SemesterSchema } from './schemas.js';
 
 const validEvent = {
   kind: 'class',
@@ -91,5 +91,74 @@ describe('SemesterSchema', () => {
         daysOff: ['2026-11-01'],
       }).success,
     ).toBe(true);
+  });
+});
+
+describe('AcademicYearSchema', () => {
+  const teaching = (startDate: string, endDate: string) => ({
+    label: 'Zajęcia dydaktyczne',
+    kind: 'teaching' as const,
+    startDate,
+    endDate,
+  });
+  const year = (periods: ReturnType<typeof teaching>[]) => ({
+    startYear: 2026,
+    semesters: [
+      {
+        term: 'winter' as const,
+        startDate: '2026-10-01',
+        endDate: '2027-02-21',
+        periods,
+      },
+    ],
+    daysOff: [{ date: '2026-11-11', label: 'Narodowe Święto Niepodległości' }],
+  });
+
+  it('accepts a calendar with separate teaching periods', () => {
+    const calendar = year([
+      teaching('2026-10-02', '2026-12-20'),
+      teaching('2027-01-07', '2027-02-04'),
+    ]);
+
+    expect(AcademicYearSchema.safeParse(calendar).success).toBe(true);
+    expect(
+      SemesterSchema.safeParse({
+        startDate: '2026-10-01',
+        daysOff: ['2026-11-11'],
+        academicYear: calendar,
+      }).success,
+    ).toBe(true);
+  });
+
+  it('rejects overlapping teaching periods and reversed dates', () => {
+    expect(
+      AcademicYearSchema.safeParse(
+        year([
+          teaching('2026-10-02', '2026-12-20'),
+          teaching('2026-12-20', '2027-02-04'),
+        ]),
+      ).success,
+    ).toBe(false);
+    expect(
+      AcademicYearSchema.safeParse(year([teaching('2026-12-20', '2026-10-02')]))
+        .success,
+    ).toBe(false);
+  });
+
+  it('rejects duplicate days off and repeated terms', () => {
+    const calendar = year([]);
+
+    expect(
+      AcademicYearSchema.safeParse({
+        ...calendar,
+        daysOff: [...calendar.daysOff, ...calendar.daysOff],
+      }).success,
+    ).toBe(false);
+    expect(
+      AcademicYearSchema.safeParse({
+        ...calendar,
+        semesters: [...calendar.semesters, ...calendar.semesters],
+      }).success,
+    ).toBe(false);
   });
 });

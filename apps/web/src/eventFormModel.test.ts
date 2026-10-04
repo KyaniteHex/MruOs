@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { EventSchema } from '@mruos/shared';
+import type { AcademicYear } from '@mruos/shared';
 import {
   buildEventFromDraft,
   createEventFormDraft,
@@ -40,6 +41,72 @@ describe('event form model', () => {
       expect(result.event.recurrence.startDate).toBe('2026-09-28');
       expect(result.event.recurrence.endDate).toBe('2026-11-08');
     }
+  });
+
+  it('counts weeks by the teaching periods of the academic calendar', () => {
+    const academicYear: AcademicYear = {
+      startYear: 2026,
+      semesters: [
+        {
+          term: 'winter',
+          startDate: '2026-10-01',
+          endDate: '2027-02-21',
+          periods: [
+            {
+              label: 'Zajęcia dydaktyczne',
+              kind: 'teaching',
+              startDate: '2026-10-02',
+              endDate: '2026-12-20',
+            },
+            {
+              label: 'Zajęcia dydaktyczne',
+              kind: 'teaching',
+              startDate: '2027-01-07',
+              endDate: '2027-02-04',
+            },
+          ],
+        },
+      ],
+      daysOff: [],
+    };
+    const draft = {
+      ...createEventFormDraft(undefined, '2026-10-05', '2027-02-14'),
+      subject: 'Etyka zawodu',
+      building: 'Jagiellońska 13',
+      room: '-1.5',
+      byDay: ['TU' as const],
+      rangeMode: 'weeks' as const,
+      firstWeek: '11',
+      lastWeek: '15',
+    };
+    const calendarSemester = { startDate: '2026-10-01', academicYear };
+
+    const result = buildEventFromDraft(
+      draft,
+      undefined,
+      'series',
+      '2026-10-05',
+      calendarSemester,
+    );
+
+    expect(result.success && result.event.recurrence).toMatchObject({
+      startDate: '2026-12-15',
+      endDate: '2027-02-02',
+    });
+    expect(
+      buildEventFromDraft(
+        { ...draft, lastWeek: '16' },
+        undefined,
+        'series',
+        '2026-10-05',
+        calendarSemester,
+      ),
+    ).toEqual({
+      success: false,
+      errors: [
+        'Podaj tygodnie mieszczące się w okresach zajęć semestru z harmonogramu.',
+      ],
+    });
   });
 
   it('keeps recurrence intact and creates an override for one occurrence', () => {
