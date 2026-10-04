@@ -1,4 +1,11 @@
-import { mkdtemp, readdir, readFile, rm, stat } from 'node:fs/promises';
+import {
+  mkdtemp,
+  readdir,
+  readFile,
+  rm,
+  stat,
+  writeFile,
+} from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { MongoMemoryServer } from 'mongodb-memory-server';
@@ -10,8 +17,9 @@ export type InMemoryDatabase = {
 };
 
 const directoryPrefix = 'mruos-db-';
-// How long a directory without mongod.lock may wait for its database.
+// How long a directory without an owner file may wait for its owner.
 const startupGraceMs = 60_000;
+const ownerFile = 'owner.pid';
 
 function isRunning(pid: number): boolean {
   try {
@@ -23,10 +31,10 @@ function isRunning(pid: number): boolean {
   }
 }
 
-// Each database takes ~200 MB in the temp directory. Remove those left by
-// processes that were killed before they could clean up. mongod creates
-// mongod.lock on start, keeps its PID there while running and empties it on
-// exit; a directory without the file may belong to a database still starting.
+// Each database takes ~200 MB in the temp directory. Remove those whose
+// owning process is gone, e.g. force-killed before it could clean up. The
+// owner writes its PID right after creating the directory; a directory
+// without that file is given time in case its owner is still starting.
 async function removeStaleDirectories(): Promise<void> {
   const entries = await readdir(tmpdir()).catch(() => []);
 
@@ -34,15 +42,14 @@ async function removeStaleDirectories(): Promise<void> {
     name.startsWith(directoryPrefix),
   )) {
     const path = join(tmpdir(), entry);
-    const lock = await readFile(join(path, 'mongod.lock'), 'utf8').catch(
-      () => null,
+    const owner = Number.parseInt(
+      (await readFile(join(path, ownerFile), 'utf8').catch(() => '')) || '',
+      10,
     );
-    const pid = Number.parseInt(lock ?? '', 10);
     const info = await stat(path).catch(() => null);
-    const stale =
-      lock === null
-        ? info !== null && Date.now() - info.mtimeMs > startupGraceMs
-        : !Number.isInteger(pid) || !isRunning(pid);
+    const stale = Number.isInteger(owner)
+      ? !isRunning(owner)
+      : info !== null && Date.now() - info.mtimeMs > startupGraceMs;
 
     if (stale) {
       await rm(path, { recursive: true, force: true });
@@ -55,6 +62,7 @@ async function removeStaleDirectories(): Promise<void> {
 export async function startInMemoryDatabase(): Promise<InMemoryDatabase> {
   await removeStaleDirectories();
   const dbPath = await mkdtemp(join(tmpdir(), directoryPrefix));
+  await writeFile(join(dbPath, ownerFile), String(process.pid));
   const server = await MongoMemoryServer.create({ instance: { dbPath } });
 
   return {
