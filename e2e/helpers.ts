@@ -80,3 +80,11 @@ export async function openDetails(page: Page, date: string, subject: string) {
 
   return details;
 }
+
+/** Reloads and waits for the session to be restored from the API. */
+export async function reloadSignedIn(page: Page) {
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Wyloguj' })).toBeVisible({
+    timeout: 15_000,
+  });
+}
