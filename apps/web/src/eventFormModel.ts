@@ -1,4 +1,9 @@
-import { EventSchema } from '@mruos/shared';
+import {
+  EventSchema,
+  academicWeekCalendar,
+  termForDate,
+  weeksToDateRange,
+} from '@mruos/shared';
 import { semesterWeeksToDateRange } from '@mruos/shared/semester';
 import type {
   ClassType,
@@ -109,12 +114,38 @@ export function buildEventFromDraft(
   initialEvent: Event | undefined,
   scope: EventEditScope,
   occurrenceDate: string,
-  semester: Pick<Semester, 'startDate'>,
+  semester: Pick<Semester, 'startDate'> &
+    Partial<Pick<Semester, 'academicYear'>>,
 ): EventFormResult {
   let recurrenceRange: DateRange;
 
   if (scope === 'occurrence' && initialEvent) {
     recurrenceRange = initialEvent.recurrence;
+  } else if (draft.rangeMode === 'weeks' && semester.academicYear) {
+    // Weeks of the semester containing the chosen day, from its calendar.
+    const year = semester.academicYear;
+    const term = termForDate(year, occurrenceDate) ?? year.semesters[0]?.term;
+    const first = Number(draft.firstWeek);
+    const last = Number(draft.lastWeek);
+    const range =
+      term && Number.isInteger(first) && Number.isInteger(last) && first >= 1
+        ? last >= first &&
+          weeksToDateRange(
+            academicWeekCalendar(year, term),
+            draft.byDay,
+            first,
+            last,
+          )
+        : null;
+    if (!range) {
+      return {
+        success: false,
+        errors: [
+          'Podaj tygodnie mieszczące się w okresach zajęć semestru z harmonogramu.',
+        ],
+      };
+    }
+    recurrenceRange = range;
   } else if (draft.rangeMode === 'weeks') {
     try {
       recurrenceRange = semesterWeeksToDateRange(

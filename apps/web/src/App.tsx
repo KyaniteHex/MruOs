@@ -15,23 +15,31 @@ import {
   AuthResponseSchema,
   EventSchema,
   expandOccurrences,
+  semesterFromAcademicYear,
+  todayInWarsaw,
 } from '@mruos/shared';
-import type { AuthenticatedUser } from '@mruos/shared';
+import type { AcademicYear, AuthenticatedUser } from '@mruos/shared';
 import type { ClassType, Event, Semester } from '@mruos/shared';
 import { semesterWeeksToDateRange } from '@mruos/shared/semester';
 import { AccountPanel } from './AccountPanel';
 import { EventForm } from './EventForm';
-import { SemesterSettings } from './SemesterSettings';
+import { AcademicYearSettings } from './AcademicYearSettings';
+import { periodKindLabels } from './academicYearForm';
 import { DialogKeyboard } from './useDialogKeyboard';
 import { ScheduleImport } from './ScheduleImport';
 import type { ScheduleImportResult } from './ScheduleImport';
 import { classTypeLabels, defaultClassColors } from './eventFormModel';
 import type { EventEditScope } from './eventFormModel';
-import type { CalendarEventDetails, EventSeries } from './calendarEvents';
+import type {
+  AnnotationDetails,
+  CalendarEventDetails,
+  EventSeries,
+} from './calendarEvents';
 import {
   demoEventSeries,
   demoRange,
   demoSemester,
+  toAnnotationEvents,
   toCalendarEvents,
 } from './calendarEvents';
 import { exportCalendarBackup, importCalendarBackup } from './calendarBackup';
@@ -64,7 +72,30 @@ function importColor(classType: ClassType): string {
   return defaultClassColors[classType];
 }
 
+function isAnnotation(props: Record<string, unknown>): boolean {
+  return (props as Partial<AnnotationDetails>).annotation === true;
+}
+
 function renderEventContent(info: EventContentArg) {
+  if (isAnnotation(info.event.extendedProps)) {
+    const { kind, label } = info.event.extendedProps as AnnotationDetails;
+    // Month cells are narrow: show the name; the colour marks a day off.
+    const prefix =
+      kind === 'day-off' && label !== 'Dzień wolny' ? 'Dzień wolny: ' : '';
+    const showPrefix = info.view.type === 'timeGridDay';
+
+    return (
+      <div className="calendar-annotation-copy" title={info.event.title}>
+        {prefix && (
+          <span className={showPrefix ? undefined : 'visually-hidden'}>
+            {prefix}
+          </span>
+        )}
+        {label}
+      </div>
+    );
+  }
+
   const details = info.event.extendedProps as CalendarEventDetails;
   const isDayView = info.view.type === 'timeGridDay';
 
@@ -111,6 +142,8 @@ export function App() {
     loadResult.success && loadResult.value ? loadResult.value : null;
   const savedSnapshotRef = useRef(savedSnapshot);
   const [authUser, setAuthUser] = useState<AuthenticatedUser | null>(null);
+  const [selectedAnnotation, setSelectedAnnotation] =
+    useState<AnnotationDetails | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<SelectedEvent | null>(
     null,
   );
@@ -246,12 +279,20 @@ export function App() {
   function handleDateClick(info: { dateStr: string }) {
     setActiveDate(info.dateStr);
     setSelectedEvent(null);
+    setSelectedAnnotation(null);
     calendarRef.current?.getApi().changeView('timeGridDay', info.dateStr);
   }
 
   function handleEventClick(info: EventClickArg) {
+    if (isAnnotation(info.event.extendedProps)) {
+      // Narrow month cells cut long names; the panel shows them in full.
+      setSelectedEvent(null);
+      setSelectedAnnotation(info.event.extendedProps as AnnotationDetails);
+      return;
+    }
     const details = info.event.extendedProps as CalendarEventDetails;
 
+    setSelectedAnnotation(null);
     setSelectedEvent({
       ...details,
       title: info.event.title,
@@ -363,7 +404,11 @@ export function App() {
     setSelectedEvent(null);
   }
 
-  async function handleSemesterSave(nextSemester: Semester) {
+  async function handleAcademicYearSave(academicYear: AcademicYear) {
+    const nextSemester = semesterFromAcademicYear(
+      academicYear,
+      todayInWarsaw(),
+    );
     if (await persistSnapshot(eventSeries, nextSemester)) {
       setActiveDate(nextSemester.startDate);
       calendarRef.current?.getApi().gotoDate(nextSemester.startDate);
@@ -442,7 +487,9 @@ export function App() {
     const nextSeries = result.replace
       ? imported
       : [...eventSeries, ...imported];
-    const nextSemester = { ...semester, startDate: result.semesterStartDate };
+    const nextSemester = result.semesterStartDate
+      ? { ...semester, startDate: result.semesterStartDate }
+      : semester;
 
     if (!(await persistSnapshot(nextSeries, nextSemester))) {
       return;
@@ -517,7 +564,7 @@ export function App() {
             type="button"
             onClick={() => setSettingsOpen(true)}
           >
-            Semestr
+            Rok akademicki
           </button>
           <button
             className="secondary-button"
@@ -597,8 +644,9 @@ export function App() {
               timeZone="Europe/Warsaw"
               firstDay={1}
               events={(fetchInfo: EventSourceFuncArg, successCallback) => {
-                successCallback(
-                  toCalendarEvents(
+                successCallback([
+                  ...toAnnotationEvents(semester),
+                  ...toCalendarEvents(
                     eventSeries,
                     {
                       startDate: fetchInfo.startStr.slice(0, 10),
@@ -606,7 +654,7 @@ export function App() {
                     },
                     semester,
                   ),
-                );
+                ]);
               }}
               dateClick={handleDateClick}
               navLinks
@@ -628,7 +676,8 @@ export function App() {
               scrollTime="08:00:00"
               slotDuration="01:00:00"
               slotEventOverlap={false}
-              allDaySlot={false}
+              allDaySlot
+              allDayText="cały dzień"
               height="auto"
               dayMaxEvents={3}
               nowIndicator
@@ -683,6 +732,29 @@ export function App() {
                   </button>
                 </div>
               </div>
+            ) : selectedAnnotation ? (
+              <div className="event-details">
+                <span className="event-type">
+                  {periodKindLabels[selectedAnnotation.kind]}
+                </span>
+                <h3>{selectedAnnotation.label}</h3>
+                <dl>
+                  <div>
+                    <dt>
+                      {selectedAnnotation.startDate ===
+                      selectedAnnotation.endDate
+                        ? 'Data'
+                        : 'Okres'}
+                    </dt>
+                    <dd>
+                      {selectedAnnotation.startDate ===
+                      selectedAnnotation.endDate
+                        ? selectedAnnotation.startDate
+                        : `${selectedAnnotation.startDate} – ${selectedAnnotation.endDate}`}
+                    </dd>
+                  </div>
+                </dl>
+              </div>
             ) : (
               <p className="details-empty">Wybierz zajęcia w kalendarzu</p>
             )}
@@ -730,13 +802,14 @@ export function App() {
         />
       )}
       {settingsOpen && (
-        <SemesterSettings
+        <AcademicYearSettings
           semester={semester}
+          today={todayInWarsaw()}
           saveError={
             storageError ? repositoryErrorMessages[storageError] : undefined
           }
           onCancel={() => setSettingsOpen(false)}
-          onSave={handleSemesterSave}
+          onSave={(academicYear) => void handleAcademicYearSave(academicYear)}
         />
       )}
       {scheduleImportOpen && (

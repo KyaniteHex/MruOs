@@ -212,57 +212,10 @@ a {
   flex: 0 0 auto;
 }
 
-.semester-days-off {
-  min-width: 0;
-  margin: 23px 0 0;
-  border: 0;
-  padding: 0;
-}
-
-.semester-days-off legend {
-  margin-bottom: 10px;
-  color: #43544a;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.day-off-entry {
-  display: flex;
-  align-items: end;
-  gap: 10px;
-}
-
-.day-off-entry .form-field {
-  flex: 1;
-}
-
-.day-off-entry + .day-off-entry {
-  margin-top: 10px;
-}
-
 .field-hint {
   margin: 8px 0 0;
   color: #4f5d53;
   font-size: 12px;
-}
-
-.days-off-list {
-  display: grid;
-  gap: 6px;
-  margin: 12px 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.days-off-list li {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  border-bottom: 1px solid #edf0eb;
-  padding: 8px 0;
-  color: #43544a;
-  font-size: 13px;
 }
 
 .remove-day-off {
@@ -277,6 +230,93 @@ a {
 
 .remove-day-off:hover {
   text-decoration: underline;
+}
+
+.academic-year-modal {
+  width: min(960px, 100%);
+}
+
+.academic-year-select {
+  max-width: 260px;
+  margin-bottom: 18px;
+}
+
+.academic-rows {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0;
+  padding: 0;
+  list-style: none;
+}
+
+.academic-row {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 2fr) minmax(110px, 1fr) minmax(130px, 1fr)
+    minmax(130px, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.academic-day-off {
+  grid-template-columns: minmax(130px, 1fr) minmax(0, 3fr) auto;
+}
+
+.academic-row input,
+.academic-row select {
+  min-width: 0;
+  min-height: 36px;
+  border: 1px solid #cfd8ce;
+  border-radius: 4px;
+  padding: 0 8px;
+  background: #fff;
+  color: #1d2a22;
+  font-size: 13px;
+}
+
+.academic-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.fc .calendar-annotation {
+  color: var(--fc-event-text-color);
+  cursor: default;
+}
+
+.fc .calendar-annotation-day-off {
+  --fc-event-bg-color: #f6e3de;
+  --fc-event-border-color: #b5523a;
+  --fc-event-text-color: #6e2617;
+}
+
+.fc .calendar-annotation-break {
+  --fc-event-bg-color: #e3edf3;
+  --fc-event-border-color: #4f7d99;
+  --fc-event-text-color: #1f4257;
+}
+
+.fc .calendar-annotation-exams {
+  --fc-event-bg-color: #f5ecd7;
+  --fc-event-border-color: #b17a27;
+  --fc-event-text-color: #5c4210;
+}
+
+.fc .calendar-annotation-event {
+  --fc-event-bg-color: #e5efe6;
+  --fc-event-border-color: #5e8f68;
+  --fc-event-text-color: #24452b;
+}
+
+.calendar-annotation-copy {
+  overflow: hidden;
+  padding: 1px 4px;
+  color: var(--fc-event-text-color);
+  font-size: 11px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .visually-hidden {
@@ -1094,15 +1134,28 @@ a {
     font-size: 10px;
   }
 
-  .storage-alert,
-  .day-off-entry {
+  .storage-alert {
     align-items: stretch;
     flex-direction: column;
   }
 
-  .storage-alert .secondary-button,
-  .day-off-entry .secondary-button {
+  .storage-alert .secondary-button {
     align-self: start;
+  }
+
+  .academic-row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    border-bottom: 1px solid #e3e9e2;
+    padding-bottom: 10px;
+  }
+
+  .academic-row > input:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .academic-day-off > input:nth-child(2) {
+    grid-column: 1 / -1;
+    grid-row: 2;
   }
 
   .page-heading-actions {
