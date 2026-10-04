@@ -4,6 +4,7 @@ import {
   buildImportCandidates,
   defaultSelection,
   parseScheduleBlock,
+  subjectKey,
   summarizeSubjects,
 } from '@mruos/shared';
 import type {
@@ -16,7 +17,19 @@ import type {
   SubjectChoice,
   Weekday,
 } from '@mruos/shared';
+import type { EventSeries } from './calendarEvents';
 import { classTypeLabels } from './eventFormModel';
+import {
+  buildSlotIndex,
+  eventSlots,
+  findEntryConflicts,
+  findSlotConflicts,
+} from './importConflicts';
+import type {
+  EntryConflict,
+  OccurrenceSlot,
+  ScheduleEntry,
+} from './importConflicts';
 import { useDialogKeyboard } from './useDialogKeyboard';
 import { maxScheduleFileBytes, readScheduleWorkbook } from './xlsxSchedule';
 import type { ScheduleReadError, ScheduleSheet } from './xlsxSchedule';
@@ -29,6 +42,8 @@ export type ScheduleImportResult = {
 
 type ScheduleImportProps = {
   semester: Semester;
+  /** The current plan, checked for overlaps unless it is replaced. */
+  existingSeries: readonly EventSeries[];
   colorFor: (classType: ClassType) => string;
   saveError?: string;
   onCancel: () => void;
@@ -94,6 +109,26 @@ function readFileBytes(file: File): Promise<ArrayBuffer> {
   });
 }
 
+function formatDate(isoDate: string): string {
+  return isoDate.split('-').reverse().join('.');
+}
+
+function datesLabel(count: number): string {
+  const lastDigit = count % 10;
+  const lastTwo = count % 100;
+  if (count === 1) return '1 termin';
+  if (lastDigit >= 2 && lastDigit <= 4 && (lastTwo < 12 || lastTwo > 14)) {
+    return `${count} terminy`;
+  }
+  return `${count} terminów`;
+}
+
+function conflictMessage(conflict: EntryConflict): string {
+  const owner = conflict.existing ? ' (w Twoim planie)' : '';
+
+  return `${conflict.subject}${owner}, ${conflict.startTime}–${conflict.endTime}: ${datesLabel(conflict.dates.length)}, od ${formatDate(conflict.dates[0] ?? '')}`;
+}
+
 /** "1–10, 12" style summary of sorted week numbers. */
 function formatWeeks(weeks: readonly number[]): string {
   const ranges: [number, number][] = [];
@@ -113,6 +148,7 @@ function formatWeeks(weeks: readonly number[]): string {
 
 export function ScheduleImport({
   semester,
+  existingSeries,
   colorFor,
   saveError,
   onCancel,
@@ -149,11 +185,118 @@ export function ScheduleImport({
         : [],
     [blocks, startDate, semester.daysOff, selection, colorFor, sheet],
   );
-  const chosen = candidates.filter(
-    (candidate): candidate is ImportCandidate & { event: Event } =>
-      candidate.event !== null && !excluded.has(candidate.id),
+  const chosen = useMemo(
+    () =>
+      candidates.filter(
+        (candidate): candidate is ImportCandidate & { event: Event } =>
+          candidate.event !== null && !excluded.has(candidate.id),
+      ),
+    [candidates, excluded],
   );
   const flagged = candidates.filter((c) => c.issues.length > 0).length;
+
+  const planEntries = useMemo<ScheduleEntry[]>(
+    () =>
+      replace
+        ? []
+        : existingSeries.map((series) => ({
+            id: `plan:${series.id}`,
+            event: series.event,
+            existing: true,
+          })),
+    [replace, existingSeries],
+  );
+  const slotIndex = useMemo(
+    () =>
+      buildSlotIndex(
+        [
+          ...planEntries,
+          ...chosen.map((candidate) => ({
+            id: candidate.id,
+            event: candidate.event,
+            existing: false,
+          })),
+        ],
+        semester,
+      ),
+    [chosen, planEntries, semester],
+  );
+  const conflicts = useMemo(
+    () =>
+      new Map(
+        chosen.map((candidate) => [
+          candidate.id,
+          findEntryConflicts(
+            candidate.id,
+            candidate.event,
+            slotIndex,
+            semester,
+          ),
+        ]),
+      ),
+    [chosen, slotIndex, semester],
+  );
+  const conflictCount = [...conflicts.values()].filter(
+    (list) => list.length > 0,
+  ).length;
+
+  // Dated slots of every group option; they depend on the file and the
+  // semester only, so changing the chosen groups does not rebuild them.
+  const groupOptionSlots = useMemo(() => {
+    const options = new Map<string, Map<string, OccurrenceSlot[][]>>();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate)) {
+      return options;
+    }
+    for (const subject of subjects.filter((s) => s.groups.length > 0)) {
+      const subjectBlocks = blocks.filter(
+        (block) => subjectKey(block) === subject.key,
+      );
+      const groups = new Map<string, OccurrenceSlot[][]>();
+      for (const group of subject.groups) {
+        groups.set(
+          group,
+          buildImportCandidates(subjectBlocks, {
+            semester: { startDate, daysOff: semester.daysOff },
+            selection: { [subject.key]: { include: true, group } },
+            colorFor,
+          }).flatMap((option) =>
+            option.event ? [eventSlots(option.event, semester)] : [],
+          ),
+        );
+      }
+      options.set(subject.key, groups);
+    }
+
+    return options;
+  }, [subjects, blocks, startDate, semester, colorFor]);
+
+  // Groups that would overlap the classes chosen for other subjects, so the
+  // student sees which groups fit before picking one.
+  const conflictingGroups = useMemo(() => {
+    const result = new Map<string, Set<string>>();
+    for (const [key, groups] of groupOptionSlots) {
+      const ownClasses = new Set(
+        chosen
+          .filter((candidate) => candidate.subjectKey === key)
+          .map((candidate) => candidate.id),
+      );
+      const clashing = new Set<string>();
+      for (const [group, options] of groups) {
+        if (
+          options.some(
+            (slots) =>
+              findSlotConflicts(`option:${group}`, slots, slotIndex, ownClasses)
+                .length > 0,
+          )
+        ) {
+          clashing.add(group);
+        }
+      }
+      result.set(key, clashing);
+    }
+
+    return result;
+  }, [groupOptionSlots, chosen, slotIndex]);
 
   function selectSheet(name: string, available: ScheduleSheet[]) {
     const next = available.find((candidate) => candidate.name === name);
@@ -298,6 +441,13 @@ export function ScheduleImport({
                         ? classTypeLabels[subject.classType]
                         : 'typ nieznany'
                     }`;
+                    const subjectConflicts = chosen
+                      .filter(
+                        (candidate) => candidate.subjectKey === subject.key,
+                      )
+                      .flatMap(
+                        (candidate) => conflicts.get(candidate.id) ?? [],
+                      );
 
                     return (
                       <li key={subject.key}>
@@ -333,9 +483,21 @@ export function ScheduleImport({
                             {subject.groups.map((group) => (
                               <option key={group} value={group}>
                                 gr. {group}
+                                {conflictingGroups.get(subject.key)?.has(group)
+                                  ? ' – kolizja'
+                                  : ''}
                               </option>
                             ))}
                           </select>
+                        )}
+                        {subjectConflicts.length > 0 && (
+                          <ul className="import-conflicts">
+                            {subjectConflicts.map((conflict, index) => (
+                              <li key={`${conflict.id}-${index}`}>
+                                Koliduje z: {conflictMessage(conflict)}
+                              </li>
+                            ))}
+                          </ul>
                         )}
                       </li>
                     );
@@ -347,6 +509,7 @@ export function ScheduleImport({
                 <legend>
                   Podgląd: {chosen.length} z {candidates.length} zajęć
                   {flagged > 0 && `, ${flagged} wymaga uwagi`}
+                  {conflictCount > 0 && `, ${conflictCount} z kolizją`}
                 </legend>
                 {candidates.length === 0 ? (
                   <p className="details-empty">
@@ -357,7 +520,11 @@ export function ScheduleImport({
                     {candidates.map((candidate) => (
                       <li
                         className={
-                          candidate.issues.length > 0 ? 'has-issues' : ''
+                          (conflicts.get(candidate.id)?.length ?? 0) > 0
+                            ? 'has-conflicts'
+                            : candidate.issues.length > 0
+                              ? 'has-issues'
+                              : ''
                         }
                         key={candidate.id}
                       >
@@ -391,6 +558,15 @@ export function ScheduleImport({
                             </span>
                           </span>
                         </label>
+                        {(conflicts.get(candidate.id)?.length ?? 0) > 0 && (
+                          <ul className="import-conflicts">
+                            {conflicts.get(candidate.id)?.map((conflict) => (
+                              <li key={conflict.id}>
+                                Koliduje z: {conflictMessage(conflict)}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
                         {candidate.issues.length > 0 && (
                           <ul className="import-issues">
                             {candidate.issues.map((issue) => (

@@ -886,6 +886,7 @@ a {
 
 .import-subjects > li {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
@@ -957,6 +958,27 @@ a {
 .import-preview-main strong {
   color: #1d2a22;
   font-size: 13px;
+}
+
+.import-preview > li.has-conflicts {
+  border-left: 3px solid #b5523a;
+  background: #fbf0eb;
+}
+
+.import-conflicts {
+  display: grid;
+  gap: 2px;
+  margin: 6px 0 0 26px;
+  padding: 0;
+  color: #8f3f2b;
+  font-size: 12px;
+  font-weight: 600;
+  list-style: none;
+}
+
+.import-subjects .import-conflicts {
+  flex-basis: 100%;
+  margin: 0 0 0 26px;
 }
 
 .import-issues {

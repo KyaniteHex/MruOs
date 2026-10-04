@@ -29,6 +29,7 @@ describe('ScheduleImport', () => {
     render(
       <ScheduleImport
         semester={{ startDate: '2026-10-05', daysOff: [] }}
+        existingSeries={[]}
         colorFor={() => '#25745b'}
         onCancel={vi.fn()}
         onImport={onImport}
@@ -82,6 +83,7 @@ describe('ScheduleImport', () => {
     render(
       <ScheduleImport
         semester={{ startDate: '2026-10-05', daysOff: [] }}
+        existingSeries={[]}
         colorFor={() => '#25745b'}
         onCancel={vi.fn()}
         onImport={vi.fn()}
@@ -99,5 +101,43 @@ describe('ScheduleImport', () => {
     expect((await screen.findByRole('alert')).textContent).toContain(
       'zapisz jako .xlsx',
     );
+  });
+
+  it('warns about overlapping classes while groups are chosen', async () => {
+    render(
+      <ScheduleImport
+        semester={{ startDate: '2026-10-05', daysOff: [] }}
+        existingSeries={[]}
+        colorFor={() => '#25745b'}
+        onCancel={vi.fn()}
+        onImport={vi.fn()}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText('Plik planu (.xlsx)'), {
+      target: { files: [await planFile('260922_Farmacja_rok5_sem9.xlsx')] },
+    });
+    fireEvent.change(
+      await screen.findByLabelText('Grupa: Biofarmacja · Laboratorium'),
+      { target: { value: "d'" } },
+    );
+
+    // Monday labs: Biofarmacja d' 11:30–15:15 in weeks 6–15.
+    const pharmacotherapy = screen.getByLabelText(
+      'Grupa: Farmakoterapia i inform. o lekach · Laboratorium',
+    );
+    const optionLabel = (value: string) =>
+      pharmacotherapy.querySelector(`option[value="${value}"]`)?.textContent;
+    expect(optionLabel('d')).toBe('gr. d – kolizja');
+    expect(optionLabel('e')).toBe('gr. e – kolizja');
+    expect(optionLabel('c')).toBe('gr. c');
+
+    fireEvent.change(pharmacotherapy, { target: { value: 'd' } });
+
+    const warnings = await screen.findAllByText(
+      'Koliduje z: Biofarmacja, 11:30–15:15: 9 terminów, od 16.11.2026',
+    );
+    expect(warnings.length).toBeGreaterThan(0);
+    expect(screen.getByText(/z kolizją/)).toBeTruthy();
   });
 });

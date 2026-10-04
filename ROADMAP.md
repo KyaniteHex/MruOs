@@ -111,6 +111,7 @@ Testy muszą obejmować:
 - [x] Rozpoznanie zajęć z bloków planu (przedmiot, typ, grupa, godziny, tygodnie, sala); zmienione z „mapowania kolumn”, bo plany uczelni to bloki tekstu na siatce, a nie kolumny
 - [x] Wybór grupy z planu obejmującego wiele grup (osobno dla każdego przedmiotu)
 - [x] Podgląd wynikowych zajęć przed zapisem, z oznaczeniem miejsc do poprawy
+- [x] Ostrzeżenia o kolizjach już przy wyborze grup (także z obecnym planem)
 - [x] Testy na prawdziwych plikach (Farmacja, Kosmetologia I i II stopnia)
 
 **Gotowe, gdy:** import planu z prawdziwego pliku uczelni daje poprawny kalendarz bez ręcznych poprawek albo z jasno wskazanymi miejscami do poprawy.

@@ -742,6 +742,7 @@ export function App() {
       {scheduleImportOpen && (
         <ScheduleImport
           semester={semester}
+          existingSeries={eventSeries}
           colorFor={importColor}
           saveError={
             storageError ? repositoryErrorMessages[storageError] : undefined
