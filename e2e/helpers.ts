@@ -88,3 +88,25 @@ export async function reloadSignedIn(page: Page) {
     timeout: 15_000,
   });
 }
+
+/** Fills the winter semester of the 2026/2027 calendar of UMK in Toruń. */
+export async function fillUmkWinterSemester(dialog: Locator) {
+  const winter = dialog.getByRole('group', { name: 'Semestr zimowy' });
+  const fill = async (label: string, value: string, index = 0) =>
+    winter.getByLabel(label, { exact: true }).nth(index).fill(value);
+
+  await fill('Semestr zimowy: od', '2026-10-01');
+  await fill('Semestr zimowy: do', '2027-02-21');
+  await fill('Od: Inauguracja roku akademickiego', '2026-10-01');
+  await fill('Od: Zajęcia dydaktyczne', '2026-10-02');
+  await fill('Do: Zajęcia dydaktyczne', '2026-12-20');
+  await fill('Od: Wakacje zimowe', '2026-12-21');
+  await fill('Do: Wakacje zimowe', '2027-01-06');
+  await fill('Od: Zajęcia dydaktyczne', '2027-01-07', 1);
+  await fill('Do: Zajęcia dydaktyczne', '2027-02-04', 1);
+  await fill('Od: Egzaminacyjna sesja zimowa', '2027-02-05');
+  await fill('Do: Egzaminacyjna sesja zimowa', '2027-02-18');
+  await fill('Od: Egzaminacyjna sesja zimowa poprawkowa', '2027-02-20');
+  await fill('Do: Egzaminacyjna sesja zimowa poprawkowa', '2027-02-28');
+  await fill('Od: Święto uczelni', '2027-02-19');
+}
