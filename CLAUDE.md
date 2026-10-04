@@ -98,9 +98,9 @@ Zasady, których trzeba przestrzegać:
 
 ## Komendy
 
-Wymagania: Node.js 22 lub nowszy, pnpm 10 oraz MongoDB 7.0 lub nowszy (lokalnie albo w Atlasie).
+Wymagania: Node.js 22 lub nowszy i pnpm 10. MongoDB 7.0+ (np. Atlas) jest potrzebne tylko do trwałych danych lokalnie i w produkcji.
 
-Backend czyta konfigurację z root `.env` (utwórz go na podstawie `.env.example`). Wymagane zmienne: `MONGODB_URI` i `SESSION_SECRET` (co najmniej 32 znaki); `WEB_ORIGIN` jest potrzebne przy osobnym originie frontendu.
+Backend czyta opcjonalny root `.env` (wzór w `.env.example`). Lokalnie bez `MONGODB_URI` API startuje z tymczasową bazą w pamięci i losowym `SESSION_SECRET`; w produkcji (`NODE_ENV=production`) wymagane są `MONGODB_URI`, `SESSION_SECRET` (co najmniej 32 znaki) i `ORIGIN_SECRET`.
 
 - Instalacja zależności: `pnpm install`
 - Uruchomienie frontendu i API: `pnpm dev` (frontend: http://localhost:5173, API: http://localhost:3001)
