@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  AccountExportSchema,
+  CalendarBackupSchema,
+  ChangePasswordInputSchema,
+  DeleteAccountInputSchema,
   EventCreateInputSchema,
   EventUpdateInputSchema,
   LoginInputSchema,
@@ -40,5 +44,54 @@ describe('API input schemas', () => {
     expect(
       EventUpdateInputSchema.safeParse({ event: {}, userId: 'other' }).success,
     ).toBe(false);
+  });
+
+  it('defaults "Nie wylogowuj mnie" to a browser session', () => {
+    expect(
+      LoginInputSchema.parse({ email: 'a@example.com', password: 'secret' })
+        .remember,
+    ).toBe(false);
+    expect(
+      RegistrationInputSchema.parse({
+        email: 'a@example.com',
+        password: 'long-enough-password',
+        remember: true,
+      }).remember,
+    ).toBe(true);
+  });
+
+  it('validates password changes and account deletion', () => {
+    expect(
+      ChangePasswordInputSchema.safeParse({
+        currentPassword: 'old',
+        newPassword: 'short',
+      }).success,
+    ).toBe(false);
+    expect(
+      ChangePasswordInputSchema.safeParse({
+        currentPassword: 'old',
+        newPassword: 'a-long-new-password',
+      }).success,
+    ).toBe(true);
+    expect(DeleteAccountInputSchema.safeParse({ password: '' }).success).toBe(
+      false,
+    );
+  });
+});
+
+describe('AccountExportSchema', () => {
+  it('can be imported back as a calendar backup', () => {
+    const exported = AccountExportSchema.parse({
+      version: 1,
+      exportedAt: '2026-10-06T08:00:00.000Z',
+      account: {
+        email: 'student@example.com',
+        createdAt: '2026-10-01T10:00:00.000Z',
+      },
+      events: [],
+      semester: { startDate: '2026-10-01', daysOff: [] },
+    });
+
+    expect(CalendarBackupSchema.safeParse(exported).success).toBe(true);
   });
 });
