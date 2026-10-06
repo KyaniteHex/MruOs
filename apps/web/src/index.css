@@ -68,13 +68,15 @@ a {
 }
 
 .term-label,
-.account-controls {
+.account-controls,
+.account-actions {
   display: flex;
   align-items: center;
   gap: 9px;
 }
 
-.account-controls {
+.account-controls,
+.account-actions {
   gap: 8px;
 }
 
@@ -91,18 +93,7 @@ a {
   min-height: 34px;
   padding: 0 10px;
   font-size: 12px;
-}
-
-.account-modal {
-  width: min(440px, 100%);
-}
-
-.account-password-field {
-  margin-top: 14px;
-}
-
-.account-form-actions {
-  align-items: center;
+  white-space: nowrap;
 }
 
 .text-button {
@@ -121,15 +112,8 @@ a {
   text-decoration: underline;
 }
 
-.account-error {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  color: #a34c35;
-  font-size: 11px;
-}
-
 .term-dot {
+  flex: 0 0 auto;
   width: 8px;
   height: 8px;
   border-radius: 50%;
@@ -658,6 +642,15 @@ a {
   font-size: 13px;
   font-weight: 650;
   cursor: pointer;
+}
+
+/* Links styled as buttons, e.g. "Konto": center the text like a button. */
+a.primary-button,
+a.secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
 }
 
 .primary-button {
@@ -1251,7 +1244,39 @@ a {
 
 @media (max-width: 600px) {
   .topbar {
-    height: 56px;
+    display: grid;
+    height: auto;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px 12px;
+    padding-block: 10px;
+  }
+
+  .topbar-term,
+  .account-controls {
+    display: contents;
+  }
+
+  .topbar .brand,
+  .account-actions {
+    grid-row: 1;
+  }
+
+  .account-actions {
+    grid-column: 2;
+    justify-self: end;
+  }
+
+  .term-label {
+    grid-row: 2;
+    grid-column: 1;
+    white-space: nowrap;
+  }
+
+  .account-email,
+  .account-mode {
+    grid-row: 2;
+    grid-column: 2;
+    justify-self: end;
   }
 
   .topbar-term {
@@ -1274,8 +1299,12 @@ a {
   }
 
   .account-email {
-    max-width: 88px;
-    font-size: 10px;
+    max-width: 120px;
+    font-size: 11px;
+  }
+
+  .account-mode {
+    font-size: 11px;
   }
 
   .account-button {

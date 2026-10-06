@@ -534,23 +534,27 @@ export function App() {
         {authUser ? (
           <div className="account-controls">
             <span className="account-email">{authUser.email}</span>
-            <Link className="secondary-button account-button" to="/konto">
-              Konto
-            </Link>
-            <button
-              className="secondary-button account-button"
-              type="button"
-              onClick={() => void handleLogout()}
-            >
-              Wyloguj
-            </button>
+            <div className="account-actions">
+              <Link className="secondary-button account-button" to="/konto">
+                Konto
+              </Link>
+              <button
+                className="secondary-button account-button"
+                type="button"
+                onClick={() => void handleLogout()}
+              >
+                Wyloguj
+              </button>
+            </div>
           </div>
         ) : (
           <div className="account-controls">
             <span className="account-mode">Tryb bez konta</span>
-            <Link className="secondary-button account-button" to="/">
-              Zaloguj się
-            </Link>
+            <div className="account-actions">
+              <Link className="secondary-button account-button" to="/">
+                Zaloguj się
+              </Link>
+            </div>
           </div>
         )}
       </div>
