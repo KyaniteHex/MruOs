@@ -1,9 +1,9 @@
 import { expect, test } from '@playwright/test';
-import { dayCell } from './helpers';
+import { dayCell, openAsGuest } from './helpers';
 
 // Uses the demo plan shown to visitors who are not logged in.
 test.beforeEach(async ({ page }) => {
-  await page.goto('/');
+  await openAsGuest(page);
 });
 
 test('moves between months', async ({ page }) => {

@@ -1,12 +1,17 @@
 import { expect, test } from '@playwright/test';
-import { dayCell, fillUmkWinterSemester, goToNextMonth } from './helpers';
+import {
+  dayCell,
+  fillUmkWinterSemester,
+  goToNextMonth,
+  openAsGuest,
+} from './helpers';
 
 const pharmacyPlan = 'e2e/fixtures/plans/260922_Farmacja_rok5_sem9.xlsx';
 
 test('dates an imported timetable by the academic calendar', async ({
   page,
 }) => {
-  await page.goto('/');
+  await openAsGuest(page);
   await page.getByRole('button', { name: 'Rok akademicki' }).click();
   const settings = page.getByRole('dialog', { name: 'Rok akademicki' });
 

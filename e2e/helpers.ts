@@ -7,14 +7,19 @@ export function uniqueEmail(): string {
   return `e2e-${Date.now()}-${Math.random().toString(36).slice(2, 10)}@example.com`;
 }
 
-export async function register(page: Page, email = uniqueEmail()) {
-  await page.getByRole('button', { name: 'Zaloguj', exact: true }).click();
-  const dialog = page.getByRole('dialog', { name: 'Zaloguj się' });
-  await dialog.getByRole('button', { name: 'Utwórz konto' }).click();
-  const registerDialog = page.getByRole('dialog', { name: 'Utwórz konto' });
-  await registerDialog.getByLabel('E-mail').fill(email);
-  await registerDialog.getByLabel('Hasło').fill(password);
-  await registerDialog.getByRole('button', { name: 'Zarejestruj' }).click();
+export async function register(
+  page: Page,
+  email = uniqueEmail(),
+  options: { remember?: boolean } = {},
+) {
+  await page.goto('/rejestracja');
+  await page.getByLabel('E-mail').fill(email);
+  await page.getByLabel('Hasło (co najmniej 12 znaków)').fill(password);
+  await page.getByLabel('Powtórz hasło').fill(password);
+  if (options.remember === false) {
+    await page.getByLabel('Nie wylogowuj mnie (30 dni)').uncheck();
+  }
+  await page.getByRole('button', { name: 'Zarejestruj' }).click();
   // Password hashing makes registration slower than other requests.
   await expect(page.getByRole('button', { name: 'Wyloguj' })).toBeVisible({
     timeout: 15_000,
@@ -23,12 +28,27 @@ export async function register(page: Page, email = uniqueEmail()) {
   return email;
 }
 
-export async function login(page: Page, email: string, secret = password) {
+/** Fills the login page; the caller checks the outcome. */
+export async function login(
+  page: Page,
+  email: string,
+  secret = password,
+  options: { remember?: boolean } = {},
+) {
+  await page.goto('/');
+  await page.getByLabel('E-mail').fill(email);
+  await page.getByLabel('Hasło').fill(secret);
+  if (options.remember === false) {
+    await page.getByLabel('Nie wylogowuj mnie (30 dni)').uncheck();
+  }
   await page.getByRole('button', { name: 'Zaloguj', exact: true }).click();
-  const dialog = page.getByRole('dialog', { name: 'Zaloguj się' });
-  await dialog.getByLabel('E-mail').fill(email);
-  await dialog.getByLabel('Hasło').fill(secret);
-  await dialog.getByRole('button', { name: 'Zaloguj' }).click();
+}
+
+/** Opens the calendar without an account ("Wypróbuj bez konta"). */
+export async function openAsGuest(page: Page) {
+  await page.goto('/');
+  await page.getByRole('button', { name: /bez konta/ }).click();
+  await expect(page.getByText('Tryb bez konta')).toBeVisible();
 }
 
 type NewClass = {

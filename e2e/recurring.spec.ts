@@ -10,7 +10,6 @@ import {
 // A fresh account starts with an empty plan; the calendar opens on the
 // semester start, Monday 2026-09-28.
 test.beforeEach(async ({ page }) => {
-  await page.goto('/');
   await register(page);
 });
 
