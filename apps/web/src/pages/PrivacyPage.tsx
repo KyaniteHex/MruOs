@@ -17,8 +17,8 @@ export function PrivacyPage() {
             zapisujemy) i datę założenia konta.
           </li>
           <li>
-            <strong>Plan:</strong> wpisane lub zaimportowane zajęcia,
-            harmonogram roku akademickiego i dni wolne.
+            <strong>Plan:</strong> wpisane lub zaimportowane zajęcia, kolokwia,
+            egzaminy i notatki, harmonogram roku akademickiego i dni wolne.
           </li>
           <li>
             <strong>Sesja:</strong> identyfikator sesji w ciasteczku

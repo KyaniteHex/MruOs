@@ -9,21 +9,44 @@ import type {
   EventSourceFuncArg,
 } from '@fullcalendar/core';
 import plLocale from '@fullcalendar/core/locales/pl';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent, CSSProperties } from 'react';
 import {
   EventSchema,
+  classKey,
+  classesOn,
   expandOccurrences,
+  placeEntries,
   semesterFromAcademicYear,
   todayInWarsaw,
+  upcomingAssessments,
 } from '@mruos/shared';
-import type { AcademicYear } from '@mruos/shared';
+import type {
+  AcademicYear,
+  Assessment,
+  AssessmentKind,
+  DatedClass,
+  Entry,
+  EntryRecord,
+  Note,
+  UpcomingAssessment,
+} from '@mruos/shared';
 import type { ClassType, Event, Semester } from '@mruos/shared';
 import { semesterWeeksToDateRange } from '@mruos/shared/semester';
 import { Link, useNavigate } from 'react-router';
 import { useAuth } from './authContext';
 import { slowServerMessage, useSlowHint } from './useSlowHint';
 import { EventForm } from './EventForm';
+import { AssessmentDetails } from './AssessmentDetails';
+import { AssessmentForm } from './AssessmentForm';
+import { ClassEntries } from './ClassEntries';
+import type { NewEntryKind } from './ClassEntries';
+import { IcsExportDialog } from './IcsExportDialog';
+import type { IcsOptions } from './calendarIcs';
+import { NoteForm } from './NoteForm';
+import { UpcomingPanel } from './UpcomingPanel';
+import { assessmentKindMarks, noteMark } from './entryFormModel';
+import type { EntryContext } from './entryFormModel';
 import { AcademicYearSettings } from './AcademicYearSettings';
 import { periodKindLabels } from './academicYearForm';
 import { DialogKeyboard } from './useDialogKeyboard';
@@ -33,14 +56,17 @@ import { classTypeLabels, defaultClassColors } from './eventFormModel';
 import type { EventEditScope } from './eventFormModel';
 import type {
   AnnotationDetails,
+  AssessmentEventDetails,
   CalendarEventDetails,
   EventSeries,
 } from './calendarEvents';
 import {
+  classMarks,
   demoEventSeries,
   demoRange,
   demoSemester,
   toAnnotationEvents,
+  toAssessmentEvents,
   toCalendarEvents,
 } from './calendarEvents';
 import { exportCalendarBackup, importCalendarBackup } from './calendarBackup';
@@ -69,6 +95,16 @@ type FormSession =
       seriesId: string;
     };
 
+type EntrySession =
+  | {
+      form: 'assessment';
+      kind: AssessmentKind;
+      context: EntryContext;
+      id?: string;
+      initial?: Assessment;
+    }
+  | { form: 'note'; context: EntryContext; id?: string; initial?: Note };
+
 function importColor(classType: ClassType): string {
   return defaultClassColors[classType];
 }
@@ -77,7 +113,43 @@ function isAnnotation(props: Record<string, unknown>): boolean {
   return (props as Partial<AnnotationDetails>).annotation === true;
 }
 
+function isAssessmentEvent(props: Record<string, unknown>): boolean {
+  return (
+    typeof (props as Partial<AssessmentEventDetails>).assessmentId === 'string'
+  );
+}
+
+function EntryMark({ mark, label }: { mark: string; label: string }) {
+  return (
+    <>
+      <span className="entry-mark-inline" aria-hidden="true">
+        {mark}
+      </span>
+      <span className="visually-hidden">{label}: </span>
+    </>
+  );
+}
+
 function renderEventContent(info: EventContentArg) {
+  if (isAssessmentEvent(info.event.extendedProps)) {
+    const { kind, room } = info.event.extendedProps as AssessmentEventDetails;
+
+    return (
+      <div className="calendar-event-copy">
+        <div className="calendar-event-primary">
+          <span>{info.timeText}</span>
+          <strong>
+            <span className="entry-mark-inline" aria-hidden="true">
+              {assessmentKindMarks[kind]}
+            </span>
+            {info.event.title}
+          </strong>
+        </div>
+        {room && <span className="calendar-event-location">{room}</span>}
+      </div>
+    );
+  }
+
   if (isAnnotation(info.event.extendedProps)) {
     const { kind, label } = info.event.extendedProps as AnnotationDetails;
     // Month cells are narrow: show the name; the colour marks a day off.
@@ -104,7 +176,16 @@ function renderEventContent(info: EventContentArg) {
     <div className="calendar-event-copy">
       <div className="calendar-event-primary">
         <span>{info.timeText}</span>
-        <strong>{info.event.title}</strong>
+        <strong>
+          {details.marks.exam && (
+            <EntryMark mark={assessmentKindMarks.exam} label="Egzamin" />
+          )}
+          {details.marks.test && (
+            <EntryMark mark={assessmentKindMarks.test} label="Kolokwium" />
+          )}
+          {details.marks.note && <EntryMark mark={noteMark} label="Notatka" />}
+          {info.event.title}
+        </strong>
       </div>
       <span className="calendar-event-location">
         {isDayView ? `${details.room} · ${details.building}` : details.room}
@@ -121,6 +202,8 @@ const repositoryErrorMessages: Record<RepositoryErrorCode, string> = {
   'clear-error': 'Nie udało się wyczyścić lokalnego zapisu.',
   unauthorized: 'Zaloguj się, aby kontynuować pracę z kontem.',
   'network-error': 'Nie można połączyć się z API. Spróbuj ponownie.',
+  'server-updating':
+    'Serwer jest właśnie aktualizowany i nie zapisał kolokwiów, egzaminów ani notatek. Spróbuj ponownie za kilka minut.',
 };
 
 export function App() {
@@ -155,6 +238,14 @@ export function App() {
   const [semester, setSemester] = useState<Semester>(
     savedSnapshot?.semester ?? demoSemester,
   );
+  const [entries, setEntries] = useState<EntryRecord[]>(
+    savedSnapshot?.entries ?? [],
+  );
+  const [selectedAssessmentId, setSelectedAssessmentId] = useState<
+    string | null
+  >(null);
+  const [entrySession, setEntrySession] = useState<EntrySession | null>(null);
+  const [icsExportOpen, setIcsExportOpen] = useState(false);
   const [formSession, setFormSession] = useState<FormSession | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [scheduleImportOpen, setScheduleImportOpen] = useState(false);
@@ -175,13 +266,21 @@ export function App() {
   >(authUser ? 'loading' : 'ready');
   const slowAccountPlan = useSlowHint(accountPlan === 'loading');
   const semesterEndDate = semesterWeeksToDateRange(semester, 1, 20).endDate;
+  const placed = useMemo(
+    () => placeEntries(entries, eventSeries, semester),
+    [entries, eventSeries, semester],
+  );
+  const upcoming = upcomingAssessments(placed.assessments, todayInWarsaw());
+  const selectedAssessment = placed.assessments.find(
+    (scheduled) => scheduled.id === selectedAssessmentId && !scheduled.seriesId,
+  );
   const handleAuthenticatedRef = useRef(handleAuthenticated);
   handleAuthenticatedRef.current = handleAuthenticated;
   const authUserId = authUser?.id;
 
   useEffect(() => {
     calendarRef.current?.getApi().refetchEvents();
-  }, [eventSeries, semester]);
+  }, [eventSeries, semester, placed]);
 
   // A signed-in student works on the account's plan; a guest on the local one.
   useEffect(() => {
@@ -204,10 +303,12 @@ export function App() {
   async function persistSnapshot(
     events: EventSeries[],
     nextSemester: Semester,
+    nextEntries: EntryRecord[] = entries,
   ): Promise<boolean> {
     const result = await activeRepository.save({
       events,
       semester: nextSemester,
+      entries: nextEntries,
     });
 
     if (!result.success) {
@@ -219,10 +320,12 @@ export function App() {
       savedSnapshotRef.current = {
         events,
         semester: nextSemester,
+        entries: nextEntries,
       };
     }
     setEventSeries(events);
     setSemester(nextSemester);
+    setEntries(nextEntries);
     setStorageError(null);
     return true;
   }
@@ -260,6 +363,7 @@ export function App() {
     setActiveRepository(apiRepository);
     setEventSeries(snapshot.events);
     setSemester(snapshot.semester);
+    setEntries(snapshot.entries);
     setActiveDate(snapshot.semester.startDate);
     calendarRef.current?.getApi().gotoDate(snapshot.semester.startDate);
     setStorageError(null);
@@ -277,22 +381,149 @@ export function App() {
     setActiveDate(info.dateStr);
     setSelectedEvent(null);
     setSelectedAnnotation(null);
+    setSelectedAssessmentId(null);
     calendarRef.current?.getApi().changeView('timeGridDay', info.dateStr);
   }
 
   function handleEventClick(info: EventClickArg) {
+    setSelectedEvent(null);
+    setSelectedAnnotation(null);
+    setSelectedAssessmentId(null);
+
+    if (isAssessmentEvent(info.event.extendedProps)) {
+      const { assessmentId } = info.event
+        .extendedProps as AssessmentEventDetails;
+      setSelectedAssessmentId(assessmentId);
+      return;
+    }
     if (isAnnotation(info.event.extendedProps)) {
       // Narrow month cells cut long names; the panel shows them in full.
-      setSelectedEvent(null);
       setSelectedAnnotation(info.event.extendedProps as AnnotationDetails);
       return;
     }
     const details = info.event.extendedProps as CalendarEventDetails;
 
-    setSelectedAnnotation(null);
     setSelectedEvent({
       ...details,
       title: info.event.title,
+    });
+  }
+
+  function selectedClass(): DatedClass | undefined {
+    if (!selectedEvent) {
+      return undefined;
+    }
+    return classesOn(eventSeries, selectedEvent.date, semester).find(
+      (dated) => dated.seriesId === selectedEvent.seriesId,
+    );
+  }
+
+  function addEntry(kind: NewEntryKind, context: EntryContext) {
+    setEntrySession(
+      kind === 'note'
+        ? { form: 'note', context }
+        : { form: 'assessment', kind, context },
+    );
+  }
+
+  function addEntryToSelectedClass(kind: NewEntryKind) {
+    const dated = selectedClass();
+    if (dated) {
+      addEntry(kind, { date: dated.date, dated });
+    }
+  }
+
+  function editEntry(record: EntryRecord) {
+    const { entry } = record;
+    const context: EntryContext = {
+      date:
+        entry.anchor.type === 'subject'
+          ? (selectedEvent?.date ?? activeDate)
+          : entry.anchor.date,
+      subject: entry.subject,
+    };
+
+    setEntrySession(
+      entry.kind === 'note'
+        ? { form: 'note', context, id: record.id, initial: entry }
+        : {
+            form: 'assessment',
+            kind: entry.kind,
+            context,
+            id: record.id,
+            initial: entry,
+          },
+    );
+  }
+
+  async function saveEntry(entry: Entry) {
+    if (!entrySession) {
+      return;
+    }
+
+    const { id } = entrySession;
+    const nextEntries = id
+      ? entries.map((record) => (record.id === id ? { id, entry } : record))
+      : [...entries, { id: crypto.randomUUID(), entry }];
+    if (!(await persistSnapshot(eventSeries, semester, nextEntries))) {
+      return;
+    }
+
+    setEntrySession(null);
+    // A new kolokwium or exam may be in another month, e.g. in the session.
+    if (!id && entry.anchor.type !== 'subject') {
+      calendarRef.current?.getApi().gotoDate(entry.anchor.date);
+    }
+  }
+
+  async function deleteEntry() {
+    const id = entrySession?.id;
+    if (!id) {
+      return;
+    }
+
+    const nextEntries = entries.filter((record) => record.id !== id);
+    if (!(await persistSnapshot(eventSeries, semester, nextEntries))) {
+      return;
+    }
+
+    if (selectedAssessmentId === id) {
+      setSelectedAssessmentId(null);
+    }
+    setEntrySession(null);
+  }
+
+  function openUpcoming(item: UpcomingAssessment) {
+    setActiveDate(item.date);
+    setSelectedAnnotation(null);
+    calendarRef.current?.getApi().changeView('timeGridDay', item.date);
+
+    const dated = item.seriesId
+      ? classesOn(eventSeries, item.date, semester).find(
+          (candidate) => candidate.seriesId === item.seriesId,
+        )
+      : undefined;
+    if (!dated) {
+      setSelectedEvent(null);
+      setSelectedAssessmentId(item.id);
+      return;
+    }
+
+    // A kolokwium during a class is shown with the class.
+    setSelectedAssessmentId(null);
+    setSelectedEvent({
+      building: dated.event.building,
+      classType: dated.event.classType,
+      color: dated.event.color,
+      date: dated.date,
+      endTime: dated.event.endTime,
+      marks: classMarks(
+        placed.byClass.get(classKey(dated.seriesId, dated.date)),
+      ),
+      room: dated.event.room,
+      seriesId: dated.seriesId,
+      startTime: dated.event.startTime,
+      title: dated.event.subject,
     });
   }
 
@@ -424,18 +655,19 @@ export function App() {
     downloadFile(
       'mruos-plan.json',
       'application/json;charset=utf-8',
-      exportCalendarBackup({ events: eventSeries, semester }),
+      exportCalendarBackup({ events: eventSeries, semester, entries }),
     );
   }
 
-  async function handleExportIcs() {
+  async function handleExportIcs(options: IcsOptions) {
     const { exportCalendarIcs } = await import('./calendarIcs');
 
     downloadFile(
       'mruos-plan.ics',
       'text/calendar;charset=utf-8',
-      exportCalendarIcs(eventSeries, semester.daysOff),
+      exportCalendarIcs({ events: eventSeries, semester, entries }, options),
     );
+    setIcsExportOpen(false);
   }
 
   async function handleImportJson(event: ChangeEvent<HTMLInputElement>) {
@@ -471,7 +703,11 @@ export function App() {
     }
 
     if (
-      !(await persistSnapshot(pendingImport.events, pendingImport.semester))
+      !(await persistSnapshot(
+        pendingImport.events,
+        pendingImport.semester,
+        pendingImport.entries,
+      ))
     ) {
       return;
     }
@@ -510,7 +746,7 @@ export function App() {
   }
 
   async function handleRestoreDemo() {
-    if (await persistSnapshot(demoEventSeries, demoSemester)) {
+    if (await persistSnapshot(demoEventSeries, demoSemester, [])) {
       setActiveDate(demoRange.startDate);
       calendarRef.current?.getApi().gotoDate(demoRange.startDate);
     }
@@ -616,6 +852,13 @@ export function App() {
               <span aria-hidden="true">+</span>
               Dodaj zajęcia
             </button>
+            <button
+              className="secondary-button add-entry-button"
+              type="button"
+              onClick={() => addEntry('test', { date: activeDate })}
+            >
+              + Kolokwium / egzamin
+            </button>
           </div>
         </div>
 
@@ -644,7 +887,7 @@ export function App() {
           <button
             className="secondary-button"
             type="button"
-            onClick={handleExportIcs}
+            onClick={() => setIcsExportOpen(true)}
           >
             Eksport ICS
           </button>
@@ -692,6 +935,12 @@ export function App() {
         )}
 
         <div className="calendar-layout">
+          <UpcomingPanel
+            upcoming={upcoming}
+            orphans={placed.orphans}
+            onOpenAssessment={openUpcoming}
+            onOpenOrphan={editEntry}
+          />
           <section className="calendar-panel" aria-label="Kalendarz zajęć">
             <FullCalendar
               ref={calendarRef}
@@ -717,16 +966,14 @@ export function App() {
               timeZone="Europe/Warsaw"
               firstDay={1}
               events={(fetchInfo: EventSourceFuncArg, successCallback) => {
+                const range = {
+                  startDate: fetchInfo.startStr.slice(0, 10),
+                  endDate: fetchInfo.endStr.slice(0, 10),
+                };
                 successCallback([
                   ...toAnnotationEvents(semester),
-                  ...toCalendarEvents(
-                    eventSeries,
-                    {
-                      startDate: fetchInfo.startStr.slice(0, 10),
-                      endDate: fetchInfo.endStr.slice(0, 10),
-                    },
-                    semester,
-                  ),
+                  ...toCalendarEvents(eventSeries, range, semester, placed),
+                  ...toAssessmentEvents(placed.assessments, range),
                 ]);
               }}
               dateClick={handleDateClick}
@@ -804,7 +1051,31 @@ export function App() {
                     Edytuj
                   </button>
                 </div>
+                <ClassEntries
+                  records={
+                    placed.byClass.get(
+                      classKey(selectedEvent.seriesId, selectedEvent.date),
+                    ) ?? []
+                  }
+                  subjectNotes={
+                    placed.subjectNotes.get(selectedEvent.title) ?? []
+                  }
+                  onAdd={addEntryToSelectedClass}
+                  onEdit={editEntry}
+                />
               </div>
+            ) : selectedAssessment ? (
+              <AssessmentDetails
+                scheduled={selectedAssessment}
+                onEdit={() => {
+                  const record = entries.find(
+                    (candidate) => candidate.id === selectedAssessment.id,
+                  );
+                  if (record) {
+                    editEntry(record);
+                  }
+                }}
+              />
             ) : selectedAnnotation ? (
               <div className="event-details">
                 <span className="event-type">
@@ -874,6 +1145,43 @@ export function App() {
           }
         />
       )}
+      {entrySession?.form === 'assessment' && (
+        <AssessmentForm
+          mode={entrySession.id ? 'edit' : 'create'}
+          kind={entrySession.kind}
+          context={entrySession.context}
+          initial={entrySession.initial}
+          series={eventSeries}
+          semester={semester}
+          onCancel={() => setEntrySession(null)}
+          onSave={(assessment) => void saveEntry(assessment)}
+          onDelete={entrySession.id ? () => void deleteEntry() : undefined}
+          saveError={
+            storageError ? repositoryErrorMessages[storageError] : undefined
+          }
+        />
+      )}
+      {entrySession?.form === 'note' && (
+        <NoteForm
+          mode={entrySession.id ? 'edit' : 'create'}
+          context={entrySession.context}
+          initial={entrySession.initial}
+          series={eventSeries}
+          semester={semester}
+          onCancel={() => setEntrySession(null)}
+          onSave={(note) => void saveEntry(note)}
+          onDelete={entrySession.id ? () => void deleteEntry() : undefined}
+          saveError={
+            storageError ? repositoryErrorMessages[storageError] : undefined
+          }
+        />
+      )}
+      {icsExportOpen && (
+        <IcsExportDialog
+          onCancel={() => setIcsExportOpen(false)}
+          onExport={(options) => void handleExportIcs(options)}
+        />
+      )}
       {settingsOpen && (
         <AcademicYearSettings
           semester={semester}
@@ -918,8 +1226,8 @@ export function App() {
             </header>
             <div className="event-form">
               <p>
-                Zaimportowany plan i semestr zastąpią obecne dane zapisane w tej
-                przeglądarce.
+                Zaimportowany plan, semestr oraz kolokwia, egzaminy i notatki
+                zastąpią obecne dane.
               </p>
               {storageError && (
                 <p className="form-errors" role="alert">

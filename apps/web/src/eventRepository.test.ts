@@ -52,6 +52,17 @@ const snapshot = {
     },
   ],
   semester: { startDate: '2026-09-28', daysOff: ['2026-11-11'] },
+  entries: [
+    {
+      id: 'entry-1',
+      entry: {
+        kind: 'note' as const,
+        subject: 'Matematyka',
+        text: 'Przynieść kalkulator',
+        anchor: { type: 'subject' as const },
+      },
+    },
+  ],
 };
 
 describe('LocalStorageEventRepository', () => {
@@ -156,7 +167,7 @@ describe('ApiEventRepository', () => {
     const fetcher: typeof fetch = async (input, init) => {
       requestUrl = input;
       requestInit = init;
-      return new Response(null, { status: 200 });
+      return new Response(String(init?.body), { status: 200 });
     };
     const repository = new ApiEventRepository('/api', fetcher);
 
@@ -167,5 +178,25 @@ describe('ApiEventRepository', () => {
     expect(requestUrl).toBe('/api/calendar');
     expect(requestInit?.method).toBe('PUT');
     expect(JSON.parse(String(requestInit?.body))).toEqual(snapshot);
+  });
+
+  it('reports entries that an older server did not keep', async () => {
+    const withoutEntries = {
+      events: snapshot.events,
+      semester: snapshot.semester,
+    };
+    const repository = new ApiEventRepository(
+      '/api',
+      async () => new Response(JSON.stringify(withoutEntries), { status: 200 }),
+    );
+
+    expect(await repository.save(snapshot)).toEqual({
+      success: false,
+      error: 'server-updating',
+    });
+    expect(await repository.save({ ...snapshot, entries: [] })).toEqual({
+      success: true,
+      value: undefined,
+    });
   });
 });
