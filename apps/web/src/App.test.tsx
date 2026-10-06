@@ -185,7 +185,10 @@ describe('calendar', () => {
     window.localStorage.setItem('mruos-guest-mode', 'true');
 
     renderApp('/kalendarz');
+    // First the guest calendar, then the account; its e-mail shows while
+    // the account's plan is still loading.
     expect(await screen.findByText('student@example.com')).toBeTruthy();
+    await screen.findByRole('button', { name: 'Dodaj zajęcia' });
     addClass('Lost change');
 
     expect(
