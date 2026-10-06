@@ -2,6 +2,10 @@ import express from 'express';
 import session from 'express-session';
 import helmet from 'helmet';
 import type { Store } from 'express-session';
+import { defaultLockoutPolicy } from './controllers/loginThrottle.js';
+import type { LockoutPolicy } from './controllers/loginThrottle.js';
+import { createAuthLimiter } from './middleware/authLimiter.js';
+import { createAccountRoutes } from './routes/accountRoutes.js';
 import { createAuthRoutes } from './routes/authRoutes.js';
 import { calendarRoutes } from './routes/calendarRoutes.js';
 import { eventRoutes } from './routes/eventRoutes.js';
@@ -16,6 +20,8 @@ export type AppOptions = {
   webOrigin?: string;
   /** Login and registration attempts per IP in a 15-minute window. */
   authAttemptLimit?: number;
+  /** Failed logins per e-mail that lock it for a while. */
+  loginLockout?: Partial<LockoutPolicy>;
   /**
    * Required header value on every request except /health. When set, the API
    * sits behind the Vercel proxy, so forwarded headers are trusted too.
@@ -77,23 +83,31 @@ export function createApp(options: AppOptions) {
       store: options.sessionStore,
       resave: false,
       saveUninitialized: false,
+      // Remembered sessions get a fresh 30-day expiry on every request.
+      rolling: true,
+      // No maxAge here: the cookie lasts for the browser session unless the
+      // login asks to be remembered (see startSession).
       cookie: {
         httpOnly: true,
         sameSite: 'lax',
         secure: options.secureCookies ?? false,
-        maxAge: 7 * 24 * 60 * 60 * 1000,
         path: '/',
       },
     }),
   );
 
+  const authLimiter = createAuthLimiter(
+    options.authAttemptLimit ?? 10,
+    Boolean(options.originSecret),
+  );
   app.use(
     '/auth',
-    createAuthRoutes(
-      options.authAttemptLimit ?? 10,
-      Boolean(options.originSecret),
-    ),
+    createAuthRoutes(authLimiter, {
+      ...defaultLockoutPolicy,
+      ...options.loginLockout,
+    }),
   );
+  app.use('/account', createAccountRoutes(authLimiter));
   app.use('/events', eventRoutes);
   app.use('/semester', semesterRoutes);
   app.use('/calendar', calendarRoutes);

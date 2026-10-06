@@ -6,6 +6,7 @@ import { createApp } from './app.js';
 import { startInMemoryDatabase } from './inMemoryDatabase.js';
 import type { InMemoryDatabase } from './inMemoryDatabase.js';
 import { EventModel } from './models/event.js';
+import { LoginThrottleModel } from './models/loginThrottle.js';
 import { SemesterModel } from './models/semester.js';
 import { UserModel } from './models/user.js';
 
@@ -63,6 +64,7 @@ describe('API integration and user isolation', () => {
       UserModel.deleteMany({}),
       EventModel.deleteMany({}),
       SemesterModel.deleteMany({}),
+      LoginThrottleModel.deleteMany({}),
     ]);
   });
 
