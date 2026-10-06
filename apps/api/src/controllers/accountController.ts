@@ -4,13 +4,13 @@ import {
   AccountExportSchema,
   ChangePasswordInputSchema,
   DeleteAccountInputSchema,
-  EventSchema,
 } from '@mruos/shared';
+import { EntryModel } from '../models/entry.js';
 import { EventModel } from '../models/event.js';
 import { SemesterModel } from '../models/semester.js';
 import { UserModel } from '../models/user.js';
+import { loadCalendar } from './calendarData.js';
 import { clearLoginFailures } from './loginThrottle.js';
-import { semesterFromRecord } from './semesterData.js';
 import { clearSessionCookie, endSession } from './sessionHelpers.js';
 
 // Every handler runs behind requireAuth, so the session belongs to a user.
@@ -94,10 +94,9 @@ export const exportAccount: RequestHandler = async (
 ) => {
   const userId = sessionUserId(request);
   try {
-    const [user, records, semesterRecord] = await Promise.all([
+    const [user, calendar] = await Promise.all([
       UserModel.findById(userId).select('email createdAt').lean(),
-      EventModel.find({ userId }).sort({ createdAt: 1 }).lean(),
-      SemesterModel.findOne({ userId }).lean(),
+      loadCalendar(userId),
     ]);
     const exported = AccountExportSchema.parse({
       version: 1,
@@ -106,11 +105,7 @@ export const exportAccount: RequestHandler = async (
         email: user?.email,
         createdAt: user?.createdAt.toISOString(),
       },
-      events: records.map((record) => ({
-        id: record.clientId,
-        event: EventSchema.parse(record.event),
-      })),
-      semester: semesterFromRecord(semesterRecord),
+      ...calendar,
     });
 
     response.setHeader(
@@ -147,6 +142,7 @@ export const deleteAccount: RequestHandler = async (
 
     await Promise.all([
       EventModel.deleteMany({ userId }),
+      EntryModel.deleteMany({ userId }),
       SemesterModel.deleteMany({ userId }),
       clearLoginFailures(user.email),
     ]);

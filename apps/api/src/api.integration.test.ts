@@ -5,6 +5,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { createApp } from './app.js';
 import { startInMemoryDatabase } from './inMemoryDatabase.js';
 import type { InMemoryDatabase } from './inMemoryDatabase.js';
+import { EntryModel } from './models/entry.js';
 import { EventModel } from './models/event.js';
 import { LoginThrottleModel } from './models/loginThrottle.js';
 import { SemesterModel } from './models/semester.js';
@@ -33,6 +34,26 @@ const event = {
   exceptions: [],
 };
 
+const kolokwium = {
+  kind: 'test',
+  subject: 'Matematyka',
+  title: 'Kolokwium',
+  reminders: ['P1D'],
+  anchor: {
+    type: 'class',
+    classType: 'wyklad',
+    date: '2026-10-12',
+    startTime: '08:00',
+  },
+};
+const note = {
+  kind: 'note',
+  subject: 'Matematyka',
+  text: 'Przynieść kalkulator',
+  anchor: { type: 'subject' },
+};
+const semester = { startDate: '2026-10-01', daysOff: [] };
+
 async function registerAgent(
   email: string,
   password = 'correct-horse-battery',
@@ -51,11 +72,14 @@ describe('API integration and user isolation', () => {
     await Promise.all([
       UserModel.init(),
       EventModel.init(),
+      EntryModel.init(),
       SemesterModel.init(),
     ]);
     app = createApp({
       sessionSecret: 'integration-test-secret-value-is-long-enough',
       secureCookies: false,
+      // Limits have their own tests with their own app.
+      authAttemptLimit: 1000,
     });
   }, 60000);
 
@@ -63,6 +87,7 @@ describe('API integration and user isolation', () => {
     await Promise.all([
       UserModel.deleteMany({}),
       EventModel.deleteMany({}),
+      EntryModel.deleteMany({}),
       SemesterModel.deleteMany({}),
       LoginThrottleModel.deleteMany({}),
     ]);
@@ -124,6 +149,65 @@ describe('API integration and user isolation', () => {
       daysOff: [],
     });
     expect((await userA.get('/calendar')).body.events).toHaveLength(1);
+  });
+
+  it('stores kolokwia, exams and notes with each account’s plan', async () => {
+    const { agent: userA } = await registerAgent('a@example.com');
+    const { agent: userB } = await registerAgent('b@example.com');
+    const entries = [
+      { id: 'entry-1', entry: kolokwium },
+      { id: 'entry-2', entry: note },
+    ];
+
+    const saved = await userA.put('/calendar').send({
+      events: [{ id: 'series-a', event }],
+      semester,
+      entries,
+    });
+    // The same client ids in another account are separate entries.
+    await userB.put('/calendar').send({
+      events: [],
+      semester,
+      entries: [{ id: 'entry-1', entry: { ...note, text: 'Inna' } }],
+    });
+
+    expect(saved.status).toBe(200);
+    expect((await userA.get('/calendar')).body.entries).toEqual(entries);
+    expect((await userB.get('/calendar')).body.entries).toEqual([
+      { id: 'entry-1', entry: { ...note, text: 'Inna' } },
+    ]);
+  });
+
+  it('keeps entries when a page from before entries saves the plan', async () => {
+    const { agent } = await registerAgent('a@example.com');
+    const entries = [{ id: 'entry-1', entry: kolokwium }];
+    await agent.put('/calendar').send({ events: [], semester, entries });
+
+    const oldPage = await agent.put('/calendar').send({ events: [], semester });
+
+    expect(oldPage.body.entries).toEqual(entries);
+    expect((await agent.get('/calendar')).body.entries).toEqual(entries);
+
+    await agent.put('/calendar').send({ events: [], semester, entries: [] });
+    expect((await agent.get('/calendar')).body.entries).toEqual([]);
+  });
+
+  it('rejects entries that break the rules', async () => {
+    const { agent } = await registerAgent('a@example.com');
+
+    const response = await agent.put('/calendar').send({
+      events: [],
+      semester,
+      entries: [
+        {
+          id: 'entry-1',
+          entry: { ...kolokwium, anchor: { type: 'subject' } },
+        },
+      ],
+    });
+
+    expect(response.status).toBe(400);
+    expect(await EntryModel.countDocuments()).toBe(0);
   });
 
   it('rate limits repeated login attempts', async () => {

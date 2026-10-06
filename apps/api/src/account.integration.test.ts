@@ -6,6 +6,7 @@ import { AccountExportSchema } from '@mruos/shared';
 import { createApp } from './app.js';
 import { startInMemoryDatabase } from './inMemoryDatabase.js';
 import type { InMemoryDatabase } from './inMemoryDatabase.js';
+import { EntryModel } from './models/entry.js';
 import { EventModel } from './models/event.js';
 import { LoginThrottleModel } from './models/loginThrottle.js';
 import { SemesterModel } from './models/semester.js';
@@ -33,6 +34,18 @@ const event = {
   },
   exceptions: [],
 };
+const exam = {
+  kind: 'exam',
+  subject: 'Biofarmacja',
+  title: 'Egzamin',
+  reminders: ['P7D', 'P1D'],
+  anchor: {
+    type: 'own',
+    date: '2027-02-08',
+    startTime: '09:00',
+    endTime: '11:00',
+  },
+};
 
 async function register(email: string, remember = false) {
   const agent = request.agent(app);
@@ -58,6 +71,7 @@ describe('account settings', () => {
     await Promise.all([
       UserModel.init(),
       EventModel.init(),
+      EntryModel.init(),
       SemesterModel.init(),
       LoginThrottleModel.init(),
     ]);
@@ -72,6 +86,7 @@ describe('account settings', () => {
     await Promise.all([
       UserModel.deleteMany({}),
       EventModel.deleteMany({}),
+      EntryModel.deleteMany({}),
       SemesterModel.deleteMany({}),
       LoginThrottleModel.deleteMany({}),
     ]);
@@ -134,7 +149,11 @@ describe('account settings', () => {
 
   it('exports the account data as an importable backup', async () => {
     const { agent } = await register('student@example.com');
-    await agent.post('/events').send({ id: 'series-1', event });
+    await agent.put('/calendar').send({
+      events: [{ id: 'series-1', event }],
+      semester: { startDate: '2026-10-01', daysOff: [] },
+      entries: [{ id: 'exam-1', entry: exam }],
+    });
 
     const account = await agent.get('/account');
     const exported = await agent.get('/account/export');
@@ -144,16 +163,18 @@ describe('account settings', () => {
     const data = AccountExportSchema.parse(exported.body);
     expect(data.account).toEqual(account.body);
     expect(data.events).toEqual([{ id: 'series-1', event }]);
+    expect(data.entries).toEqual([{ id: 'exam-1', entry: exam }]);
   });
 
   it('deletes the account with all its data and sessions', async () => {
     const { agent: laptop, response } = await register('student@example.com');
     const { agent: phone } = await login('student@example.com');
     const userId: string = response.body.user.id;
-    await laptop.post('/events').send({ id: 'series-1', event });
-    await laptop
-      .put('/semester')
-      .send({ startDate: '2026-10-01', daysOff: [] });
+    await laptop.put('/calendar').send({
+      events: [{ id: 'series-1', event }],
+      semester: { startDate: '2026-10-01', daysOff: [] },
+      entries: [{ id: 'exam-1', entry: exam }],
+    });
 
     expect(
       (await laptop.delete('/account').send({ password: 'wrong-password' }))
@@ -165,6 +186,7 @@ describe('account settings', () => {
 
     expect(await UserModel.countDocuments({ _id: userId })).toBe(0);
     expect(await EventModel.countDocuments({ userId })).toBe(0);
+    expect(await EntryModel.countDocuments({ userId })).toBe(0);
     expect(await SemesterModel.countDocuments({ userId })).toBe(0);
     expect((await laptop.get('/auth/me')).status).toBe(401);
     expect((await phone.get('/calendar')).status).toBe(401);
