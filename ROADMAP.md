@@ -129,14 +129,14 @@ Testy muszą obejmować:
 
 ## Etap 10: Konto i prywatność
 
-- [ ] Strony aplikacji (React Router): `/` logowanie, `/rejestracja`, `/kalendarz`, `/konto`, `/prywatnosc`; reguła na Vercelu, żeby adresy działały po odświeżeniu
-- [ ] Strona startowa z logowaniem; zalogowany trafia do kalendarza, niezalogowany z `/kalendarz` do logowania
-- [ ] „Wypróbuj bez konta”: tryb lokalny, plan zapisany w przeglądarce
-- [ ] „Nie wylogowuj mnie”: sesja na 30 dni, bez zaznaczenia do zamknięcia przeglądarki
-- [ ] Rejestracja na osobnej stronie, ze wskaźnikiem siły hasła
-- [ ] Ustawienia konta: zmiana hasła (wylogowuje pozostałe urządzenia), wylogowanie ze wszystkich urządzeń, pobranie moich danych, usunięcie konta
-- [ ] Czasowa blokada konta po wielu nieudanych logowaniach
-- [ ] Strona „Prywatność”: jakie dane przechowujemy, po co, jak je pobrać i usunąć
+- [x] Strony aplikacji (React Router): `/` logowanie, `/rejestracja`, `/kalendarz`, `/konto`, `/prywatnosc`; reguła na Vercelu, żeby adresy działały po odświeżeniu
+- [x] Strona startowa z logowaniem; zalogowany trafia do kalendarza, niezalogowany z `/kalendarz` do logowania
+- [x] „Wypróbuj bez konta”: tryb lokalny, plan zapisany w przeglądarce
+- [x] „Nie wylogowuj mnie”: sesja na 30 dni, bez zaznaczenia do zamknięcia przeglądarki
+- [x] Rejestracja na osobnej stronie, ze wskaźnikiem siły hasła
+- [x] Ustawienia konta: zmiana hasła (wylogowuje pozostałe urządzenia), wylogowanie ze wszystkich urządzeń, pobranie moich danych, usunięcie konta
+- [x] Czasowa blokada konta po wielu nieudanych logowaniach
+- [x] Strona „Prywatność”: jakie dane przechowujemy, po co, jak je pobrać i usunąć
 - [x] Aktualizacja akcji GitHub Actions do wersji na Node 24
 
 **Gotowe, gdy:** nowa osoba trafia na stronę logowania, może założyć konto albo wypróbować aplikację bez konta, zmienić hasło, pobrać i usunąć swoje dane; testy integracyjne potwierdzają, że usunięcie konta usuwa wszystkie dane i sesje, a zmiana hasła unieważnia sesje na innych urządzeniach; scenariusze E2E przechodzą na desktopie i telefonie.

@@ -8,7 +8,8 @@ Kalendarz studencki do zarządzania planem zajęć (wersja produkcyjna: https://
 - Serie zajęć: co tydzień lub co dwa tygodnie, zakres jako daty albo tygodnie semestru.
 - Edycja „tylko ten termin” (np. zmiana sali) albo „cała seria”, odwoływanie terminów.
 - Ostrzeżenia o kolizjach, ustawienia semestru i dni wolnych.
-- Praca bez konta (zapis w przeglądarce) albo z kontem: plan na serwerze, przeniesienie lokalnego planu przy pierwszym logowaniu.
+- Strona logowania na start; „Wypróbuj bez konta” (plan zapisany w przeglądarce) albo konto: plan na serwerze, przeniesienie lokalnego planu przy pierwszym logowaniu, „Nie wylogowuj mnie” na 30 dni.
+- Konto i prywatność: zmiana hasła (wylogowuje pozostałe urządzenia), wylogowanie innych urządzeń, pobranie i usunięcie swoich danych, czasowa blokada po 10 nieudanych logowaniach, strona „Prywatność”.
 - Import planu z pliku Excel (.xlsx) w formacie siatki dni × godzin z blokami zajęć: wybór grup dla każdego przedmiotu, ostrzeżenia o kolizjach, podgląd i oznaczenie miejsc do poprawy.
 - Harmonogram roku akademickiego: semestry z okresami zajęć, przerw i sesji oraz dni wolne (święta ustawowe wyliczane automatycznie); tygodnie planu liczone według okresów zajęć, dni wolne i przerwy widoczne w kalendarzu.
 - Kopia zapasowa JSON i eksport do kalendarza (.ics).
@@ -27,7 +28,7 @@ Frontend i API działają pod jednym adresem, więc ciasteczko sesji jest `httpO
 
 | Katalog           | Zawartość                                                   |
 | ----------------- | ----------------------------------------------------------- |
-| `apps/web`        | React, Vite, Tailwind, FullCalendar                         |
+| `apps/web`        | React, React Router, Vite, Tailwind, FullCalendar           |
 | `apps/api`        | Express, Mongoose, sesje, argon2                            |
 | `packages/shared` | Typy, schematy zod, wyliczanie terminów z reguł powtarzania |
 | `e2e`             | Testy Playwright (desktop i emulacja telefonu)              |
@@ -112,7 +113,7 @@ Darmowy serwis usypia po 15 minutach bez ruchu; pierwsze żądanie po przerwie t
 
    `API_ORIGIN` bez końcowego `/`.
 
-4. Wdróż ponownie i sprawdź, że rejestracja działa pod domeną produkcyjną.
+4. Wdróż ponownie i sprawdź, że rejestracja działa pod domeną produkcyjną, a odświeżenie strony `/konto` otwiera aplikację (pozostałe adresy trafiają do `index.html`).
 
 ### 5. Ochrona gałęzi
 
