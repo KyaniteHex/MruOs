@@ -101,12 +101,10 @@ describe('account settings', () => {
 
     expect(
       (
-        await laptop
-          .post('/account/password')
-          .send({
-            currentPassword: 'wrong-password',
-            newPassword: 'n' + password,
-          })
+        await laptop.post('/account/password').send({
+          currentPassword: 'wrong-password',
+          newPassword: 'n' + password,
+        })
       ).status,
     ).toBe(403);
     expect(
