@@ -67,6 +67,9 @@ Zasady, których trzeba przestrzegać:
 - Edycja „tylko tego terminu” tworzy wpis w `exceptions`. Edycja „całej serii” zmienia dokument.
 - Semestr (`Semester`) przechowuje datę rozpoczęcia, dni wolne i opcjonalny harmonogram roku akademickiego (`academicYear`: semestry z okresami `teaching`, `break`, `exams`, `event`, `day-off` oraz nazwane dni wolne). Gdy harmonogram istnieje, `daysOff` jest z niego wyliczane.
 - Z harmonogramem „tydzień N” zajęć w danym dniu tygodnia to N-ta data tego dnia w okresach `teaching` semestru; dzień wolny w okresie zajęć liczy się jako tydzień, a zajęcia tego dnia przepadają. Bez harmonogramu tygodnie to 7-dniowe okna od początku semestru, z pominięciem okien, w których wszystkie dni robocze są wolne.
+- Kolokwia, egzaminy i notatki to wpisy w osobnej kolekcji `entries` (jeden dokument na wpis, `{ id, entry }` w planie). Kolokwium i egzamin są „w czasie zajęć” (`anchor.type: 'class'`) albo w osobnym terminie (`'own'`: data, godziny, opcjonalnie budynek i sala); notatka dotyczy terminu zajęć albo całego przedmiotu (`'subject'`). Przypomnienia to `P7D`, `P1D`, `PT2H`.
+- Wpis „w czasie zajęć” jest przypięty przez przedmiot, typ zajęć, datę i godzinę rozpoczęcia, a nie przez id serii, dzięki czemu przetrwa ponowny import planu. Gdy godzina się zmieni, a tego dnia jest tylko jedne takie zajęcia, wpis zostaje przy nich. Wpisy, których zajęcia zniknęły (odwołane, dzień wolny, inny plan), trafiają na listę „Wpisy bez terminu”.
+- Zapis planu bez pola `entries` (np. ze strony wczytanej przed wydaniem z wpisami) nie usuwa wpisów na serwerze.
 - Typy i schematy zod są zdefiniowane wyłącznie w `packages/shared` i importowane przez frontend oraz backend.
 
 ## Konwencje kodu
