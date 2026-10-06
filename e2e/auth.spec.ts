@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { login, password, register } from './helpers';
+import { login, openAsGuest, password, register } from './helpers';
 
 const loginHeading = { name: 'Zaloguj się' };
 const day = 24 * 60 * 60 * 1000;
@@ -88,4 +88,22 @@ test('sends visitors of protected pages to the login page', async ({
     await page.goto(path);
     await expect(page.getByRole('heading', loginHeading)).toBeVisible();
   }
+});
+
+test('fits the screen width with and without an account', async ({ page }) => {
+  // A phone widens the layout to fit the content, so compare the page with
+  // the screen rather than with window.innerWidth.
+  const screenWidth = page.viewportSize()?.width ?? 0;
+  const overflow = async () =>
+    (await page.evaluate(() => document.documentElement.scrollWidth)) -
+    screenWidth;
+
+  await openAsGuest(page);
+  expect(await overflow()).toBeLessThanOrEqual(0);
+
+  await register(page);
+  await expect(
+    page.getByRole('button', { name: 'Dodaj zajęcia' }),
+  ).toBeVisible();
+  expect(await overflow()).toBeLessThanOrEqual(0);
 });
