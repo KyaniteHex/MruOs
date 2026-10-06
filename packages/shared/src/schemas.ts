@@ -202,9 +202,82 @@ export const EventSeriesSchema = z.object({
   event: EventSchema,
 });
 
+const entrySubjectSchema = z.string().trim().min(1).max(200);
+
+/** The class of the entry's subject with this type, date and start time. */
+export const ClassAnchorSchema = z.strictObject({
+  type: z.literal('class'),
+  classType: ClassTypeSchema,
+  date: dateSchema,
+  startTime: timeSchema,
+});
+
+/** An own date and time, e.g. an exam in the exam session. */
+export const OwnTimeAnchorSchema = z
+  .strictObject({
+    type: z.literal('own'),
+    date: dateSchema,
+    startTime: timeSchema,
+    endTime: timeSchema,
+    building: z.string().trim().min(1).max(120).optional(),
+    room: z.string().trim().min(1).max(60).optional(),
+  })
+  .refine((anchor) => anchor.endTime > anchor.startTime, {
+    message: 'endTime must be after startTime',
+    path: ['endTime'],
+  });
+
+/** The whole subject, for notes that are not about a single class. */
+export const SubjectAnchorSchema = z.strictObject({
+  type: z.literal('subject'),
+});
+
+/** How long before the start a calendar reminds, as an ISO 8601 duration. */
+export const ReminderSchema = z.enum(['P7D', 'P1D', 'PT2H']);
+
+/** test: kolokwium, exam: egzamin. */
+export const AssessmentKindSchema = z.enum(['test', 'exam']);
+
+export const AssessmentSchema = z.strictObject({
+  kind: AssessmentKindSchema,
+  subject: entrySubjectSchema,
+  title: z.string().trim().min(1).max(120),
+  /** E.g. the material it covers. */
+  details: z.string().trim().min(1).max(2000).optional(),
+  reminders: z
+    .array(ReminderSchema)
+    .max(3)
+    .refine((reminders) => new Set(reminders).size === reminders.length, {
+      message: 'reminders must be unique',
+    }),
+  anchor: z.discriminatedUnion('type', [
+    ClassAnchorSchema,
+    OwnTimeAnchorSchema,
+  ]),
+});
+
+export const NoteSchema = z.strictObject({
+  kind: z.literal('note'),
+  subject: entrySubjectSchema,
+  text: z.string().trim().min(1).max(2000),
+  anchor: z.discriminatedUnion('type', [
+    ClassAnchorSchema,
+    SubjectAnchorSchema,
+  ]),
+});
+
+export const EntrySchema = z.union([AssessmentSchema, NoteSchema]);
+
+export const EntryRecordSchema = z.object({
+  id: z.string().min(1).max(100),
+  entry: EntrySchema,
+});
+
 export const CalendarSnapshotSchema = z.object({
   events: z.array(EventSeriesSchema),
   semester: SemesterSchema,
+  // Plans saved before entries existed have none.
+  entries: z.array(EntryRecordSchema).max(1000).default([]),
 });
 
 export const CalendarBackupSchema = CalendarSnapshotSchema.extend({

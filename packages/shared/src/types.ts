@@ -8,7 +8,10 @@ import type {
   AcademicYearSchema,
   AccountExportSchema,
   AccountInfoSchema,
+  AssessmentKindSchema,
+  AssessmentSchema,
   ChangePasswordInputSchema,
+  ClassAnchorSchema,
   ClassTypeSchema,
   DeleteAccountInputSchema,
   CalendarBackupSchema,
@@ -20,10 +23,16 @@ import type {
   EventSchema,
   EventSeriesSchema,
   EventUpdateInputSchema,
+  EntryRecordSchema,
+  EntrySchema,
   ExceptionOverrideSchema,
   LoginInputSchema,
+  NoteSchema,
+  OwnTimeAnchorSchema,
   RegistrationInputSchema,
   RecurrenceSchema,
+  ReminderSchema,
+  SubjectAnchorSchema,
   SemesterSchema,
   WeekdaySchema,
 } from './schemas.js';
@@ -55,6 +64,15 @@ export type EventUpdateInput = z.infer<typeof EventUpdateInputSchema>;
 export type RegistrationInput = z.infer<typeof RegistrationInputSchema>;
 export type LoginInput = z.infer<typeof LoginInputSchema>;
 export type Semester = z.infer<typeof SemesterSchema>;
+export type ClassAnchor = z.infer<typeof ClassAnchorSchema>;
+export type OwnTimeAnchor = z.infer<typeof OwnTimeAnchorSchema>;
+export type SubjectAnchor = z.infer<typeof SubjectAnchorSchema>;
+export type Reminder = z.infer<typeof ReminderSchema>;
+export type AssessmentKind = z.infer<typeof AssessmentKindSchema>;
+export type Assessment = z.infer<typeof AssessmentSchema>;
+export type Note = z.infer<typeof NoteSchema>;
+export type Entry = z.infer<typeof EntrySchema>;
+export type EntryRecord = z.infer<typeof EntryRecordSchema>;
 
 export type DateRange = {
   startDate: string;

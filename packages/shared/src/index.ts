@@ -7,8 +7,11 @@ export {
   AcademicYearSchema,
   AccountExportSchema,
   AccountInfoSchema,
+  AssessmentKindSchema,
+  AssessmentSchema,
   CalendarBackupSchema,
   ChangePasswordInputSchema,
+  ClassAnchorSchema,
   DeleteAccountInputSchema,
   CalendarSnapshotSchema,
   AuthenticatedUserSchema,
@@ -19,11 +22,17 @@ export {
   EventSchema,
   EventSeriesSchema,
   EventUpdateInputSchema,
+  EntryRecordSchema,
+  EntrySchema,
   ExceptionOverrideSchema,
   LoginInputSchema,
+  NoteSchema,
+  OwnTimeAnchorSchema,
   RegistrationInputSchema,
   RecurrenceSchema,
+  ReminderSchema,
   SemesterSchema,
+  SubjectAnchorSchema,
   WeekdaySchema,
 } from './schemas.js';
 export {
@@ -48,6 +57,21 @@ export {
   weeksToDateRange,
 } from './academicYear.js';
 export type { CalendarAnnotation, WeekCalendar } from './academicYear.js';
+export {
+  classAnchor,
+  classesOn,
+  classKey,
+  findAnchoredClass,
+  placeEntries,
+  planSubjects,
+  upcomingAssessments,
+} from './entries.js';
+export type {
+  DatedClass,
+  PlacedEntries,
+  ScheduledAssessment,
+  UpcomingAssessment,
+} from './entries.js';
 export { easterSunday, polishPublicHolidays } from './holidays.js';
 export { expandOccurrences } from './recurrence.js';
 export {
@@ -92,7 +116,10 @@ export type {
   AcademicYear,
   AccountExport,
   AccountInfo,
+  Assessment,
+  AssessmentKind,
   CalendarBackup,
+  ClassAnchor,
   ChangePasswordInput,
   DeleteAccountInput,
   CalendarSnapshot,
@@ -105,11 +132,17 @@ export type {
   EventException,
   EventSeries,
   EventUpdateInput,
+  Entry,
+  EntryRecord,
   ExceptionOverride,
   LoginInput,
+  Note,
   Occurrence,
+  OwnTimeAnchor,
   Recurrence,
   RegistrationInput,
+  Reminder,
   Semester,
+  SubjectAnchor,
   Weekday,
 } from './types.js';
