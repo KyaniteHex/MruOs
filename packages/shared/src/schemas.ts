@@ -213,14 +213,35 @@ export const CalendarBackupSchema = CalendarSnapshotSchema.extend({
 
 const emailSchema = z.string().trim().toLowerCase().email();
 
+const newPasswordSchema = z.string().min(12).max(128);
+const currentPasswordSchema = z.string().min(1).max(128);
+/** "Nie wylogowuj mnie": a 30-day session instead of a browser session. */
+const rememberSchema = z.boolean().default(false);
+
 export const RegistrationInputSchema = z.strictObject({
   email: emailSchema,
-  password: z.string().min(12).max(128),
+  password: newPasswordSchema,
+  remember: rememberSchema,
 });
 
 export const LoginInputSchema = z.strictObject({
   email: emailSchema,
-  password: z.string().min(1).max(128),
+  password: currentPasswordSchema,
+  remember: rememberSchema,
+});
+
+export const ChangePasswordInputSchema = z.strictObject({
+  currentPassword: currentPasswordSchema,
+  newPassword: newPasswordSchema,
+});
+
+export const DeleteAccountInputSchema = z.strictObject({
+  password: currentPasswordSchema,
+});
+
+export const AccountInfoSchema = z.strictObject({
+  email: emailSchema,
+  createdAt: z.iso.datetime(),
 });
 
 export const AuthenticatedUserSchema = z.strictObject({
@@ -230,6 +251,12 @@ export const AuthenticatedUserSchema = z.strictObject({
 
 export const AuthResponseSchema = z.strictObject({
   user: AuthenticatedUserSchema,
+});
+
+/** "Pobierz moje dane": a calendar backup plus the account details. */
+export const AccountExportSchema = CalendarBackupSchema.extend({
+  exportedAt: z.iso.datetime(),
+  account: AccountInfoSchema,
 });
 
 export const EventCreateInputSchema = z.strictObject({

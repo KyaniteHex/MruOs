@@ -11,6 +11,8 @@ const userSchema = new mongoose.Schema(
       unique: true,
     },
     passwordHash: { type: String, required: true },
+    // Incremented to end every session issued before the change.
+    sessionVersion: { type: Number, required: true, default: 0 },
   },
   { timestamps: true },
 );

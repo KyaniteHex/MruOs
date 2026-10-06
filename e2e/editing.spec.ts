@@ -26,7 +26,6 @@ async function editOccurrence(
 }
 
 test.beforeEach(async ({ page }) => {
-  await page.goto('/');
   await register(page);
   await addClass(page, { subject: 'Bazy danych', weekday: 'Wt', room: '101' });
   await goToNextMonth(page);

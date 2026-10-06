@@ -12,16 +12,17 @@ import plLocale from '@fullcalendar/core/locales/pl';
 import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, CSSProperties } from 'react';
 import {
-  AuthResponseSchema,
   EventSchema,
   expandOccurrences,
   semesterFromAcademicYear,
   todayInWarsaw,
 } from '@mruos/shared';
-import type { AcademicYear, AuthenticatedUser } from '@mruos/shared';
+import type { AcademicYear } from '@mruos/shared';
 import type { ClassType, Event, Semester } from '@mruos/shared';
 import { semesterWeeksToDateRange } from '@mruos/shared/semester';
-import { AccountPanel } from './AccountPanel';
+import { Link, useNavigate } from 'react-router';
+import { useAuth } from './authContext';
+import { slowServerMessage, useSlowHint } from './useSlowHint';
 import { EventForm } from './EventForm';
 import { AcademicYearSettings } from './AcademicYearSettings';
 import { periodKindLabels } from './academicYearForm';
@@ -125,7 +126,9 @@ const repositoryErrorMessages: Record<RepositoryErrorCode, string> = {
 export function App() {
   const calendarRef = useRef<FullCalendar>(null);
   const backupInputRef = useRef<HTMLInputElement>(null);
-  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? '/api';
+  const auth = useAuth();
+  const navigate = useNavigate();
+  const { apiBaseUrl, user: authUser, refresh: refreshAuth } = auth;
   const [localRepository] = useState(
     () =>
       new LocalStorageEventRepository({
@@ -141,7 +144,6 @@ export function App() {
   const savedSnapshot =
     loadResult.success && loadResult.value ? loadResult.value : null;
   const savedSnapshotRef = useRef(savedSnapshot);
-  const [authUser, setAuthUser] = useState<AuthenticatedUser | null>(null);
   const [selectedAnnotation, setSelectedAnnotation] =
     useState<AnnotationDetails | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<SelectedEvent | null>(
@@ -166,38 +168,38 @@ export function App() {
   const [activeDate, setActiveDate] = useState(
     savedSnapshot?.semester.startDate ?? demoRange.startDate,
   );
+  // A signed-in student sees nothing to edit until the account's plan
+  // arrives, so no change lands in the browser's plan by mistake.
+  const [accountPlan, setAccountPlan] = useState<
+    'loading' | 'ready' | 'failed'
+  >(authUser ? 'loading' : 'ready');
+  const slowAccountPlan = useSlowHint(accountPlan === 'loading');
   const semesterEndDate = semesterWeeksToDateRange(semester, 1, 20).endDate;
   const handleAuthenticatedRef = useRef(handleAuthenticated);
   handleAuthenticatedRef.current = handleAuthenticated;
-  const authRestorePromiseRef = useRef<Promise<void> | null>(null);
+  const authUserId = authUser?.id;
 
   useEffect(() => {
     calendarRef.current?.getApi().refetchEvents();
   }, [eventSeries, semester]);
 
+  // A signed-in student works on the account's plan; a guest on the local one.
   useEffect(() => {
-    if (authRestorePromiseRef.current) {
-      return;
+    if (authUserId) {
+      void handleAuthenticatedRef.current();
     }
+  }, [authUserId]);
 
-    authRestorePromiseRef.current = (async () => {
-      try {
-        const response = await fetch(`${apiBaseUrl}/auth/me`, {
-          credentials: 'include',
-        });
-        if (!response.ok) {
-          return;
+  // A session ended elsewhere (e.g. password changed): back to the login page.
+  useEffect(() => {
+    if (storageError === 'unauthorized') {
+      void refreshAuth().then((signedIn) => {
+        if (!signedIn) {
+          navigate('/', { replace: true });
         }
-
-        const result = AuthResponseSchema.safeParse(await response.json());
-        if (result.success) {
-          await handleAuthenticatedRef.current(result.data.user);
-        }
-      } catch {
-        return;
-      }
-    })();
-  }, [apiBaseUrl]);
+      });
+    }
+  }, [storageError, refreshAuth, navigate]);
 
   async function persistSnapshot(
     events: EventSeries[],
@@ -225,12 +227,12 @@ export function App() {
     return true;
   }
 
-  async function handleAuthenticated(
-    user: AuthenticatedUser,
-  ): Promise<boolean> {
+  async function handleAuthenticated(): Promise<boolean> {
+    setAccountPlan('loading');
     const remote = await apiRepository.load();
     if (!remote.success || !remote.value) {
       setStorageError(remote.success ? 'network-error' : remote.error);
+      setAccountPlan('failed');
       return false;
     }
 
@@ -245,6 +247,7 @@ export function App() {
       const migrated = await apiRepository.save(local);
       if (!migrated.success) {
         setStorageError(migrated.error);
+        setAccountPlan('failed');
         return false;
       }
 
@@ -259,22 +262,15 @@ export function App() {
     setSemester(snapshot.semester);
     setActiveDate(snapshot.semester.startDate);
     calendarRef.current?.getApi().gotoDate(snapshot.semester.startDate);
-    setAuthUser(user);
     setStorageError(null);
+    setAccountPlan('ready');
     return true;
   }
 
-  function handleLogout() {
-    const local = savedSnapshotRef.current;
-    setActiveRepository(localRepository);
-    setAuthUser(null);
-    setEventSeries(local?.events ?? demoEventSeries);
-    setSemester(local?.semester ?? demoSemester);
-    setActiveDate(local?.semester.startDate ?? demoRange.startDate);
-    calendarRef.current
-      ?.getApi()
-      .gotoDate(local?.semester.startDate ?? demoRange.startDate);
-    setStorageError(loadResult.success ? null : loadResult.error);
+  async function handleLogout() {
+    await auth.api.logout();
+    auth.signOut();
+    navigate('/', { replace: true });
   }
 
   function handleDateClick(info: { dateStr: string }) {
@@ -520,28 +516,84 @@ export function App() {
     }
   }
 
-  return (
-    <div className="app-shell">
-      <header className="topbar">
-        <a className="brand" href="/" aria-label="MruOS, strona główna">
-          <span className="brand-mark" aria-hidden="true">
-            M
-          </span>
-          <span>MruOS</span>
-        </a>
-        <div className="topbar-term">
+  const topbar = (
+    <header className="topbar">
+      <a className="brand" href="/" aria-label="MruOS, strona główna">
+        <span className="brand-mark" aria-hidden="true">
+          M
+        </span>
+        <span>MruOS</span>
+      </a>
+      <div className="topbar-term">
+        {accountPlan === 'ready' && (
           <div className="term-label">
             <span className="term-dot" aria-hidden="true" />
             Semestr od <span className="term-year">{semester.startDate}</span>
           </div>
-          <AccountPanel
-            user={authUser}
-            apiBaseUrl={apiBaseUrl}
-            onAuthenticated={handleAuthenticated}
-            onLogout={handleLogout}
-          />
-        </div>
-      </header>
+        )}
+        {authUser ? (
+          <div className="account-controls">
+            <span className="account-email">{authUser.email}</span>
+            <div className="account-actions">
+              <Link className="secondary-button account-button" to="/konto">
+                Konto
+              </Link>
+              <button
+                className="secondary-button account-button"
+                type="button"
+                onClick={() => void handleLogout()}
+              >
+                Wyloguj
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="account-controls">
+            <span className="account-mode">Tryb bez konta</span>
+            <div className="account-actions">
+              <Link className="secondary-button account-button" to="/">
+                Zaloguj się
+              </Link>
+            </div>
+          </div>
+        )}
+      </div>
+    </header>
+  );
+
+  if (accountPlan !== 'ready') {
+    return (
+      <div className="app-shell">
+        {topbar}
+        <main className="workspace">
+          {accountPlan === 'failed' ? (
+            <div className="storage-alert" role="alert">
+              <span>
+                {storageError
+                  ? repositoryErrorMessages[storageError]
+                  : 'Nie udało się wczytać planu.'}
+              </span>
+              <button
+                className="secondary-button"
+                type="button"
+                onClick={() => void handleAuthenticated()}
+              >
+                Spróbuj ponownie
+              </button>
+            </div>
+          ) : (
+            <p className="plan-loading" role="status">
+              Wczytywanie planu…{slowAccountPlan && ` ${slowServerMessage}`}
+            </p>
+          )}
+        </main>
+      </div>
+    );
+  }
+
+  return (
+    <div className="app-shell">
+      {topbar}
 
       <main className="workspace">
         <div className="page-heading">

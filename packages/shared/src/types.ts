@@ -6,7 +6,11 @@ import type {
   AcademicSemesterSchema,
   AcademicTermSchema,
   AcademicYearSchema,
+  AccountExportSchema,
+  AccountInfoSchema,
+  ChangePasswordInputSchema,
   ClassTypeSchema,
+  DeleteAccountInputSchema,
   CalendarBackupSchema,
   CalendarSnapshotSchema,
   AuthenticatedUserSchema,
@@ -32,6 +36,10 @@ export type AcademicPeriod = z.infer<typeof AcademicPeriodSchema>;
 export type AcademicSemester = z.infer<typeof AcademicSemesterSchema>;
 export type AcademicDayOff = z.infer<typeof AcademicDayOffSchema>;
 export type AcademicYear = z.infer<typeof AcademicYearSchema>;
+export type AccountInfo = z.infer<typeof AccountInfoSchema>;
+export type AccountExport = z.infer<typeof AccountExportSchema>;
+export type ChangePasswordInput = z.infer<typeof ChangePasswordInputSchema>;
+export type DeleteAccountInput = z.infer<typeof DeleteAccountInputSchema>;
 export type ClassType = z.infer<typeof ClassTypeSchema>;
 export type EventSeries = z.infer<typeof EventSeriesSchema>;
 export type CalendarSnapshot = z.infer<typeof CalendarSnapshotSchema>;

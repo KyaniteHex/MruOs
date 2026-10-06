@@ -86,6 +86,7 @@ Zasady, których trzeba przestrzegać:
 - Każde zapytanie do bazy dotyczące wydarzeń jest filtrowane po `userId` zalogowanego użytkownika.
 - Walidacja wejścia schematami zod na każdym endpoincie.
 - `helmet` oraz rate limiting na endpointach logowania i rejestracji.
+- Zmiana hasła i usunięcie konta wymagają obecnego hasła. Zmiana hasła i „wyloguj pozostałe urządzenia” zwiększają `sessionVersion` użytkownika, co unieważnia jego pozostałe sesje.
 - Sekrety tylko w zmiennych środowiskowych, nigdy w repozytorium.
 
 ## Sposób pracy

@@ -1,10 +1,10 @@
 import { expect, test } from '@playwright/test';
-import { eventOn, goToNextMonth } from './helpers';
+import { eventOn, goToNextMonth, openAsGuest } from './helpers';
 
 const plan = 'e2e/fixtures/plans/260922_Kosmetologia_st2_rok2_sem3.xlsx';
 
 test('imports a faculty timetable for the chosen groups', async ({ page }) => {
-  await page.goto('/');
+  await openAsGuest(page);
   await page.getByRole('button', { name: 'Import z Excela' }).click();
   const dialog = page.getByRole('dialog', { name: 'Import z Excela' });
 

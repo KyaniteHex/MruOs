@@ -126,3 +126,46 @@ Testy muszą obejmować:
 - [x] Zapis harmonogramu w koncie i w przeglądarce, zgodny wstecz ze starymi danymi
 
 **Gotowe, gdy:** harmonogram UMK 2026/27 wpisany w formularzu daje poprawne daty importu planu Farmacji (zmiana sali 2.02 trafia w tydzień 15), a dni wolne i przerwy są widoczne w kalendarzu na desktopie i telefonie.
+
+## Etap 10: Konto i prywatność
+
+- [x] Strony aplikacji (React Router): `/` logowanie, `/rejestracja`, `/kalendarz`, `/konto`, `/prywatnosc`; reguła na Vercelu, żeby adresy działały po odświeżeniu
+- [x] Strona startowa z logowaniem; zalogowany trafia do kalendarza, niezalogowany z `/kalendarz` do logowania
+- [x] „Wypróbuj bez konta”: tryb lokalny, plan zapisany w przeglądarce
+- [x] „Nie wylogowuj mnie”: sesja na 30 dni, bez zaznaczenia do zamknięcia przeglądarki
+- [x] Rejestracja na osobnej stronie, ze wskaźnikiem siły hasła
+- [x] Ustawienia konta: zmiana hasła (wylogowuje pozostałe urządzenia), wylogowanie ze wszystkich urządzeń, pobranie moich danych, usunięcie konta
+- [x] Czasowa blokada konta po wielu nieudanych logowaniach
+- [x] Strona „Prywatność”: jakie dane przechowujemy, po co, jak je pobrać i usunąć
+- [x] Aktualizacja akcji GitHub Actions do wersji na Node 24
+
+**Gotowe, gdy:** nowa osoba trafia na stronę logowania, może założyć konto albo wypróbować aplikację bez konta, zmienić hasło, pobrać i usunąć swoje dane; testy integracyjne potwierdzają, że usunięcie konta usuwa wszystkie dane i sesje, a zmiana hasła unieważnia sesje na innych urządzeniach; scenariusze E2E przechodzą na desktopie i telefonie.
+
+## Etap 11: Kolokwia, egzaminy i notatki
+
+- [ ] Model danych: kolokwium przypięte do terminu zajęć, egzamin z własną datą, godziną i salą powiązany z przedmiotem, notatka do terminu albo przedmiotu
+- [ ] Zapis wpisów w przeglądarce i w koncie (API z filtrowaniem po użytkowniku)
+- [ ] Przyciski „+ Kolokwium”, „+ Egzamin”, „+ Notatka” w szczegółach zajęć; edycja i usuwanie wpisów
+- [ ] Oznaczenia w kalendarzu: ⚑ i obwódka dla zajęć z kolokwium, osobny blok „Egzamin:”, ✎ dla notatki, opisy dla czytników ekranu
+- [ ] Panel „Nadchodzące”: kolokwia i egzaminy z 14 dni, z odliczaniem
+- [ ] Wpisy przetrwają ponowny import planu; wpisy bez terminu trafiają na osobną listę
+- [ ] Kolokwia i egzaminy w eksporcie .ics, z przypomnieniem
+
+**Gotowe, gdy:** do zajęć da się dodać kolokwium, w sesji egzamin, a do zajęć notatkę; wpisy są widoczne w kalendarzu i w „Nadchodzących” i przetrwają ponowny import planu.
+
+## Etap 12: Subskrypcja kalendarza
+
+- [ ] Tajny link subskrypcji dla każdego konta, z generowaniem nowego i unieważnianiem starego; na serwerze tylko skrót tokenu
+- [ ] Adres .ics bez logowania: zajęcia z wyjątkami, dni wolne, kolokwia i egzaminy z przypomnieniami
+- [ ] Limit zapytań do adresu subskrypcji
+- [ ] Instrukcja dodania w Google Calendar, na iPhonie i Macu
+
+**Gotowe, gdy:** link dodany w Google Calendar pokazuje plan, zmiana w MruOS pojawia się po odświeżeniu przez Google, a unieważniony link przestaje działać.
+
+## Później (do wyboru)
+
+- Konto: reset hasła i potwierdzanie adresu e-mailem (wymaga usługi mailowej), usuwanie kont nieaktywnych, sprawdzanie haseł w bazie wycieków, logowanie przez Google
+- Na co dzień: widok tygodnia, ekran „Dziś” z linkiem do mapy, aplikacja na telefon (PWA), ciemny motyw
+- Studia: obecności z licznikiem nieobecności, oceny i zaliczenia, karta przedmiotu
+- Technika: mniejsza paczka frontendu, komunikat „Budzenie serwera…”, dostrojenie hashowania haseł
+- Długoterminowo: integracja z USOS, udostępnianie planu (zmienia założenie, że plany nie są współdzielone)

@@ -2,21 +2,17 @@ import argon2 from 'argon2';
 import type { RequestHandler } from 'express';
 import { LoginInputSchema, RegistrationInputSchema } from '@mruos/shared';
 import { UserModel } from '../models/user.js';
-
-function regenerateSession(
-  request: Parameters<RequestHandler>[0],
-): Promise<void> {
-  return new Promise((resolve, reject) => {
-    request.session.regenerate((error) => {
-      if (error) {
-        reject(error);
-        return;
-      }
-
-      resolve();
-    });
-  });
-}
+import {
+  clearLoginFailures,
+  isLoginLocked,
+  recordLoginFailure,
+} from './loginThrottle.js';
+import type { LockoutPolicy } from './loginThrottle.js';
+import {
+  clearSessionCookie,
+  endSession,
+  startSession,
+} from './sessionHelpers.js';
 
 function isDuplicateKeyError(error: unknown): boolean {
   return (
@@ -25,6 +21,14 @@ function isDuplicateKeyError(error: unknown): boolean {
     'code' in error &&
     error.code === 11000
   );
+}
+
+// Verifying against a throwaway hash when the e-mail is unknown keeps the
+// response time the same, so it does not reveal whether an account exists.
+let unknownUserHash: Promise<string> | undefined;
+function hashForUnknownUser(): Promise<string> {
+  unknownUserHash ??= argon2.hash('no-such-account-placeholder');
+  return unknownUserHash;
 }
 
 export const registerUser: RequestHandler = async (request, response, next) => {
@@ -42,8 +46,7 @@ export const registerUser: RequestHandler = async (request, response, next) => {
       passwordHash,
     });
 
-    await regenerateSession(request);
-    request.session.userId = user.id;
+    await startSession(request, user, input.data.remember);
     response.status(201).json({ user: { id: user.id, email: user.email } });
   } catch (error) {
     if (isDuplicateKeyError(error)) {
@@ -55,48 +58,53 @@ export const registerUser: RequestHandler = async (request, response, next) => {
   }
 };
 
-export const loginUser: RequestHandler = async (request, response, next) => {
-  const input = LoginInputSchema.safeParse(request.body);
+export function createLoginHandler(policy: LockoutPolicy): RequestHandler {
+  return async (request, response, next) => {
+    const input = LoginInputSchema.safeParse(request.body);
 
-  if (!input.success) {
-    response.status(400).json({ error: 'invalid-input' });
-    return;
-  }
-
-  try {
-    const user = await UserModel.findOne({ email: input.data.email });
-    const passwordMatches = user
-      ? await argon2.verify(user.passwordHash, input.data.password)
-      : false;
-
-    if (!user || !passwordMatches) {
-      response.status(401).json({ error: 'invalid-credentials' });
+    if (!input.success) {
+      response.status(400).json({ error: 'invalid-input' });
       return;
     }
 
-    await regenerateSession(request);
-    request.session.userId = user.id;
-    response.json({ user: { id: user.id, email: user.email } });
+    const { email, password, remember } = input.data;
+    try {
+      if (await isLoginLocked(email)) {
+        response.status(429).json({ error: 'too-many-attempts' });
+        return;
+      }
+
+      const user = await UserModel.findOne({ email });
+      const passwordMatches = await argon2.verify(
+        user?.passwordHash ?? (await hashForUnknownUser()),
+        password,
+      );
+
+      if (!user || !passwordMatches) {
+        const locked = await recordLoginFailure(email, policy);
+        response.status(locked ? 429 : 401).json({
+          error: locked ? 'too-many-attempts' : 'invalid-credentials',
+        });
+        return;
+      }
+
+      await clearLoginFailures(email);
+      await startSession(request, user, remember);
+      response.json({ user: { id: user.id, email: user.email } });
+    } catch (error) {
+      next(error);
+    }
+  };
+}
+
+export const logoutUser: RequestHandler = async (request, response, next) => {
+  try {
+    await endSession(request);
+    clearSessionCookie(response);
+    response.status(204).end();
   } catch (error) {
     next(error);
   }
-};
-
-export const logoutUser: RequestHandler = (request, response, next) => {
-  request.session.destroy((error) => {
-    if (error) {
-      next(error);
-      return;
-    }
-
-    response.clearCookie('mruos.sid', {
-      httpOnly: true,
-      sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
-      path: '/',
-    });
-    response.status(204).end();
-  });
 };
 
 export const getCurrentUser: RequestHandler = async (

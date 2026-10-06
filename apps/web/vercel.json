@@ -18,6 +18,8 @@
           "env": ["ORIGIN_SECRET"]
         }
       ]
-    }
+    },
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }

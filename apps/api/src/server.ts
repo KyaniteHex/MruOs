@@ -49,7 +49,10 @@ await connectToDatabase(mongoUri);
 const sessionStore = MongoStore.create({
   client: mongoose.connection.getClient(),
   collectionName: 'sessions',
-  ttl: 7 * 24 * 60 * 60,
+  // Used for browser-session logins; remembered ones expire with the cookie.
+  ttl: 24 * 60 * 60,
+  // Extends idle sessions at most once an hour instead of on every request.
+  touchAfter: 60 * 60,
 });
 const app = createApp({
   sessionSecret,

@@ -1,20 +1,48 @@
 import { expect, test } from '@playwright/test';
-import { login, register, uniqueEmail } from './helpers';
+import { login, openAsGuest, password, register } from './helpers';
 
-test.beforeEach(async ({ page }) => {
+const loginHeading = { name: 'Zaloguj się' };
+const day = 24 * 60 * 60 * 1000;
+
+test('starts at the login page and opens the calendar after registering', async ({
+  page,
+}) => {
   await page.goto('/');
+  await expect(page.getByRole('heading', loginHeading)).toBeVisible();
+
+  await register(page);
+
+  await expect(page).toHaveURL(/\/kalendarz$/);
 });
 
-test('registers, logs out and logs back in', async ({ page }) => {
+test('logs out to the login page and logs back in', async ({ page }) => {
   const email = await register(page);
 
   await page.getByRole('button', { name: 'Wyloguj' }).click();
-  await expect(
-    page.getByRole('button', { name: 'Zaloguj', exact: true }),
-  ).toBeVisible();
+  await expect(page.getByRole('heading', loginHeading)).toBeVisible();
 
   await login(page, email);
   await expect(page.getByRole('button', { name: 'Wyloguj' })).toBeVisible();
+});
+
+test('remembers the session for 30 days only when asked', async ({
+  page,
+  context,
+}) => {
+  const sessionCookie = async () =>
+    (await context.cookies()).find((cookie) => cookie.name === 'mruos.sid');
+  const email = await register(page);
+
+  const remembered = await sessionCookie();
+  expect((remembered?.expires ?? 0) * 1000 - Date.now()).toBeGreaterThan(
+    29 * day,
+  );
+
+  await page.getByRole('button', { name: 'Wyloguj' }).click();
+  await login(page, email, password, { remember: false });
+  await expect(page.getByRole('button', { name: 'Wyloguj' })).toBeVisible();
+  // -1 marks a cookie that ends with the browser session.
+  expect((await sessionCookie())?.expires).toBe(-1);
 });
 
 test('keeps the session after a page reload', async ({ page }) => {
@@ -31,29 +59,51 @@ test('rejects a wrong password', async ({ page }) => {
 
   await login(page, email, 'wrong-password-123');
 
-  await expect(
-    page
-      .getByRole('dialog', { name: 'Zaloguj się' })
-      .getByRole('alert')
-      .filter({ hasText: 'Nieprawidłowy adres e-mail lub hasło.' }),
-  ).toBeVisible();
+  await expect(page.getByRole('alert')).toHaveText(
+    'Nieprawidłowy adres e-mail lub hasło.',
+  );
 });
 
 test('rejects registering the same e-mail twice', async ({ page }) => {
-  const email = await register(page, uniqueEmail());
+  const email = await register(page);
   await page.getByRole('button', { name: 'Wyloguj' }).click();
 
-  await page.getByRole('button', { name: 'Zaloguj', exact: true }).click();
+  await page.goto('/rejestracja');
+  await page.getByLabel('E-mail').fill(email);
   await page
-    .getByRole('dialog', { name: 'Zaloguj się' })
-    .getByRole('button', { name: 'Utwórz konto' })
-    .click();
-  const dialog = page.getByRole('dialog', { name: 'Utwórz konto' });
-  await dialog.getByLabel('E-mail').fill(email);
-  await dialog.getByLabel('Hasło').fill('another-long-password');
-  await dialog.getByRole('button', { name: 'Zarejestruj' }).click();
+    .getByLabel('Hasło (co najmniej 12 znaków)')
+    .fill('another-' + password);
+  await page.getByLabel('Powtórz hasło').fill('another-' + password);
+  await page.getByRole('button', { name: 'Zarejestruj' }).click();
 
-  await expect(dialog.getByRole('alert')).toHaveText(
+  await expect(page.getByRole('alert')).toHaveText(
     'Konto z tym adresem już istnieje.',
   );
+});
+
+test('sends visitors of protected pages to the login page', async ({
+  page,
+}) => {
+  for (const path of ['/kalendarz', '/konto']) {
+    await page.goto(path);
+    await expect(page.getByRole('heading', loginHeading)).toBeVisible();
+  }
+});
+
+test('fits the screen width with and without an account', async ({ page }) => {
+  // A phone widens the layout to fit the content, so compare the page with
+  // the screen rather than with window.innerWidth.
+  const screenWidth = page.viewportSize()?.width ?? 0;
+  const overflow = async () =>
+    (await page.evaluate(() => document.documentElement.scrollWidth)) -
+    screenWidth;
+
+  await openAsGuest(page);
+  expect(await overflow()).toBeLessThanOrEqual(0);
+
+  await register(page);
+  await expect(
+    page.getByRole('button', { name: 'Dodaj zajęcia' }),
+  ).toBeVisible();
+  expect(await overflow()).toBeLessThanOrEqual(0);
 });

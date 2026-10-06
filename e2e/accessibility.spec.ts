@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import type { Locator } from '@playwright/test';
 import { contrastRatio } from '../packages/shared/src/color';
-import { addClass, dayCell } from './helpers';
+import { addClass, dayCell, openAsGuest } from './helpers';
 
 function toHex(cssColor: string): string {
   const channels = cssColor.match(/\d+/g)?.slice(0, 3).map(Number);
@@ -30,7 +30,7 @@ async function textContrast(element: Locator): Promise<number> {
 }
 
 test.beforeEach(async ({ page }) => {
-  await page.goto('/');
+  await openAsGuest(page);
 });
 
 test('opens the day view and class details with the keyboard', async ({
