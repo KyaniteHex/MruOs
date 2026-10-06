@@ -62,6 +62,7 @@ export {
   classesOn,
   classKey,
   findAnchoredClass,
+  minutesLater,
   placeEntries,
   planSubjects,
   upcomingAssessments,

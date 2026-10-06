@@ -3,6 +3,7 @@ import {
   classesOn,
   classKey,
   findAnchoredClass,
+  minutesLater,
   placeEntries,
   planSubjects,
   upcomingAssessments,
@@ -246,6 +247,13 @@ describe('upcomingAssessments', () => {
       ['tomorrow', 1],
       ['in-two-weeks', 14],
     ]);
+  });
+});
+
+describe('minutesLater', () => {
+  it('adds minutes within the same day', () => {
+    expect(minutesLater('08:15', 90)).toBe('09:45');
+    expect(minutesLater('23:00', 90)).toBe('23:59');
   });
 });
 

@@ -227,6 +227,14 @@ export function upcomingAssessments(
   });
 }
 
+/** `time` moved `minutes` later, but not past the end of the day. */
+export function minutesLater(time: string, minutes: number): string {
+  const start = DateTime.fromFormat(time, 'HH:mm', { zone });
+  const end = start.plus({ minutes });
+
+  return end.hasSame(start, 'day') ? end.toFormat('HH:mm') : '23:59';
+}
+
 /** Subjects in the plan, alphabetically. */
 export function planSubjects(series: readonly EventSeries[]): string[] {
   return [...new Set(series.map(({ event }) => event.subject))].sort(
