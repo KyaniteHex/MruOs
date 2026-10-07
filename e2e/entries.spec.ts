@@ -165,7 +165,8 @@ test('exports kolokwia with reminders and notes only when chosen', async ({
   await exportDialog.getByRole('button', { name: 'Pobierz plik .ics' }).click();
   const content = await readFile((await (await download).path()) ?? '', 'utf8');
 
-  expect(content).toContain('SUMMARY:Kolokwium: Matematyka');
+  // A kolokwium during a class is part of the class's event.
+  expect(content).toContain('SUMMARY:⚑ Matematyka · Kolokwium');
   expect(content).toContain('TRIGGER:-P1D');
   expect(content).not.toContain('Przynieść kalkulator');
 });
