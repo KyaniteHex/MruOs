@@ -7,6 +7,13 @@ const account = {
   email: 'student@example.com',
   createdAt: '2026-10-01T10:00:00.000Z',
 };
+const feedOptions = {
+  assessments: true,
+  notes: false,
+  daysOff: false,
+  periods: false,
+};
+const noFeed = () => json({ active: false, options: feedOptions });
 
 function type(label: string, value: string) {
   fireEvent.change(screen.getByLabelText(label), { target: { value } });
@@ -122,6 +129,7 @@ describe('account page', () => {
     stubApi({
       'GET /auth/me': () => json(student),
       'GET /account': () => json(account),
+      'GET /calendar-feed': noFeed,
       'POST /account/password': () => {
         calls += 1;
         return calls === 1
@@ -156,6 +164,7 @@ describe('account page', () => {
     stubApi({
       'GET /auth/me': () => (deleted ? signedOut(undefined) : json(student)),
       'GET /account': () => json(account),
+      'GET /calendar-feed': noFeed,
       'DELETE /account': (init) => {
         expect(JSON.parse(String(init?.body))).toEqual({
           password: 'correct-horse-battery',
@@ -186,6 +195,98 @@ describe('account page', () => {
 
     expect(
       await screen.findByRole('heading', { name: 'Zaloguj się' }),
+    ).toBeTruthy();
+  });
+});
+
+describe('calendar subscription', () => {
+  beforeEach(() => window.localStorage.clear());
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
+
+  it('shows a new link once and saves the chosen options', async () => {
+    const token = 'a'.repeat(43);
+    let active = false;
+    let savedOptions: unknown;
+    const feed = () =>
+      json({
+        active,
+        ...(active ? { createdAt: '2026-10-07T10:00:00.000Z' } : {}),
+        options: feedOptions,
+      });
+    stubApi({
+      'GET /auth/me': () => json(student),
+      'GET /account': () => json(account),
+      'GET /calendar-feed': feed,
+      'POST /calendar-feed': () => {
+        active = true;
+        return json(
+          {
+            active,
+            createdAt: '2026-10-07T10:00:00.000Z',
+            options: feedOptions,
+            token,
+          },
+          201,
+        );
+      },
+      'PUT /calendar-feed/options': (init) => {
+        savedOptions = JSON.parse(String(init?.body));
+        return json({
+          active,
+          createdAt: '2026-10-07T10:00:00.000Z',
+          options: savedOptions,
+        });
+      },
+    });
+
+    const view = renderApp('/konto');
+    fireEvent.click(await screen.findByRole('button', { name: 'Utwórz link' }));
+
+    const link = (await screen.findByLabelText(
+      'Link subskrypcji',
+    )) as HTMLInputElement;
+    expect(link.value).toBe(`http://localhost:3000/api/ical/${token}.ics`);
+    expect(
+      screen.getByRole('link', { name: 'Dodaj do Apple' }).getAttribute('href'),
+    ).toBe(`webcal://localhost:3000/api/ical/${token}.ics`);
+
+    fireEvent.click(screen.getByLabelText('Notatki, w opisach zajęć'));
+    await waitFor(() =>
+      expect(savedOptions).toEqual({ ...feedOptions, notes: true }),
+    );
+
+    // Back on the page later, the link is no longer known.
+    view.unmount();
+    renderApp('/konto');
+    expect(
+      await screen.findByText(/Subskrypcja działa od 07\.10\.2026/),
+    ).toBeTruthy();
+    expect(screen.queryByLabelText('Link subskrypcji')).toBeNull();
+  });
+
+  it('turns the subscription off', async () => {
+    stubApi({
+      'GET /auth/me': () => json(student),
+      'GET /account': () => json(account),
+      'GET /calendar-feed': () =>
+        json({
+          active: true,
+          createdAt: '2026-10-07T10:00:00.000Z',
+          options: feedOptions,
+        }),
+      'DELETE /calendar-feed': () => new Response(null, { status: 204 }),
+    });
+
+    renderApp('/konto');
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Wyłącz subskrypcję' }),
+    );
+
+    expect(
+      await screen.findByRole('button', { name: 'Utwórz link' }),
     ).toBeTruthy();
   });
 });

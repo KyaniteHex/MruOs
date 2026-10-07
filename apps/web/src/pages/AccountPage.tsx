@@ -9,6 +9,7 @@ import { downloadFile } from '../fileDownload';
 import { PasswordStrengthMeter } from '../PasswordStrengthMeter';
 import { minimumPasswordLength } from '../passwordStrength';
 import { AuthLayout } from './AuthLayout';
+import { CalendarSubscription } from './CalendarSubscription';
 
 type Feedback = { kind: 'success' | 'error'; text: string } | null;
 
@@ -45,7 +46,7 @@ export function AccountPage() {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleteFeedback, setDeleteFeedback] = useState<Feedback>(null);
   const [busy, setBusy] = useState(false);
-  const { api, refresh } = auth;
+  const { api, apiBaseUrl, refresh } = auth;
 
   useEffect(() => {
     void api.account().then((result) => {
@@ -207,6 +208,12 @@ export function AccountPage() {
         </form>
       </section>
 
+      <CalendarSubscription
+        api={api}
+        apiBaseUrl={apiBaseUrl}
+        onUnauthorized={refresh}
+      />
+
       <section className="account-section" aria-labelledby="sessions-title">
         <h2 id="sessions-title">Urządzenia</h2>
         <p className="field-hint">
@@ -246,8 +253,8 @@ export function AccountPage() {
       >
         <h2 id="delete-title">Usuń konto</h2>
         <p className="field-hint">
-          Usuwa konto, plan, harmonogram i wszystkie sesje. Tej operacji nie
-          można cofnąć.
+          Usuwa konto, plan, harmonogram, link subskrypcji i wszystkie sesje.
+          Tej operacji nie można cofnąć.
         </p>
         <label className="form-field">
           <span>Hasło do usunięcia konta</span>

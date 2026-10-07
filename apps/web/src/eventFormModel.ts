@@ -46,13 +46,8 @@ export const classTypes: ClassType[] = [
   'zajecia-praktyczne',
 ];
 
-export const classTypeLabels: Record<ClassType, string> = {
-  wyklad: 'Wykład',
-  cwiczenia: 'Ćwiczenia',
-  laboratorium: 'Laboratorium',
-  seminarium: 'Seminarium',
-  'zajecia-praktyczne': 'Zajęcia praktyczne',
-};
+// Shared with the calendar files built in @mruos/shared.
+export { classTypeLabels } from '@mruos/shared';
 
 export const defaultClassColors: Record<ClassType, string> = {
   wyklad: '#25745b',

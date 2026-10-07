@@ -1,8 +1,11 @@
 import {
   AssessmentSchema,
   NoteSchema,
+  assessmentKindLabels,
+  assessmentKindMarks,
   classAnchor,
   minutesLater,
+  noteMark,
 } from '@mruos/shared';
 import type {
   Assessment,
@@ -16,18 +19,8 @@ import type {
 } from '@mruos/shared';
 import { classTypeLabels } from './eventFormModel';
 
-export const assessmentKindLabels: Record<AssessmentKind, string> = {
-  test: 'Kolokwium',
-  exam: 'Egzamin',
-};
-
-/** Shown on classes and blocks; exams stand out more. */
-export const assessmentKindMarks: Record<AssessmentKind, string> = {
-  test: '⚑',
-  exam: '★',
-};
-
-export const noteMark = '✎';
+// Shared with the calendar files built in @mruos/shared.
+export { assessmentKindLabels, assessmentKindMarks, noteMark };
 
 export function entryMark(entry: Entry): string {
   return entry.kind === 'note' ? noteMark : assessmentKindMarks[entry.kind];

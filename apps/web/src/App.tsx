@@ -24,6 +24,7 @@ import {
 import type {
   AcademicYear,
   Assessment,
+  CalendarFeedOptions,
   AssessmentKind,
   DatedClass,
   Entry,
@@ -42,7 +43,6 @@ import { AssessmentForm } from './AssessmentForm';
 import { ClassEntries } from './ClassEntries';
 import type { NewEntryKind } from './ClassEntries';
 import { IcsExportDialog } from './IcsExportDialog';
-import type { IcsOptions } from './calendarIcs';
 import { NoteForm } from './NoteForm';
 import { UpcomingPanel } from './UpcomingPanel';
 import { assessmentKindMarks, noteMark } from './entryFormModel';
@@ -659,13 +659,14 @@ export function App() {
     );
   }
 
-  async function handleExportIcs(options: IcsOptions) {
-    const { exportCalendarIcs } = await import('./calendarIcs');
+  async function handleExportIcs(options: CalendarFeedOptions) {
+    // Loaded on demand: the iCalendar library is only needed here.
+    const { calendarIcs } = await import('@mruos/shared/ics');
 
     downloadFile(
       'mruos-plan.ics',
       'text/calendar;charset=utf-8',
-      exportCalendarIcs({ events: eventSeries, semester, entries }, options),
+      calendarIcs({ events: eventSeries, semester, entries }, options),
     );
     setIcsExportOpen(false);
   }
@@ -1178,6 +1179,7 @@ export function App() {
       )}
       {icsExportOpen && (
         <IcsExportDialog
+          canSubscribe={Boolean(authUser)}
           onCancel={() => setIcsExportOpen(false)}
           onExport={(options) => void handleExportIcs(options)}
         />

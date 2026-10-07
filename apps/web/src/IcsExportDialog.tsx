@@ -1,18 +1,34 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import type { IcsOptions } from './calendarIcs';
+import { Link } from 'react-router';
+import type { CalendarFeedOptions } from '@mruos/shared';
 import { useDialogKeyboard } from './useDialogKeyboard';
 
 type IcsExportDialogProps = {
+  /** Signed in: a subscription is available in the account settings. */
+  canSubscribe: boolean;
   onCancel: () => void;
-  onExport: (options: IcsOptions) => void;
+  onExport: (options: CalendarFeedOptions) => void;
 };
 
-export function IcsExportDialog({ onCancel, onExport }: IcsExportDialogProps) {
+const optionLabels: Record<keyof CalendarFeedOptions, string> = {
+  assessments: 'Kolokwia i egzaminy, z przypomnieniami',
+  notes: 'Notatki, w opisach zajęć',
+  daysOff: 'Dni wolne od zajęć',
+  periods: 'Przerwy i sesja',
+};
+
+export function IcsExportDialog({
+  canSubscribe,
+  onCancel,
+  onExport,
+}: IcsExportDialogProps) {
   useDialogKeyboard(onCancel);
-  const [options, setOptions] = useState<IcsOptions>({
+  const [options, setOptions] = useState<CalendarFeedOptions>({
     assessments: true,
     notes: true,
+    daysOff: false,
+    periods: false,
   });
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -40,31 +56,33 @@ export function IcsExportDialog({ onCancel, onExport }: IcsExportDialogProps) {
         <form className="event-form" onSubmit={handleSubmit}>
           <fieldset className="form-section">
             <legend>Oprócz zajęć dołącz</legend>
-            <label className="interval-option">
-              <input
-                autoFocus
-                checked={options.assessments}
-                onChange={(event) =>
-                  setOptions({ ...options, assessments: event.target.checked })
-                }
-                type="checkbox"
-              />
-              <span>Kolokwia i egzaminy, z przypomnieniami</span>
-            </label>
-            <label className="interval-option">
-              <input
-                checked={options.notes}
-                onChange={(event) =>
-                  setOptions({ ...options, notes: event.target.checked })
-                }
-                type="checkbox"
-              />
-              <span>Notatki, w opisach zajęć</span>
-            </label>
+            {(Object.keys(optionLabels) as (keyof CalendarFeedOptions)[]).map(
+              (option, index) => (
+                <label className="interval-option" key={option}>
+                  <input
+                    autoFocus={index === 0}
+                    checked={options[option]}
+                    onChange={(event) =>
+                      setOptions({ ...options, [option]: event.target.checked })
+                    }
+                    type="checkbox"
+                  />
+                  <span>{optionLabels[option]}</span>
+                </label>
+              ),
+            )}
           </fieldset>
           <p className="field-hint">
-            Plik .ics zaimportujesz w Kalendarzu Google, Apple lub Outlooku.
-            Niektóre kalendarze pomijają przypomnienia z plików.
+            Plik .ics to jednorazowa kopia planu dla Kalendarza Google, Apple
+            lub Outlooka; późniejsze zmiany do niej nie trafią.{' '}
+            {canSubscribe ? (
+              <>
+                Kalendarz, który aktualizuje się sam:{' '}
+                <Link to="/konto#subskrypcja">subskrypcja w Koncie</Link>.
+              </>
+            ) : (
+              'Kalendarz, który aktualizuje się sam, wymaga konta.'
+            )}
           </p>
           <footer className="form-actions">
             <span className="form-action-spacer" />
