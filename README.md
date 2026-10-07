@@ -12,7 +12,8 @@ Kalendarz studencki do zarządzania planem zajęć (wersja produkcyjna: https://
 - Konto i prywatność: zmiana hasła (wylogowuje pozostałe urządzenia), wylogowanie innych urządzeń, pobranie i usunięcie swoich danych, czasowa blokada po 10 nieudanych logowaniach, strona „Prywatność”.
 - Import planu z pliku Excel (.xlsx) w formacie siatki dni × godzin z blokami zajęć: wybór grup dla każdego przedmiotu, ostrzeżenia o kolizjach, podgląd i oznaczenie miejsc do poprawy.
 - Harmonogram roku akademickiego: semestry z okresami zajęć, przerw i sesji oraz dni wolne (święta ustawowe wyliczane automatycznie); tygodnie planu liczone według okresów zajęć, dni wolne i przerwy widoczne w kalendarzu.
-- Kopia zapasowa JSON i eksport do kalendarza (.ics).
+- Kolokwia, egzaminy i notatki: w czasie zajęć albo w osobnym terminie, oznaczenia w kalendarzu (⚑ kolokwium, ★ egzamin, ✎ notatka), panel „Nadchodzące” z najbliższymi 14 dniami i lista wpisów, które straciły swoje zajęcia.
+- Kopia zapasowa JSON i eksport do kalendarza (.ics) z wyborem: kolokwia i egzaminy z przypomnieniami, notatki w opisach zajęć.
 - Obsługa klawiaturą i układ dla telefonu.
 
 ## Architektura

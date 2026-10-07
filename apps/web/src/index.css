@@ -536,8 +536,206 @@ a {
 .calendar-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 260px;
+  grid-template-rows: auto 1fr;
+  grid-template-areas:
+    'calendar upcoming'
+    'calendar details';
   align-items: start;
   gap: 18px;
+}
+
+.calendar-panel {
+  grid-area: calendar;
+}
+
+.details-panel {
+  grid-area: details;
+}
+
+.upcoming-panel {
+  grid-area: upcoming;
+  border: 1px solid #e0e6dd;
+  border-radius: 6px;
+  padding: 20px;
+  background: #fff;
+}
+
+.upcoming-list {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Kolokwia are orange and exams red, in the calendar and in lists. */
+.upcoming-item {
+  display: grid;
+  width: 100%;
+  gap: 2px;
+  border: 0;
+  border-left: 3px solid #b35c00;
+  border-radius: 3px;
+  padding: 7px 9px;
+  background: #fdebd8;
+  color: #4a2a08;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.upcoming-item-exam {
+  border-left-color: #b3261e;
+  background: #fbeceb;
+  color: #5e1410;
+}
+
+.upcoming-countdown {
+  font-size: 11px;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+.upcoming-title {
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.upcoming-when {
+  font-size: 12px;
+}
+
+.upcoming-toggle {
+  display: none;
+  margin-top: 6px;
+}
+
+.orphan-entries {
+  margin-top: 16px;
+  border-top: 1px solid #edf0eb;
+  padding-top: 12px;
+}
+
+.orphan-entries h3 {
+  margin: 0;
+  color: #24332d;
+  font-size: 13px;
+}
+
+.orphan-entries ul {
+  display: grid;
+  gap: 6px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.orphan-item {
+  width: 100%;
+  border: 1px dashed #b9c5b6;
+  border-radius: 4px;
+  padding: 6px 8px;
+  background: #fff;
+  color: #384a3f;
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.class-entries {
+  margin-top: 18px;
+  border-top: 1px solid #edf0eb;
+  padding-top: 14px;
+}
+
+.entry-list {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 10px;
+  padding: 0;
+  list-style: none;
+}
+
+.entry-item {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 6px;
+  color: #26342b;
+  font-size: 13px;
+}
+
+.entry-mark {
+  font-weight: 700;
+  text-align: center;
+}
+
+.entry-item-test .entry-mark {
+  color: #b35c00;
+}
+
+.entry-item-exam .entry-mark {
+  color: #b3261e;
+}
+
+.entry-copy p,
+.assessment-text {
+  margin: 3px 0 0;
+  color: #4f5d53;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.entry-item .text-button {
+  min-height: 24px;
+}
+
+.entry-add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 10px;
+}
+
+.entry-add .text-button {
+  min-height: 28px;
+}
+
+/* Kolokwium, exam and note forms: room between their groups of fields. */
+.entry-form > .form-grid,
+.entry-form > .form-field {
+  margin-bottom: 18px;
+}
+
+.entry-class-field {
+  max-width: 500px;
+}
+
+.assessment-type-test {
+  --event-color: #b35c00;
+}
+
+.assessment-type-exam {
+  --event-color: #b3261e;
+}
+
+.reminder-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+}
+
+.form-field textarea {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #dce4db;
+  border-radius: 4px;
+  padding: 8px 10px;
+  background: #fff;
+  color: #293a31;
+  font: inherit;
+  font-size: 14px;
+  resize: vertical;
 }
 
 .calendar-panel,
@@ -783,7 +981,8 @@ a.secondary-button {
 }
 
 .form-field input:focus,
-.form-field select:focus {
+.form-field select:focus,
+.form-field textarea:focus {
   border-color: #25745b;
   outline: 2px solid rgb(37 116 91 / 16%);
 }
@@ -1078,6 +1277,37 @@ a.secondary-button {
   font-weight: 650;
 }
 
+.fc .entry-mark-inline {
+  margin-right: 3px;
+}
+
+/* Classes with a kolokwium or an exam get an outline in its colour. */
+.fc .fc-event.has-test {
+  outline: 2px solid #b35c00;
+  outline-offset: 1px;
+}
+
+.fc .fc-event.has-exam {
+  outline: 2px solid #b3261e;
+  outline-offset: 1px;
+}
+
+.fc .calendar-assessment {
+  color: var(--fc-event-text-color);
+}
+
+.fc .calendar-assessment-test {
+  --fc-event-bg-color: #fdebd8;
+  --fc-event-border-color: #b35c00;
+  --fc-event-text-color: #4a2a08;
+}
+
+.fc .calendar-assessment-exam {
+  --fc-event-bg-color: #b3261e;
+  --fc-event-border-color: #6e130e;
+  --fc-event-text-color: #fff;
+}
+
 .fc .fc-timegrid-slot-label {
   color: #78847a;
   font-size: 11px;
@@ -1096,6 +1326,11 @@ a.secondary-button {
 @media (max-width: 900px) {
   .calendar-layout {
     grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto;
+    grid-template-areas:
+      'upcoming'
+      'calendar'
+      'details';
   }
 
   .details-panel {
@@ -1415,10 +1650,24 @@ a.secondary-button {
     gap: 8px;
   }
 
-  .add-event-button {
+  .add-event-button,
+  .add-entry-button {
     min-height: 34px;
     padding: 0 9px;
     font-size: 11px;
+  }
+
+  .upcoming-panel {
+    padding: 14px 16px;
+  }
+
+  /* Only the nearest one until "Pokaż wszystkie". */
+  .upcoming-list:not(.is-expanded) > li:nth-child(n + 2) {
+    display: none;
+  }
+
+  .upcoming-toggle {
+    display: inline-flex;
   }
 
   .modal-backdrop {

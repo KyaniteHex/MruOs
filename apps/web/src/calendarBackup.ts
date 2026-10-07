@@ -29,6 +29,7 @@ export function importCalendarBackup(
     value: {
       events: parsedBackup.data.events,
       semester: parsedBackup.data.semester,
+      entries: parsedBackup.data.entries,
     },
   };
 }

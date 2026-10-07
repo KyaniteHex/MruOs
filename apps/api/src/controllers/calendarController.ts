@@ -1,9 +1,11 @@
 import type { RequestHandler } from 'express';
 import mongoose from 'mongoose';
-import { CalendarSnapshotSchema, EventSchema } from '@mruos/shared';
+import { CalendarSnapshotSchema } from '@mruos/shared';
+import { EntryModel } from '../models/entry.js';
 import { EventModel } from '../models/event.js';
 import { SemesterModel } from '../models/semester.js';
-import { semesterFromRecord, semesterUpdate } from './semesterData.js';
+import { loadCalendar, loadEntries } from './calendarData.js';
+import { semesterUpdate } from './semesterData.js';
 
 export const getCalendar: RequestHandler = async (request, response, next) => {
   const userId = request.session.userId;
@@ -13,17 +15,7 @@ export const getCalendar: RequestHandler = async (request, response, next) => {
   }
 
   try {
-    const [records, semesterRecord] = await Promise.all([
-      EventModel.find({ userId }).sort({ createdAt: 1 }).lean(),
-      SemesterModel.findOne({ userId }).lean(),
-    ]);
-    const events = records.map((record) => ({
-      id: record.clientId,
-      event: EventSchema.parse(record.event),
-    }));
-    const semester = semesterFromRecord(semesterRecord);
-
-    response.json(CalendarSnapshotSchema.parse({ events, semester }));
+    response.json(await loadCalendar(userId));
   } catch (error) {
     next(error);
   }
@@ -45,6 +37,12 @@ export const replaceCalendar: RequestHandler = async (
     response.status(400).json({ error: 'invalid-calendar' });
     return;
   }
+  // A page loaded before entries existed sends none; its saves must not
+  // remove the entries made elsewhere.
+  const sentEntries =
+    typeof request.body === 'object' &&
+    request.body !== null &&
+    'entries' in request.body;
 
   try {
     const ownerId = new mongoose.Types.ObjectId(userId);
@@ -76,7 +74,33 @@ export const replaceCalendar: RequestHandler = async (
         : { userId },
     );
 
-    response.json(input.data);
+    if (sentEntries) {
+      const entryOperations = input.data.entries.map(({ id, entry }) => ({
+        updateOne: {
+          filter: { userId: ownerId, clientId: id },
+          update: {
+            $set: { entry },
+            $setOnInsert: { userId: ownerId, clientId: id },
+          },
+          upsert: true,
+        },
+      }));
+      if (entryOperations.length > 0) {
+        await EntryModel.bulkWrite(entryOperations, { ordered: true });
+      }
+
+      const entryIds = input.data.entries.map((record) => record.id);
+      await EntryModel.deleteMany(
+        entryIds.length > 0
+          ? { userId, clientId: { $nin: entryIds } }
+          : { userId },
+      );
+    }
+
+    response.json({
+      ...input.data,
+      entries: sentEntries ? input.data.entries : await loadEntries(userId),
+    });
   } catch (error) {
     next(error);
   }
@@ -96,6 +120,7 @@ export const clearCalendar: RequestHandler = async (
   try {
     await Promise.all([
       EventModel.deleteMany({ userId }),
+      EntryModel.deleteMany({ userId }),
       SemesterModel.deleteOne({ userId }),
     ]);
     response.status(204).end();

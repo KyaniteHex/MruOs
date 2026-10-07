@@ -10,7 +10,8 @@ export type RepositoryErrorCode =
   | 'write-error'
   | 'clear-error'
   | 'unauthorized'
-  | 'network-error';
+  | 'network-error'
+  | 'server-updating';
 
 export type RepositoryResult<Value> =
   | { success: true; value: Value }
@@ -69,6 +70,7 @@ export class LocalStorageEventRepository implements EventRepository {
       value: {
         events: parsedSnapshot.data.events,
         semester: parsedSnapshot.data.semester,
+        entries: parsedSnapshot.data.entries,
       },
     };
   }
@@ -181,10 +183,24 @@ export class ApiEventRepository implements EventRepository {
     if (response.status === 401) {
       return { success: false, error: 'unauthorized' };
     }
+    if (!response.ok) {
+      return { success: false, error: 'write-error' };
+    }
 
-    return response.ok
-      ? { success: true, value: undefined }
-      : { success: false, error: 'write-error' };
+    // While a release goes out, the API may still be a version that drops
+    // entries without a word; it answers without them.
+    if (snapshot.entries.length > 0) {
+      const saved: unknown = await response.json().catch(() => null);
+      if (
+        typeof saved !== 'object' ||
+        saved === null ||
+        !('entries' in saved)
+      ) {
+        return { success: false, error: 'server-updating' };
+      }
+    }
+
+    return { success: true, value: undefined };
   }
 
   async clear(): Promise<RepositoryResult<void>> {

@@ -143,20 +143,20 @@ Testy muszą obejmować:
 
 ## Etap 11: Kolokwia, egzaminy i notatki
 
-- [ ] Model danych: kolokwium przypięte do terminu zajęć, egzamin z własną datą, godziną i salą powiązany z przedmiotem, notatka do terminu albo przedmiotu
-- [ ] Zapis wpisów w przeglądarce i w koncie (API z filtrowaniem po użytkowniku)
-- [ ] Przyciski „+ Kolokwium”, „+ Egzamin”, „+ Notatka” w szczegółach zajęć; edycja i usuwanie wpisów
-- [ ] Oznaczenia w kalendarzu: ⚑ i obwódka dla zajęć z kolokwium, osobny blok „Egzamin:”, ✎ dla notatki, opisy dla czytników ekranu
-- [ ] Panel „Nadchodzące”: kolokwia i egzaminy z 14 dni, z odliczaniem
-- [ ] Wpisy przetrwają ponowny import planu; wpisy bez terminu trafiają na osobną listę
-- [ ] Kolokwia i egzaminy w eksporcie .ics, z przypomnieniem
+- [x] Model danych: kolokwium i egzamin w czasie zajęć albo w osobnym terminie (data, godziny, budynek, sala), notatka do terminu albo całego przedmiotu
+- [x] Zapis wpisów w przeglądarce i w koncie (API z filtrowaniem po użytkowniku), w kopii JSON i w „Pobierz moje dane”
+- [x] Przyciski „+ Kolokwium”, „+ Egzamin”, „+ Notatka” w szczegółach zajęć oraz „+ Kolokwium / egzamin” nad kalendarzem; edycja i usuwanie wpisów
+- [x] Oznaczenia w kalendarzu: ⚑ i pomarańczowa obwódka dla kolokwium, ★ i czerwona dla egzaminu, osobne bloki dla wpisów w osobnym terminie, ✎ dla notatki, opisy dla czytników ekranu
+- [x] Panel „Nadchodzące”: kolokwia i egzaminy z 14 dni, z odliczaniem; napis, gdy nic nie ma
+- [x] Wpisy przetrwają ponowny import planu; wpisy bez terminu trafiają na osobną listę
+- [x] Eksport .ics z wyborem: kolokwia i egzaminy (z przypomnieniami do wyboru: tydzień, dzień, 2 godziny wcześniej) oraz notatki
 
 **Gotowe, gdy:** do zajęć da się dodać kolokwium, w sesji egzamin, a do zajęć notatkę; wpisy są widoczne w kalendarzu i w „Nadchodzących” i przetrwają ponowny import planu.
 
 ## Etap 12: Subskrypcja kalendarza
 
 - [ ] Tajny link subskrypcji dla każdego konta, z generowaniem nowego i unieważnianiem starego; na serwerze tylko skrót tokenu
-- [ ] Adres .ics bez logowania: zajęcia z wyjątkami, dni wolne, kolokwia i egzaminy z przypomnieniami
+- [ ] Adres .ics bez logowania: zajęcia z wyjątkami, dni wolne, kolokwia i egzaminy z przypomnieniami; notatki tylko po włączeniu przełącznika (domyślnie wyłączony)
 - [ ] Limit zapytań do adresu subskrypcji
 - [ ] Instrukcja dodania w Google Calendar, na iPhonie i Macu
 
@@ -167,5 +167,6 @@ Testy muszą obejmować:
 - Konto: reset hasła i potwierdzanie adresu e-mailem (wymaga usługi mailowej), usuwanie kont nieaktywnych, sprawdzanie haseł w bazie wycieków, logowanie przez Google
 - Na co dzień: widok tygodnia, ekran „Dziś” z linkiem do mapy, aplikacja na telefon (PWA), ciemny motyw
 - Studia: obecności z licznikiem nieobecności, oceny i zaliczenia, karta przedmiotu
-- Technika: mniejsza paczka frontendu, komunikat „Budzenie serwera…”, dostrojenie hashowania haseł
+- Technika: mniejsza paczka frontendu, dostrojenie hashowania haseł
+- Notatki: eksport do czytelnego pliku (np. do wydruku), pogrupowany po przedmiotach
 - Długoterminowo: integracja z USOS, udostępnianie planu (zmienia założenie, że plany nie są współdzielone)

@@ -50,7 +50,8 @@ export function createApp(options: AppOptions) {
   if (options.originSecret) {
     app.use(requireOriginSecret(options.originSecret));
   }
-  app.use(express.json({ limit: '1mb' }));
+  // Room for a full plan with up to 1000 kolokwia, exams and notes.
+  app.use(express.json({ limit: '4mb' }));
 
   if (options.webOrigin) {
     app.use((request, response, next) => {

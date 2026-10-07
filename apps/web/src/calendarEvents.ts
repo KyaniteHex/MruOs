@@ -1,10 +1,23 @@
 import type { EventInput } from '@fullcalendar/core';
-import { academicAnnotations, dayAfter } from '@mruos/shared';
-import type { CalendarAnnotation } from '@mruos/shared';
+import { academicAnnotations, classKey, dayAfter } from '@mruos/shared';
+import type {
+  AssessmentKind,
+  CalendarAnnotation,
+  EntryRecord,
+  PlacedEntries,
+  ScheduledAssessment,
+} from '@mruos/shared';
 import { readableTextColor } from '@mruos/shared/color';
 import { expandOccurrences } from '@mruos/shared/recurrence';
 import { semesterWeeksToDateRange } from '@mruos/shared/semester';
 import type { ClassType, DateRange, Event, Semester } from '@mruos/shared';
+
+/** Kolokwia, exams and notes pinned to a class. */
+export type ClassMarks = {
+  test: boolean;
+  exam: boolean;
+  note: boolean;
+};
 
 export type CalendarEventDetails = {
   building: string;
@@ -12,10 +25,22 @@ export type CalendarEventDetails = {
   color: string;
   date: string;
   endTime: string;
+  marks: ClassMarks;
   room: string;
   seriesId: string;
   startTime: string;
 };
+
+export function classMarks(
+  records: readonly EntryRecord[] | undefined,
+): ClassMarks {
+  const kinds = new Set(records?.map(({ entry }) => entry.kind));
+  return {
+    test: kinds.has('test'),
+    exam: kinds.has('exam'),
+    note: kinds.has('note'),
+  };
+}
 
 export type EventSeries = {
   id: string;
@@ -26,28 +51,74 @@ export function toCalendarEvents(
   series: readonly EventSeries[],
   range: DateRange,
   semester?: Pick<Semester, 'daysOff'>,
+  placed?: Pick<PlacedEntries, 'byClass'>,
 ): EventInput[] {
   return series.flatMap(({ id, event }) =>
-    expandOccurrences(event, range, semester).map((occurrence) => ({
-      id: `${id}-${occurrence.date}`,
-      title: occurrence.event.subject,
-      start: occurrence.start.toISO() ?? undefined,
-      end: occurrence.end.toISO() ?? undefined,
-      backgroundColor: occurrence.event.color,
-      borderColor: occurrence.event.color,
-      textColor: readableTextColor(occurrence.event.color),
-      extendedProps: {
-        building: occurrence.event.building,
-        classType: occurrence.event.classType,
-        color: occurrence.event.color,
-        date: occurrence.date,
-        endTime: occurrence.event.endTime,
-        room: occurrence.event.room,
-        seriesId: id,
-        startTime: occurrence.event.startTime,
-      } satisfies CalendarEventDetails,
-    })),
+    expandOccurrences(event, range, semester).map((occurrence) => {
+      const marks = classMarks(
+        placed?.byClass.get(classKey(id, occurrence.date)),
+      );
+
+      return {
+        id: `${id}-${occurrence.date}`,
+        title: occurrence.event.subject,
+        start: occurrence.start.toISO() ?? undefined,
+        end: occurrence.end.toISO() ?? undefined,
+        backgroundColor: occurrence.event.color,
+        borderColor: occurrence.event.color,
+        textColor: readableTextColor(occurrence.event.color),
+        // An exam outranks a kolokwium in the outline.
+        classNames: marks.exam ? ['has-exam'] : marks.test ? ['has-test'] : [],
+        extendedProps: {
+          building: occurrence.event.building,
+          classType: occurrence.event.classType,
+          color: occurrence.event.color,
+          date: occurrence.date,
+          endTime: occurrence.event.endTime,
+          marks,
+          room: occurrence.event.room,
+          seriesId: id,
+          startTime: occurrence.event.startTime,
+        } satisfies CalendarEventDetails,
+      };
+    }),
   );
+}
+
+export type AssessmentEventDetails = {
+  assessmentId: string;
+  kind: AssessmentKind;
+  room?: string;
+};
+
+/** Kolokwia and exams at their own time, as blocks of their own. */
+export function toAssessmentEvents(
+  assessments: readonly ScheduledAssessment[],
+  range: DateRange,
+): EventInput[] {
+  return assessments
+    .filter(
+      (scheduled) =>
+        !scheduled.seriesId &&
+        scheduled.date >= range.startDate &&
+        scheduled.date <= range.endDate,
+    )
+    .map((scheduled) => ({
+      id: `entry-${scheduled.id}`,
+      title: `${scheduled.assessment.title}: ${scheduled.assessment.subject}`,
+      start: scheduled.start.toISO() ?? undefined,
+      end: scheduled.end.toISO() ?? undefined,
+      display: 'block',
+      classNames: [
+        'calendar-assessment',
+        `calendar-assessment-${scheduled.assessment.kind}`,
+      ],
+      extendedProps: {
+        assessmentId: scheduled.id,
+        kind: scheduled.assessment.kind,
+        room: scheduled.room,
+      } satisfies AssessmentEventDetails,
+    }));
 }
 
 export type AnnotationDetails = {
