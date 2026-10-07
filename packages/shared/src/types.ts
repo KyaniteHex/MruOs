@@ -18,6 +18,9 @@ import type {
   CalendarSnapshotSchema,
   AuthenticatedUserSchema,
   AuthResponseSchema,
+  CalendarFeedOptionsSchema,
+  CalendarFeedSchema,
+  CreatedCalendarFeedSchema,
   EventExceptionSchema,
   EventCreateInputSchema,
   EventSchema,
@@ -73,6 +76,9 @@ export type Assessment = z.infer<typeof AssessmentSchema>;
 export type Note = z.infer<typeof NoteSchema>;
 export type Entry = z.infer<typeof EntrySchema>;
 export type EntryRecord = z.infer<typeof EntryRecordSchema>;
+export type CalendarFeedOptions = z.infer<typeof CalendarFeedOptionsSchema>;
+export type CalendarFeed = z.infer<typeof CalendarFeedSchema>;
+export type CreatedCalendarFeed = z.infer<typeof CreatedCalendarFeedSchema>;
 
 export type DateRange = {
   startDate: string;
