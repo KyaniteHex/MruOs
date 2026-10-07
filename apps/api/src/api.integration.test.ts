@@ -5,6 +5,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { createApp } from './app.js';
 import { startInMemoryDatabase } from './inMemoryDatabase.js';
 import type { InMemoryDatabase } from './inMemoryDatabase.js';
+import { CalendarFeedModel } from './models/calendarFeed.js';
 import { EntryModel } from './models/entry.js';
 import { EventModel } from './models/event.js';
 import { LoginThrottleModel } from './models/loginThrottle.js';
@@ -74,6 +75,7 @@ describe('API integration and user isolation', () => {
       EventModel.init(),
       EntryModel.init(),
       SemesterModel.init(),
+      CalendarFeedModel.init(),
     ]);
     app = createApp({
       sessionSecret: 'integration-test-secret-value-is-long-enough',
@@ -89,6 +91,7 @@ describe('API integration and user isolation', () => {
       EventModel.deleteMany({}),
       EntryModel.deleteMany({}),
       SemesterModel.deleteMany({}),
+      CalendarFeedModel.deleteMany({}),
       LoginThrottleModel.deleteMany({}),
     ]);
   });
@@ -208,6 +211,115 @@ describe('API integration and user isolation', () => {
 
     expect(response.status).toBe(400);
     expect(await EntryModel.countDocuments()).toBe(0);
+  });
+
+  describe('calendar subscription', () => {
+    const allOptions = {
+      assessments: true,
+      notes: true,
+      daysOff: false,
+      periods: false,
+    };
+
+    // Calendar files fold long lines; joining them back gives the text.
+    async function fetchFeed(token: string) {
+      const response = await request(app).get(`/ical/${token}.ics`);
+      return { ...response, text: response.text.replace(/\r\n[ \t]/g, '') };
+    }
+
+    async function subscribe(agent: ReturnType<typeof request.agent>) {
+      await agent.put('/calendar').send({
+        events: [{ id: 'series-a', event }],
+        semester,
+        entries: [
+          { id: 'entry-1', entry: kolokwium },
+          { id: 'entry-2', entry: note },
+        ],
+      });
+      const created = await agent.post('/calendar-feed');
+      expect(created.status).toBe(201);
+      return created.body as { token: string; active: boolean };
+    }
+
+    it('serves the plan behind a secret link with the chosen options', async () => {
+      const { agent } = await registerAgent('a@example.com');
+      expect((await agent.get('/calendar-feed')).body).toEqual({
+        active: false,
+        options: {
+          assessments: true,
+          notes: false,
+          daysOff: false,
+          periods: false,
+        },
+      });
+
+      const { token, active } = await subscribe(agent);
+      const feed = await fetchFeed(token);
+
+      expect(active).toBe(true);
+      expect(token).toMatch(/^[\w-]{43}$/);
+      expect(feed.status).toBe(200);
+      expect(feed.headers['content-type']).toContain('text/calendar');
+      expect(feed.text).toContain('SUMMARY:⚑ Matematyka · Kolokwium');
+      expect(feed.text).not.toContain('Przynieść kalkulator');
+
+      await agent.put('/calendar-feed/options').send(allOptions);
+      expect((await fetchFeed(token)).text).toContain(
+        'Notatka do przedmiotu: Przynieść kalkulator',
+      );
+      // Only a hash of the token is stored.
+      const stored = await CalendarFeedModel.findOne().lean();
+      expect(JSON.stringify(stored)).not.toContain(token);
+    });
+
+    it('stops serving old links once replaced or turned off', async () => {
+      const { agent } = await registerAgent('a@example.com');
+      const { token: first } = await subscribe(agent);
+
+      const second = (await agent.post('/calendar-feed')).body.token;
+
+      expect((await request(app).get(`/ical/${first}.ics`)).status).toBe(404);
+      expect((await request(app).get(`/ical/${second}.ics`)).status).toBe(200);
+      expect((await agent.delete('/calendar-feed')).status).toBe(204);
+      expect((await request(app).get(`/ical/${second}.ics`)).status).toBe(404);
+      expect((await agent.get('/calendar-feed')).body.active).toBe(false);
+    });
+
+    it('keeps each account’s subscription to itself', async () => {
+      const { agent: userA } = await registerAgent('a@example.com');
+      const { agent: userB } = await registerAgent('b@example.com');
+      await subscribe(userA);
+
+      expect((await userB.get('/calendar-feed')).body.active).toBe(false);
+      expect(
+        (await userB.put('/calendar-feed/options').send(allOptions)).status,
+      ).toBe(404);
+      expect((await request(app).get('/calendar-feed')).status).toBe(401);
+      for (const file of [
+        'nope.ics',
+        `${'a'.repeat(43)}.ics`,
+        'a'.repeat(43),
+      ]) {
+        expect((await request(app).get(`/ical/${file}`)).status).toBe(404);
+      }
+      expect(
+        (await userA.put('/calendar-feed/options').send({ notes: true }))
+          .status,
+      ).toBe(400);
+    });
+
+    it('limits how often a link can be fetched', async () => {
+      const limitedApp = createApp({
+        sessionSecret: 'integration-test-secret-value-is-long-enough',
+        feedRequestLimit: 2,
+      });
+      const fetch = () =>
+        request(limitedApp).get(`/ical/${'a'.repeat(43)}.ics`);
+
+      expect((await fetch()).status).toBe(404);
+      expect((await fetch()).status).toBe(404);
+      expect((await fetch()).status).toBe(429);
+    });
   });
 
   it('rate limits repeated login attempts', async () => {

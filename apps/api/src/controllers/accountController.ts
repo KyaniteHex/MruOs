@@ -5,6 +5,7 @@ import {
   ChangePasswordInputSchema,
   DeleteAccountInputSchema,
 } from '@mruos/shared';
+import { CalendarFeedModel } from '../models/calendarFeed.js';
 import { EntryModel } from '../models/entry.js';
 import { EventModel } from '../models/event.js';
 import { SemesterModel } from '../models/semester.js';
@@ -144,6 +145,7 @@ export const deleteAccount: RequestHandler = async (
       EventModel.deleteMany({ userId }),
       EntryModel.deleteMany({ userId }),
       SemesterModel.deleteMany({ userId }),
+      CalendarFeedModel.deleteMany({ userId }),
       clearLoginFailures(user.email),
     ]);
     // With the user gone, requireAuth rejects every remaining session.
