@@ -113,6 +113,29 @@ describe('account settings', () => {
     expect(browserOnly.headers['set-cookie']?.[0]).not.toContain('Expires');
   });
 
+  it('keeps accounts from before session versions signed in', async () => {
+    await register('student@example.com');
+    // Accounts created before this release have no session version stored.
+    await UserModel.updateOne(
+      { email: 'student@example.com' },
+      { $unset: { sessionVersion: 1 } },
+    );
+
+    const { agent: laptop, response } = await login('student@example.com');
+    const { agent: phone } = await login('student@example.com');
+
+    expect(response.status).toBe(200);
+    expect((await laptop.get('/calendar')).status).toBe(200);
+    expect((await phone.get('/auth/me')).status).toBe(200);
+
+    // Changing the password still ends the other sessions.
+    await laptop
+      .post('/account/password')
+      .send({ currentPassword: password, newPassword: 'n' + password });
+    expect((await phone.get('/calendar')).status).toBe(401);
+    expect((await laptop.get('/calendar')).status).toBe(200);
+  });
+
   it('logs other devices out when the password changes', async () => {
     const { agent: laptop } = await register('student@example.com');
     const { agent: phone } = await login('student@example.com');
