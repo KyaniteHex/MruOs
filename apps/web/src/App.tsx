@@ -40,13 +40,14 @@ import { semesterWeeksToDateRange } from '@mruos/shared/semester';
 import { AppHeader } from './AppHeader';
 import { AssessmentDetails } from './AssessmentDetails';
 import { AssessmentForm } from './AssessmentForm';
+import { BottomSheet } from './BottomSheet';
 import { ClassEntries } from './ClassEntries';
 import type { NewEntryKind } from './ClassEntries';
 import { EventForm } from './EventForm';
 import { MenuButton } from './MenuButton';
 import { NoteForm } from './NoteForm';
 import { PlanStatusScreen } from './PlanStatusScreen';
-import { UpcomingPanel } from './UpcomingPanel';
+import { UpcomingBar, UpcomingList, UpcomingPanel } from './UpcomingPanel';
 import { periodKindLabels } from './academicYearForm';
 import {
   calendarTitle,
@@ -68,6 +69,7 @@ import {
   demoEventSeries,
   demoRange,
   demoSemester,
+  hasAnnotations,
   toAnnotationEvents,
   toAssessmentEvents,
   toCalendarEvents,
@@ -77,6 +79,7 @@ import type { EntryContext } from './entryFormModel';
 import { classTypeLabels } from './eventFormModel';
 import type { EventEditScope } from './eventFormModel';
 import { repositoryErrorMessages, usePlan } from './planContext';
+import { narrowScreenQuery, useMediaQuery } from './useMediaQuery';
 
 /** Where the calendar opens, e.g. on the first week of an imported plan. */
 export type CalendarLocationState = { date?: string };
@@ -110,6 +113,9 @@ type CalendarState = {
   title: string;
   /** "tydzień 2 semestru", or null in the month view and outside teaching. */
   week: string | null;
+  /** The first and the last day shown, without hidden weekends. */
+  firstDate: string;
+  lastDate: string;
 };
 
 const views: { view: CalendarView; label: string }[] = [
@@ -175,10 +181,6 @@ function blockStyle(color: string, colors: ClassBlockColors): CSSProperties {
 }
 
 function renderEventContent(info: EventContentArg) {
-  // Shading of days off has nothing to show.
-  if (info.event.display === 'background') {
-    return null;
-  }
   const isMonth = info.view.type === 'dayGridMonth';
 
   if (isAssessmentEvent(info.event.extendedProps)) {
@@ -210,18 +212,13 @@ function renderEventContent(info: EventContentArg) {
 
   if (isAnnotation(info.event.extendedProps)) {
     const { kind, label } = info.event.extendedProps as AnnotationDetails;
-    // Month cells are narrow: show the name; the colour marks a day off.
+    // Only the name: the colour already marks a day off.
     const prefix =
       kind === 'day-off' && label !== 'Dzień wolny' ? 'Dzień wolny: ' : '';
-    const showPrefix = info.view.type === 'timeGridDay';
 
     return (
       <div className="calendar-annotation-copy" title={info.event.title}>
-        {prefix && (
-          <span className={showPrefix ? undefined : 'visually-hidden'}>
-            {prefix}
-          </span>
-        )}
+        {prefix && <span className="visually-hidden">{prefix}</span>}
         {label}
       </div>
     );
@@ -286,6 +283,9 @@ function CalendarPage() {
   >(null);
   const [entrySession, setEntrySession] = useState<EntrySession | null>(null);
   const [formSession, setFormSession] = useState<FormSession | null>(null);
+  // Narrow screens show details and "Nadchodzące" in a sheet.
+  const isNarrow = useMediaQuery(narrowScreenQuery);
+  const [upcomingOpen, setUpcomingOpen] = useState(false);
   const [initialDate] = useState(
     () =>
       (location.state as CalendarLocationState | null)?.date ??
@@ -312,6 +312,10 @@ function CalendarPage() {
   const selectedAssessment = placed.assessments.find(
     (scheduled) => scheduled.id === selectedAssessmentId && !scheduled.seriesId,
   );
+  // The all-day row holds only days off, breaks and events.
+  const showAllDayRow =
+    calendarState !== null &&
+    hasAnnotations(semester, calendarState.firstDate, calendarState.lastDate);
 
   useEffect(() => {
     calendarRef.current?.getApi().refetchEvents();
@@ -358,16 +362,22 @@ function CalendarPage() {
       view,
       title: calendarTitle(view, first, shown.at(-1) ?? first),
       week: view === 'dayGridMonth' ? null : weekLabel(semester, shown),
+      firstDate: shown[0] ?? first,
+      lastDate: shown.at(-1) ?? first,
     });
     setActiveDate(shown.includes(today) ? today : first);
   }
 
-  function handleDateClick(info: { dateStr: string }) {
-    setActiveDate(info.dateStr);
+  function clearSelection() {
     setSelectedEvent(null);
     setSelectedAnnotation(null);
     setSelectedAssessmentId(null);
     markSelected(null);
+  }
+
+  function handleDateClick(info: { dateStr: string }) {
+    setActiveDate(info.dateStr);
+    clearSelection();
     calendarApi()?.changeView('timeGridDay', info.dateStr);
   }
 
@@ -485,6 +495,7 @@ function CalendarPage() {
 
   function openUpcoming(item: UpcomingAssessment) {
     setActiveDate(item.date);
+    setUpcomingOpen(false);
     setSelectedAnnotation(null);
     calendarApi()?.changeView('timeGridDay', item.date);
 
@@ -635,7 +646,7 @@ function CalendarPage() {
   }
 
   const controls = (
-    <>
+    <div className="calendar-controls">
       <div className="segmented" role="group" aria-label="Widok kalendarza">
         {views.map(({ view, label }) => (
           <button
@@ -675,7 +686,7 @@ function CalendarPage() {
           Dziś
         </button>
       </div>
-    </>
+    </div>
   );
 
   const addMenu = (
@@ -699,11 +710,99 @@ function CalendarPage() {
     </MenuButton>
   );
 
+  const details = selectedEvent ? (
+    <div className="event-details">
+      <span
+        className="event-type"
+        style={
+          {
+            '--event-color': selectedEvent.color,
+          } as CSSProperties
+        }
+      >
+        {classTypeLabels[selectedEvent.classType]}
+      </span>
+      <h3>{selectedEvent.title}</h3>
+      <dl>
+        <div>
+          <dt>Data</dt>
+          <dd>{selectedEvent.date}</dd>
+        </div>
+        <div>
+          <dt>Godziny</dt>
+          <dd>
+            {selectedEvent.startTime}–{selectedEvent.endTime}
+          </dd>
+        </div>
+        <div>
+          <dt>Sala</dt>
+          <dd>{selectedEvent.room}</dd>
+        </div>
+        <div>
+          <dt>Budynek</dt>
+          <dd>{selectedEvent.building}</dd>
+        </div>
+      </dl>
+      <div className="details-actions">
+        <button
+          className="secondary-button"
+          type="button"
+          onClick={openEditForm}
+        >
+          Edytuj
+        </button>
+      </div>
+      <ClassEntries
+        records={
+          placed.byClass.get(
+            classKey(selectedEvent.seriesId, selectedEvent.date),
+          ) ?? []
+        }
+        subjectNotes={placed.subjectNotes.get(selectedEvent.title) ?? []}
+        onAdd={addEntryToSelectedClass}
+        onEdit={editEntry}
+      />
+    </div>
+  ) : selectedAssessment ? (
+    <AssessmentDetails
+      scheduled={selectedAssessment}
+      onEdit={() => {
+        const record = entries.find(
+          (candidate) => candidate.id === selectedAssessment.id,
+        );
+        if (record) {
+          editEntry(record);
+        }
+      }}
+    />
+  ) : selectedAnnotation ? (
+    <div className="event-details">
+      <span className="event-type">
+        {periodKindLabels[selectedAnnotation.kind]}
+      </span>
+      <h3>{selectedAnnotation.label}</h3>
+      <dl>
+        <div>
+          <dt>
+            {selectedAnnotation.startDate === selectedAnnotation.endDate
+              ? 'Data'
+              : 'Okres'}
+          </dt>
+          <dd>
+            {selectedAnnotation.startDate === selectedAnnotation.endDate
+              ? selectedAnnotation.startDate
+              : `${selectedAnnotation.startDate} – ${selectedAnnotation.endDate}`}
+          </dd>
+        </div>
+      </dl>
+    </div>
+  ) : null;
+
   return (
     <div className="app-shell">
-      <AppHeader controls={controls} actions={addMenu} />
+      <AppHeader actions={addMenu} />
 
-      <main className="workspace">
+      <main className="workspace calendar-workspace">
         {storageError && (
           <div className="storage-alert" role="alert">
             <span>{repositoryErrorMessages[storageError]}</span>
@@ -720,179 +819,132 @@ function CalendarPage() {
         )}
 
         <div className="calendar-layout">
-          <UpcomingPanel
+          {isNarrow ? (
+            <UpcomingBar
+              upcoming={upcoming}
+              orphans={placed.orphans}
+              onOpen={() => setUpcomingOpen(true)}
+            />
+          ) : (
+            <UpcomingPanel
+              upcoming={upcoming}
+              orphans={placed.orphans}
+              onOpenAssessment={openUpcoming}
+              onOpenOrphan={editEntry}
+            />
+          )}
+          <section className="calendar-panel" aria-labelledby="calendar-title">
+            <div className="calendar-heading">
+              <div className="calendar-heading-text">
+                <h1 className="calendar-title" id="calendar-title">
+                  {calendarState?.title}
+                </h1>
+                {calendarState?.week && (
+                  <p className="calendar-week">{calendarState.week}</p>
+                )}
+              </div>
+              {controls}
+            </div>
+            <div className="calendar-body">
+              <FullCalendar
+                ref={calendarRef}
+                plugins={[
+                  dayGridPlugin,
+                  timeGridPlugin,
+                  interactionPlugin,
+                  rrulePlugin,
+                ]}
+                initialView="timeGridWeek"
+                initialDate={initialDate}
+                headerToolbar={false}
+                locale={plLocale}
+                timeZone="Europe/Warsaw"
+                firstDay={1}
+                views={{ timeGridWeek: { weekends: showWeekends } }}
+                events={(fetchInfo: EventSourceFuncArg, successCallback) => {
+                  const range = {
+                    startDate: fetchInfo.startStr.slice(0, 10),
+                    endDate: fetchInfo.endStr.slice(0, 10),
+                  };
+                  successCallback([
+                    ...toAnnotationEvents(semester),
+                    ...toCalendarEvents(eventSeries, range, semester, placed),
+                    ...toAssessmentEvents(placed.assessments, range),
+                  ]);
+                }}
+                datesSet={handleDatesSet}
+                dateClick={handleDateClick}
+                navLinks
+                navLinkDayClick={(date) =>
+                  // With a named time zone and no zone plugin FullCalendar passes
+                  // UTC-coerced dates, so the UTC date is the Warsaw calendar day.
+                  handleDateClick({ dateStr: date.toISOString().slice(0, 10) })
+                }
+                eventInteractive
+                eventClick={handleEventClick}
+                eventContent={renderEventContent}
+                eventDidMount={handleEventMount}
+                eventDisplay="block"
+                eventTimeFormat={{
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  hour12: false,
+                }}
+                slotMinTime={hourTime(hours.start)}
+                slotMaxTime={hourTime(hours.end)}
+                scrollTime={hourTime(hours.start)}
+                slotDuration="01:00:00"
+                slotEventOverlap={false}
+                allDaySlot={showAllDayRow}
+                allDayText="cały dzień"
+                // Breaks and events stay in the top row, single days below.
+                eventOrder="row,start,-duration,allDay,title"
+                // The calendar fills the screen; hours stretch to fit it.
+                height="100%"
+                expandRows
+                dayMaxEvents={3}
+                nowIndicator
+              />
+            </div>
+          </section>
+
+          {!isNarrow && (
+            <aside className="details-panel" aria-live="polite">
+              <div className="details-heading">
+                <p className="eyebrow">INFORMACJE</p>
+                <h2>Szczegóły</h2>
+              </div>
+              {details ?? (
+                <p className="details-empty">Wybierz zajęcia w kalendarzu</p>
+              )}
+            </aside>
+          )}
+        </div>
+      </main>
+      {isNarrow && details ? (
+        <BottomSheet
+          eyebrow="INFORMACJE"
+          title="Szczegóły"
+          active={!formSession && !entrySession}
+          onClose={clearSelection}
+        >
+          {details}
+        </BottomSheet>
+      ) : isNarrow && upcomingOpen ? (
+        <BottomSheet
+          eyebrow="NAJBLIŻSZE 14 DNI"
+          title="Nadchodzące"
+          active={!formSession && !entrySession}
+          onClose={() => setUpcomingOpen(false)}
+        >
+          <UpcomingList
             upcoming={upcoming}
             orphans={placed.orphans}
             onOpenAssessment={openUpcoming}
             onOpenOrphan={editEntry}
           />
-          <section className="calendar-panel" aria-labelledby="calendar-title">
-            <div className="calendar-heading">
-              <h1 className="calendar-title" id="calendar-title">
-                {calendarState?.title}
-              </h1>
-              {calendarState?.week && (
-                <p className="calendar-week">{calendarState.week}</p>
-              )}
-            </div>
-            <FullCalendar
-              ref={calendarRef}
-              plugins={[
-                dayGridPlugin,
-                timeGridPlugin,
-                interactionPlugin,
-                rrulePlugin,
-              ]}
-              initialView="timeGridWeek"
-              initialDate={initialDate}
-              headerToolbar={false}
-              locale={plLocale}
-              timeZone="Europe/Warsaw"
-              firstDay={1}
-              views={{ timeGridWeek: { weekends: showWeekends } }}
-              events={(fetchInfo: EventSourceFuncArg, successCallback) => {
-                const range = {
-                  startDate: fetchInfo.startStr.slice(0, 10),
-                  endDate: fetchInfo.endStr.slice(0, 10),
-                };
-                successCallback([
-                  ...toAnnotationEvents(semester),
-                  ...toCalendarEvents(eventSeries, range, semester, placed),
-                  ...toAssessmentEvents(placed.assessments, range),
-                ]);
-              }}
-              datesSet={handleDatesSet}
-              dateClick={handleDateClick}
-              navLinks
-              navLinkDayClick={(date) =>
-                // With a named time zone and no zone plugin FullCalendar passes
-                // UTC-coerced dates, so the UTC date is the Warsaw calendar day.
-                handleDateClick({ dateStr: date.toISOString().slice(0, 10) })
-              }
-              eventInteractive
-              eventClick={handleEventClick}
-              eventContent={renderEventContent}
-              eventDidMount={handleEventMount}
-              eventDisplay="block"
-              eventTimeFormat={{
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: false,
-              }}
-              slotMinTime={hourTime(hours.start)}
-              slotMaxTime={hourTime(hours.end)}
-              scrollTime={hourTime(hours.start)}
-              slotDuration="01:00:00"
-              slotEventOverlap={false}
-              allDaySlot
-              allDayText="cały dzień"
-              height="auto"
-              dayMaxEvents={3}
-              nowIndicator
-            />
-          </section>
-
-          <aside className="details-panel" aria-live="polite">
-            <div className="details-heading">
-              <p className="eyebrow">INFORMACJE</p>
-              <h2>Szczegóły</h2>
-            </div>
-            {selectedEvent ? (
-              <div className="event-details">
-                <span
-                  className="event-type"
-                  style={
-                    {
-                      '--event-color': selectedEvent.color,
-                    } as CSSProperties
-                  }
-                >
-                  {classTypeLabels[selectedEvent.classType]}
-                </span>
-                <h3>{selectedEvent.title}</h3>
-                <dl>
-                  <div>
-                    <dt>Data</dt>
-                    <dd>{selectedEvent.date}</dd>
-                  </div>
-                  <div>
-                    <dt>Godziny</dt>
-                    <dd>
-                      {selectedEvent.startTime}–{selectedEvent.endTime}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>Sala</dt>
-                    <dd>{selectedEvent.room}</dd>
-                  </div>
-                  <div>
-                    <dt>Budynek</dt>
-                    <dd>{selectedEvent.building}</dd>
-                  </div>
-                </dl>
-                <div className="details-actions">
-                  <button
-                    className="secondary-button"
-                    type="button"
-                    onClick={openEditForm}
-                  >
-                    Edytuj
-                  </button>
-                </div>
-                <ClassEntries
-                  records={
-                    placed.byClass.get(
-                      classKey(selectedEvent.seriesId, selectedEvent.date),
-                    ) ?? []
-                  }
-                  subjectNotes={
-                    placed.subjectNotes.get(selectedEvent.title) ?? []
-                  }
-                  onAdd={addEntryToSelectedClass}
-                  onEdit={editEntry}
-                />
-              </div>
-            ) : selectedAssessment ? (
-              <AssessmentDetails
-                scheduled={selectedAssessment}
-                onEdit={() => {
-                  const record = entries.find(
-                    (candidate) => candidate.id === selectedAssessment.id,
-                  );
-                  if (record) {
-                    editEntry(record);
-                  }
-                }}
-              />
-            ) : selectedAnnotation ? (
-              <div className="event-details">
-                <span className="event-type">
-                  {periodKindLabels[selectedAnnotation.kind]}
-                </span>
-                <h3>{selectedAnnotation.label}</h3>
-                <dl>
-                  <div>
-                    <dt>
-                      {selectedAnnotation.startDate ===
-                      selectedAnnotation.endDate
-                        ? 'Data'
-                        : 'Okres'}
-                    </dt>
-                    <dd>
-                      {selectedAnnotation.startDate ===
-                      selectedAnnotation.endDate
-                        ? selectedAnnotation.startDate
-                        : `${selectedAnnotation.startDate} – ${selectedAnnotation.endDate}`}
-                    </dd>
-                  </div>
-                </dl>
-              </div>
-            ) : (
-              <p className="details-empty">Wybierz zajęcia w kalendarzu</p>
-            )}
-          </aside>
-        </div>
-      </main>
+        </BottomSheet>
+      ) : null}
       {formSession && (
         <EventForm
           key={

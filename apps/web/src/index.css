@@ -126,25 +126,18 @@ a {
 }
 
 .app-shell {
+  --topbar-height: 64px;
   min-height: 100vh;
 }
 
 .topbar {
   display: flex;
-  min-height: 64px;
+  min-height: var(--topbar-height);
   align-items: center;
   gap: 16px;
   padding: 10px clamp(16px, 4vw, 56px);
   border-bottom: 1px solid var(--color-border);
   background: var(--color-surface);
-}
-
-.topbar-controls {
-  display: flex;
-  flex: 1;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
 }
 
 .topbar-actions {
@@ -219,12 +212,25 @@ a {
   line-height: 1;
 }
 
+/* The title with the week under it, and the views and navigation on the
+   right, in the same place for every week. */
 .calendar-heading {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 4px 14px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px 16px;
   margin-bottom: 14px;
+}
+
+.calendar-heading-text {
+  display: grid;
+  gap: 2px;
+}
+
+.calendar-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .calendar-title {
@@ -284,6 +290,17 @@ a {
   width: min(1500px, 100%);
   margin: 0 auto;
   padding: 36px clamp(16px, 4vw, 56px) 56px;
+}
+
+/* The calendar fills the screen below the top bar; hours stretch to fit. */
+.calendar-workspace {
+  --calendar-space: 24px;
+  --calendar-height: max(
+    460px,
+    calc(100dvh - var(--topbar-height) - 2 * var(--calendar-space))
+  );
+  padding-top: var(--calendar-space);
+  padding-bottom: var(--calendar-space);
 }
 
 .eyebrow {
@@ -435,6 +452,11 @@ a {
   --fc-event-bg-color: var(--color-event-soft);
   --fc-event-border-color: var(--color-event-line);
   --fc-event-text-color: var(--color-event-text);
+}
+
+.fc .fc-daygrid-event.calendar-annotation {
+  margin-right: 1px;
+  margin-left: 1px;
 }
 
 .calendar-annotation-copy {
@@ -740,11 +762,6 @@ a {
   font-size: 12px;
 }
 
-.upcoming-toggle {
-  display: none;
-  margin-top: 6px;
-}
-
 .orphan-entries {
   margin-top: 16px;
   border-top: 1px solid var(--color-border-soft);
@@ -776,6 +793,116 @@ a {
   font-size: 12px;
   text-align: left;
   cursor: pointer;
+}
+
+/* "Nadchodzące" on narrow screens: one line above the calendar. */
+.upcoming-bar {
+  display: flex;
+  width: 100%;
+  min-height: 44px;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  border-left: 3px solid var(--color-test);
+  border-radius: 4px;
+  padding: 6px 10px;
+  background: var(--color-test-soft);
+  color: var(--color-test-text);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.upcoming-bar-exam {
+  border-left-color: var(--color-exam);
+  background: var(--color-exam-soft);
+  color: var(--color-exam-text);
+}
+
+.upcoming-bar-orphans {
+  border-left-color: var(--color-warning-line);
+  background: var(--color-warning-soft);
+  color: var(--color-warning-text);
+}
+
+.upcoming-bar-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.upcoming-bar-count {
+  flex: none;
+  border-radius: 10px;
+  padding: 1px 7px;
+  background: var(--color-surface);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.upcoming-bar-chevron {
+  flex: none;
+  font-size: 18px;
+  line-height: 1;
+}
+
+/* Details and "Nadchodzące" over the calendar on narrow screens. */
+.sheet-backdrop {
+  position: fixed;
+  z-index: 900;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: var(--color-backdrop);
+}
+
+.sheet {
+  width: min(640px, 100%);
+  max-height: 80dvh;
+  overflow-y: auto;
+  border-radius: 12px 12px 0 0;
+  padding: 16px 16px calc(20px + env(safe-area-inset-bottom));
+  background: var(--color-surface);
+  box-shadow: 0 -12px 32px var(--color-shadow-strong);
+  animation: sheet-in 180ms ease-out;
+}
+
+.sheet:focus {
+  outline: none;
+}
+
+.sheet-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--color-border-soft);
+}
+
+.sheet-header h2 {
+  margin: 0;
+  color: var(--color-text-strong);
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 21px;
+  font-weight: 500;
+}
+
+@keyframes sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet {
+    animation: none;
+  }
 }
 
 .class-entries {
@@ -881,8 +1008,16 @@ a {
 }
 
 .calendar-panel {
+  display: flex;
   min-width: 0;
+  height: var(--calendar-height);
+  flex-direction: column;
   padding: 20px;
+}
+
+.calendar-body {
+  flex: 1;
+  min-height: 0;
 }
 
 .details-panel {
@@ -1315,7 +1450,7 @@ a.secondary-button {
 }
 
 .fc .fc-dayGridMonth-view .fc-daygrid-day-frame {
-  min-height: 112px;
+  min-height: 96px;
 }
 
 .fc .fc-event {
@@ -1409,14 +1544,9 @@ a.secondary-button {
   font-weight: 650;
 }
 
+/* The shortest an hour gets; it grows when the screen has room. */
 .fc .fc-timegrid-slot {
-  height: 3rem;
-}
-
-/* Days off shade their whole day, e.g. a column of the week. */
-.fc .fc-bg-event.day-off-shade {
-  background: var(--color-day-off-soft);
-  opacity: 0.7;
+  height: 2.5rem;
 }
 
 .fc .entry-mark-inline {
@@ -1479,17 +1609,31 @@ a.secondary-button {
   cursor: pointer;
 }
 
-@media (max-width: 900px) {
-  .calendar-layout {
+/* Narrower calendars: the title, then views on the left and navigation on
+   the right. */
+@media (max-width: 1100px) {
+  .calendar-heading {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto;
-    grid-template-areas:
-      'upcoming'
-      'calendar'
-      'details';
   }
 
-  .details-panel {
+  .calendar-controls {
+    justify-content: space-between;
+  }
+}
+
+@media (max-width: 900px) {
+  /* The "Nadchodzące" bar, then the calendar filling the rest. */
+  .calendar-layout {
+    display: flex;
+    height: var(--calendar-height);
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .calendar-panel {
+    height: auto;
+    flex: 1;
     min-height: 0;
   }
 
@@ -1634,16 +1778,18 @@ a.secondary-button {
 }
 
 @media (max-width: 600px) {
-  /* Phones: logo and actions, then the calendar's views and navigation. */
-  .topbar {
-    flex-wrap: wrap;
-    gap: 10px;
+  .app-shell {
+    --topbar-height: 56px;
   }
 
-  .topbar-controls {
-    order: 3;
-    flex-basis: 100%;
-    justify-content: space-between;
+  .topbar {
+    gap: 10px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  .calendar-nav .secondary-button {
+    min-height: 34px;
   }
 
   .segmented button,
@@ -1674,7 +1820,7 @@ a.secondary-button {
   }
 
   .fc .fc-timegrid-slot {
-    height: 2.5rem;
+    height: 2.25rem;
   }
 
   /* Month cells are too narrow for names; screen readers still get them. */
@@ -1695,6 +1841,11 @@ a.secondary-button {
 
   .workspace {
     padding-top: 25px;
+  }
+
+  .calendar-workspace {
+    --calendar-space: 10px;
+    padding: var(--calendar-space);
   }
 
   .calendar-panel {
@@ -1743,19 +1894,6 @@ a.secondary-button {
   .academic-day-off > input:nth-child(2) {
     grid-column: 1 / -1;
     grid-row: 2;
-  }
-
-  .upcoming-panel {
-    padding: 14px 16px;
-  }
-
-  /* Only the nearest one until "Pokaż wszystkie". */
-  .upcoming-list:not(.is-expanded) > li:nth-child(n + 2) {
-    display: none;
-  }
-
-  .upcoming-toggle {
-    display: inline-flex;
   }
 
   .modal-backdrop {

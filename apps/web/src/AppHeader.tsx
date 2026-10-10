@@ -3,8 +3,6 @@ import { Link, NavLink } from 'react-router';
 import { useAuth } from './authContext';
 
 type AppHeaderProps = {
-  /** The calendar's views and navigation. */
-  controls?: ReactNode;
   /** Page actions before settings, e.g. "+ Dodaj". */
   actions?: ReactNode;
 };
@@ -22,7 +20,7 @@ function GearIcon() {
 }
 
 /** The bar on top of the calendar and the settings. */
-export function AppHeader({ controls, actions }: AppHeaderProps) {
+export function AppHeader({ actions }: AppHeaderProps) {
   const { user } = useAuth();
 
   return (
@@ -33,7 +31,6 @@ export function AppHeader({ controls, actions }: AppHeaderProps) {
         </span>
         <span className="brand-name">MruOS</span>
       </Link>
-      {controls && <div className="topbar-controls">{controls}</div>}
       <div className="topbar-actions">
         {actions}
         {!user && (
