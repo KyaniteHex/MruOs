@@ -2089,6 +2089,12 @@ a.secondary-button {
   margin: 18px 0 0;
 }
 
+.settings-version {
+  margin: 6px 0 0;
+  color: var(--color-text-subtle);
+  font-size: 12px;
+}
+
 .settings-content a:not([class]) {
   color: var(--color-accent-text);
   text-decoration: underline;

@@ -11,6 +11,7 @@ import { AcademicYearSettings } from '../AcademicYearSettings';
 import { accountErrorMessages } from '../accountApi';
 import { AppHeader } from '../AppHeader';
 import type { CalendarLocationState } from '../App';
+import { appVersion, versionLabel } from '../appVersion';
 import { useAuth } from '../authContext';
 import { exportCalendarBackup, importCalendarBackup } from '../calendarBackup';
 import type { CalendarSnapshot } from '../eventRepository';
@@ -132,6 +133,8 @@ function Settings() {
   const [notice, setNotice] = useState<string | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
   const [theme, setTheme] = useState(readThemePreference);
+  // The commit the API runs, to compare with this app's.
+  const [apiVersion, setApiVersion] = useState<string | null>(null);
   const saveError = storageError
     ? repositoryErrorMessages[storageError]
     : undefined;
@@ -142,6 +145,20 @@ function Settings() {
       document.getElementById(location.hash.slice(1))?.scrollIntoView?.();
     }
   }, [location.hash]);
+
+  useEffect(() => {
+    let current = true;
+    void auth.api.health().then((result) => {
+      if (current) {
+        setApiVersion(
+          result.success ? (result.value.version ?? 'nieznana') : 'niedostępne',
+        );
+      }
+    });
+    return () => {
+      current = false;
+    };
+  }, [auth.api]);
 
   function openCalendar(date?: string) {
     navigate('/kalendarz', {
@@ -452,6 +469,10 @@ function Settings() {
 
             <p className="settings-footer">
               <Link to="/prywatnosc">Prywatność</Link>
+            </p>
+            <p className="settings-version">
+              Wersja aplikacji: {versionLabel(appVersion)} · API:{' '}
+              {apiVersion ?? 'sprawdzam…'}
             </p>
           </div>
         </div>

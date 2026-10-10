@@ -308,11 +308,18 @@ describe('settings: look', () => {
   });
 
   it('lets a guest pick a theme kept on this device', async () => {
-    stubApi({ 'GET /auth/me': signedOut });
+    stubApi({
+      'GET /auth/me': signedOut,
+      'GET /health': () => json({ status: 'ok', version: 'abc1234' }),
+    });
     window.localStorage.setItem('mruos-guest-mode', 'true');
     renderApp('/ustawienia');
 
     expect(await screen.findByText(/Używasz MruOS bez konta/)).toBeTruthy();
+    // Which app and API run here, e.g. on production or in a preview.
+    expect((await screen.findByText(/API: abc1234/)).textContent).toMatch(
+      /^Wersja aplikacji: [0-9a-f]{7}/,
+    );
     fireEvent.click(screen.getByLabelText('Ciemny'));
 
     expect(document.documentElement.dataset.theme).toBe('dark');
