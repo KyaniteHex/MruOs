@@ -175,6 +175,10 @@ function blockStyle(color: string, colors: ClassBlockColors): CSSProperties {
 }
 
 function renderEventContent(info: EventContentArg) {
+  // Shading of days off has nothing to show.
+  if (info.event.display === 'background') {
+    return null;
+  }
   const isMonth = info.view.type === 'dayGridMonth';
 
   if (isAssessmentEvent(info.event.extendedProps)) {
@@ -681,8 +685,9 @@ function CalendarPage() {
       items={[
         {
           label: 'Zajęcia',
+          // A weekly class covers the whole semester unless changed.
           onSelect: () =>
-            setFormSession({ mode: 'create', initialDate: activeDate }),
+            setFormSession({ mode: 'create', initialDate: semester.startDate }),
         },
         {
           label: 'Kolokwium lub egzamin',
