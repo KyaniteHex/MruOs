@@ -13,4 +13,14 @@ describe('GET /health', () => {
     expect(response.status).toBe(200);
     expect(response.body).toEqual({ status: 'ok' });
   });
+
+  it('reports the commit the API runs', async () => {
+    const versioned = createApp({
+      sessionSecret: 'stage-five-test-secret-value-32-chars',
+      version: 'd5b820c',
+    });
+    const response = await request(versioned).get('/health');
+
+    expect(response.body).toEqual({ status: 'ok', version: 'd5b820c' });
+  });
 });

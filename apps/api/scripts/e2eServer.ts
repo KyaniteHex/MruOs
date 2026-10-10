@@ -6,6 +6,7 @@ import { startInMemoryDatabase } from '../src/inMemoryDatabase.js';
 import { EventModel } from '../src/models/event.js';
 import { SemesterModel } from '../src/models/semester.js';
 import { UserModel } from '../src/models/user.js';
+import { apiVersion } from '../src/version.js';
 
 const port = Number(process.env.PORT ?? 3101);
 const database = await startInMemoryDatabase();
@@ -17,6 +18,7 @@ const app = createApp({
   sessionSecret: 'e2e-only-session-secret-value-32-chars',
   // Every E2E test registers its own account from the same IP.
   authAttemptLimit: 10_000,
+  version: apiVersion(),
 });
 const server = app.listen(port, () => {
   console.log(`MruOS E2E API listening on port ${port}`);

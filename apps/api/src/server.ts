@@ -3,6 +3,7 @@ import MongoStore from 'connect-mongo';
 import mongoose from 'mongoose';
 import { connectToDatabase, disconnectFromDatabase } from './database.js';
 import { createApp } from './app.js';
+import { apiVersion } from './version.js';
 
 const port = Number(process.env.PORT ?? 3001);
 const isProduction = process.env.NODE_ENV === 'production';
@@ -54,15 +55,17 @@ const sessionStore = MongoStore.create({
   // Extends idle sessions at most once an hour instead of on every request.
   touchAfter: 60 * 60,
 });
+const version = apiVersion();
 const app = createApp({
   sessionSecret,
   sessionStore,
   secureCookies: isProduction,
   webOrigin: process.env.WEB_ORIGIN,
   originSecret,
+  version,
 });
 const server = app.listen(port, () => {
-  console.log(`MruOS API listening on port ${port}`);
+  console.log(`MruOS API ${version} listening on port ${port}`);
 });
 
 async function shutdown() {
