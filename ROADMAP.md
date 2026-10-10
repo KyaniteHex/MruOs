@@ -177,6 +177,7 @@ Testy muszą obejmować:
 - [x] Strona „Ustawienia”, także bez konta: Plan (rok akademicki, „Import ▾”: Format JSON, Format XLSX (UMK CM); „Eksport ▾”: Format JSON, Format ICS), Kalendarz w telefonie (subskrypcja), Wygląd, Konto (z wylogowaniem); `/konto` przekierowuje do Ustawień
 - [x] Ciemny motyw: Jasny, Ciemny albo Jak w systemie (domyślnie), zapamiętany na urządzeniu; kolory na wspólnych zmiennych, kontrast sprawdzany w obu motywach
 - [x] Rozwijane menu obsługiwane z klawiatury i przez czytniki ekranu, zawsze w całości na ekranie
+- [x] Wersja aplikacji (skrót commita i czas zbudowania) w konsoli przy starcie i na dole Ustawień, obok wersji API z `/health`
 
 **Gotowe, gdy:** kalendarz otwiera się na bieżącym tygodniu, wszystkie dotychczasowe funkcje (harmonogram, importy, eksporty, subskrypcja, konto) działają z Ustawień, ciemny motyw przechodzi testy kontrastu, a scenariusze E2E przechodzą na desktopie i telefonie.
 
@@ -206,7 +207,6 @@ Testy muszą obejmować:
 - Studia: obecności z licznikiem nieobecności, oceny i zaliczenia, karta przedmiotu
 - Technika: dostrojenie hashowania haseł
 - Logi API: zapis błędów 500 (metoda, ścieżka, komunikat i stos, bez treści zapytań i e-maili) oraz krótki log zapytań (metoda, ścieżka, status, czas; bez `/health`, z zamaskowanym kodem w `/ical/…`), żeby awarie zostawiały ślad, a pobrania subskrypcji przez Google były widoczne w logach Rendera
-- Wersjonowanie: numer wersji aplikacji (np. z `package.json` i skrótu commita) wypisywany w konsoli devtools przy starcie, żeby było widać, która wersja działa na produkcji, a która w podglądzie; podobnie wersja API, np. w `/health`
 - Jednorazowe zajęcia: w oknie „Dodaj zajęcia” w „Zakresie obowiązywania” opcja „Jednorazowo” (domyślna) z jednym polem daty; dni tygodnia i „Co dwa tygodnie” wtedy znikają. Bez zmiany modelu danych: seria z tą samą datą początku i końca
 - Kolokwia i egzaminy w osobnym terminie: domyślnie jedno pole „Godzina” (tylko początek), a przełącznik „Od–do” pokazuje też godzinę zakończenia; do ustalenia, jak wpis bez końca wygląda w kalendarzu i w .ics (np. blok o stałej długości). Przy okazji sprawdzić ucinany napis „W czasie zajęć” w formularzu
 - Notatki: eksport do czytelnego pliku (np. do wydruku), pogrupowany po przedmiotach

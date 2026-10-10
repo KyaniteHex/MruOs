@@ -61,6 +61,15 @@ pnpm build
 
 CI (GitHub Actions) uruchamia lint, testy, build oraz testy E2E dla każdego pusha i pull requesta.
 
+## Która wersja działa
+
+Każde wdrożenie podaje swój commit:
+
+- aplikacja: na dole strony „Ustawienia” („Wersja aplikacji: d5b820c z 10.10.2026, 20:25 · API: d5b820c”) i w konsoli przeglądarki przy starcie; „+ lokalne zmiany” oznacza kod jeszcze niezacommitowany (np. `pnpm dev`),
+- API: `GET /health` zwraca `{"status":"ok","version":"d5b820c"}`.
+
+Na Vercelu i Renderze commit pochodzi z ich zmiennych `VERCEL_GIT_COMMIT_SHA` i `RENDER_GIT_COMMIT`, lokalnie z `git`.
+
 ## Środowiska i wydania
 
 | Środowisko | Gałąź        | Frontend (Vercel)                 | API (Render)        | Baza (Atlas)    |
