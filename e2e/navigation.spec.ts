@@ -1,5 +1,6 @@
 import {
   addClass,
+  addFromMenu,
   dayCell,
   expect,
   isNarrow,
@@ -152,15 +153,31 @@ test('shows which versions of the app and the API run', async ({ page }) => {
   );
 });
 
-test('shows the weekend on phones only when the plan has weekend classes', async ({
+test('shows the weekend on phones only in weeks with weekend classes', async ({
   page,
 }) => {
   const days = page.locator('.fc-timeGridWeek-view .fc-col-header-cell');
+  const title = page.locator('#calendar-title');
   await expect(days).toHaveCount(isPhone(page) ? 5 : 7);
 
+  // An exam on a Saturday two weeks later shows only that week's weekend.
+  await addFromMenu(page, 'Kolokwium lub egzamin');
+  const dialog = page.getByRole('dialog', {
+    name: 'Dodaj kolokwium lub egzamin',
+  });
+  await dialog.getByLabel('Egzamin').check();
+  await dialog.getByLabel('Przedmiot', { exact: true }).fill('Fizyka');
+  await dialog.getByLabel('Data', { exact: true }).fill('2026-10-17');
+  await dialog.getByRole('button', { name: 'Zapisz', exact: true }).click();
+  await expect(dialog).toBeHidden();
+  await expect(title).toHaveText('12–18 października 2026');
+  await expect(days).toHaveCount(7);
+
+  await page.getByRole('button', { name: 'Dziś' }).click();
+  await expect(days).toHaveCount(isPhone(page) ? 5 : 7);
+
+  // A weekly Saturday class shows the weekend from now on.
   await addClass(page, { subject: 'Zajęcia sobotnie', weekday: 'Sob' });
   await expect(days).toHaveCount(7);
-  await expect(page.locator('#calendar-title')).toHaveText(
-    '28 września – 4 października 2026',
-  );
+  await expect(title).toHaveText('28 września – 4 października 2026');
 });
