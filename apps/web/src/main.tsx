@@ -3,7 +3,11 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router';
 import { AuthProvider } from './auth';
 import { Root } from './Root';
+import { applyTheme, followSystemTheme } from './theme';
 import './index.css';
+
+applyTheme();
+followSystemTheme();
 
 const rootElement = document.getElementById('root');
 
