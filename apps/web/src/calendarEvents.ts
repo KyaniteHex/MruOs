@@ -146,6 +146,8 @@ export type AnnotationDetails = {
   label: string;
   startDate: string;
   endDate: string;
+  /** Periods of several days go to the top row, single days below them. */
+  row: 1 | 2;
 };
 
 /**
@@ -153,45 +155,42 @@ export type AnnotationDetails = {
  * academic calendar the semester's days off get a generic name.
  */
 export function toAnnotationEvents(semester: Semester): EventInput[] {
-  const annotations = semesterAnnotations(semester);
-  // Days off also shade their whole day, e.g. a column of the week view.
-  const shades: EventInput[] = annotations
-    .filter((annotation) => annotation.kind === 'day-off')
-    .map((annotation, index) => ({
-      id: `day-off-shade-${index}`,
-      start: annotation.startDate,
-      end: dayAfter(annotation.endDate),
-      allDay: true,
-      display: 'background',
-      classNames: ['day-off-shade'],
-    }));
+  return semesterAnnotations(semester).map((annotation, index) => ({
+    id: `annotation-${index}`,
+    title:
+      annotation.kind === 'day-off' && annotation.label !== 'Dzień wolny'
+        ? `Dzień wolny: ${annotation.label}`
+        : annotation.label,
+    start: annotation.startDate,
+    // FullCalendar ends all-day events on the following day, exclusively.
+    end: dayAfter(annotation.endDate),
+    allDay: true,
+    display: 'block',
+    classNames: [
+      'calendar-annotation',
+      `calendar-annotation-${annotation.kind}`,
+    ],
+    extendedProps: {
+      annotation: true,
+      kind: annotation.kind,
+      label: annotation.label,
+      startDate: annotation.startDate,
+      endDate: annotation.endDate,
+      row: annotation.startDate === annotation.endDate ? 2 : 1,
+    } satisfies AnnotationDetails,
+  }));
+}
 
-  return [
-    ...shades,
-    ...annotations.map((annotation, index) => ({
-      id: `annotation-${index}`,
-      title:
-        annotation.kind === 'day-off' && annotation.label !== 'Dzień wolny'
-          ? `Dzień wolny: ${annotation.label}`
-          : annotation.label,
-      start: annotation.startDate,
-      // FullCalendar ends all-day events on the following day, exclusively.
-      end: dayAfter(annotation.endDate),
-      allDay: true,
-      display: 'block',
-      classNames: [
-        'calendar-annotation',
-        `calendar-annotation-${annotation.kind}`,
-      ],
-      extendedProps: {
-        annotation: true,
-        kind: annotation.kind,
-        label: annotation.label,
-        startDate: annotation.startDate,
-        endDate: annotation.endDate,
-      } satisfies AnnotationDetails,
-    })),
-  ];
+/** Whether days off, breaks or events fall on any of the shown days. */
+export function hasAnnotations(
+  semester: Semester,
+  firstDate: string,
+  lastDate: string,
+): boolean {
+  return semesterAnnotations(semester).some(
+    (annotation) =>
+      annotation.startDate <= lastDate && annotation.endDate >= firstDate,
+  );
 }
 
 export const demoSemester: Semester = {

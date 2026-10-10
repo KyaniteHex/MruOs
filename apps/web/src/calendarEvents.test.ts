@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { EntryRecordSchema, EventSchema, placeEntries } from '@mruos/shared';
-import { toAssessmentEvents, toCalendarEvents } from './calendarEvents';
+import type { Semester } from '@mruos/shared';
+import {
+  hasAnnotations,
+  toAnnotationEvents,
+  toAssessmentEvents,
+  toCalendarEvents,
+} from './calendarEvents';
 
 describe('toCalendarEvents', () => {
   it('maps expanded occurrences into FullCalendar events with local time and details', () => {
@@ -181,5 +187,76 @@ describe('entries in the calendar', () => {
         endDate: '2026-10-31',
       }),
     ).toEqual([]);
+  });
+});
+
+describe('toAnnotationEvents', () => {
+  const winter: Semester = {
+    startDate: '2026-10-01',
+    daysOff: ['2026-11-11', '2026-12-24', '2027-01-06'],
+    academicYear: {
+      startYear: 2026,
+      semesters: [
+        {
+          term: 'winter',
+          startDate: '2026-10-01',
+          endDate: '2027-02-21',
+          periods: [
+            {
+              label: 'Wakacje zimowe',
+              kind: 'break',
+              startDate: '2026-12-21',
+              endDate: '2027-01-06',
+            },
+          ],
+        },
+      ],
+      daysOff: [
+        { date: '2026-11-11', label: 'Narodowe Święto Niepodległości' },
+        { date: '2026-12-24', label: 'Wigilia Bożego Narodzenia' },
+        { date: '2027-01-06', label: 'Święto Trzech Króli' },
+      ],
+    },
+  };
+
+  it('puts breaks above the holidays that fall in them, without shading days', () => {
+    const events = toAnnotationEvents(winter);
+    const winterBreak = events.find(
+      (event) => event.title === 'Wakacje zimowe',
+    );
+    const epiphany = events.find(
+      (event) => event.title === 'Dzień wolny: Święto Trzech Króli',
+    );
+
+    expect(events).toHaveLength(4);
+    expect(events.every((event) => event.display === 'block')).toBe(true);
+    expect(winterBreak).toMatchObject({
+      start: '2026-12-21',
+      end: '2027-01-07',
+      extendedProps: { kind: 'break', row: 1 },
+    });
+    expect(epiphany).toMatchObject({
+      start: '2027-01-06',
+      end: '2027-01-07',
+      extendedProps: {
+        kind: 'day-off',
+        label: 'Święto Trzech Króli',
+        row: 2,
+      },
+    });
+  });
+
+  it('tells whether anything falls on the shown days', () => {
+    expect(hasAnnotations(winter, '2026-11-09', '2026-11-13')).toBe(true);
+    expect(hasAnnotations(winter, '2026-11-16', '2026-11-20')).toBe(false);
+    // A break that started in an earlier week.
+    expect(hasAnnotations(winter, '2027-01-04', '2027-01-08')).toBe(true);
+    expect(
+      hasAnnotations(
+        { startDate: '2026-09-28', daysOff: ['2026-10-03'] },
+        '2026-09-28',
+        '2026-10-02',
+      ),
+    ).toBe(false);
   });
 });
