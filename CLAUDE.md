@@ -1,6 +1,6 @@
 # MruOS: kalendarz studencki
 
-Aplikacja webowa do zarządzania planem zajęć na studiach. Użytkownik ręcznie wprowadza zajęcia (przedmiot, typ, kolor, budynek, sala, godziny, zakres obowiązywania), a aplikacja pokazuje je w widoku miesiąca i w widoku dnia z podziałką godzinową. Każdy użytkownik konfiguruje swój kalendarz samodzielnie; plany nie są współdzielone.
+Aplikacja webowa do zarządzania planem zajęć na studiach. Użytkownik ręcznie wprowadza zajęcia (przedmiot, typ, kolor, budynek, sala, godziny, zakres obowiązywania), a aplikacja pokazuje je w widoku tygodnia (domyślnym), miesiąca i dnia z podziałką godzinową. Każdy użytkownik konfiguruje swój kalendarz samodzielnie; plany nie są współdzielone.
 
 Aktualny etap prac: patrz `ROADMAP.md`.
 
@@ -79,6 +79,7 @@ Zasady, których trzeba przestrzegać:
 - Bez `any`. Jeśli typ jest nieznany, używamy `unknown` i zawężamy.
 - Eksporty nazwane, bez `export default` (wyjątek: pliki, które wymagają go przez narzędzia).
 - Komponenty React jako funkcje, stan lokalny przez hooki.
+- Kolory w `apps/web/src/index.css` tylko przez zmienne `--color-*`, z wartością dla jasnego i ciemnego motywu (`:root[data-theme='dark']`). Kolory bloków zajęć liczy `classBlockColors` z `@mruos/shared`.
 - Dostęp do danych na frontendzie tylko przez interfejs repozytorium (`EventRepository`), żeby implementację localStorage można było podmienić na API bez zmian w komponentach.
 - Testy obok kodu: `nazwa.ts` i `nazwa.test.ts`.
 - Logika domeny w `packages/shared` musi mieć testy jednostkowe przed użyciem w UI.

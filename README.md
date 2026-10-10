@@ -4,10 +4,11 @@ Kalendarz studencki do zarządzania planem zajęć (wersja produkcyjna: https://
 
 ## Funkcje
 
-- Widok miesiąca i dnia (7:00–21:00), kolory zajęć z czytelnym tekstem na każdym tle.
+- Widok tygodnia (domyślny, z „tydzień N semestru” i godzinami dopasowanymi do planu), miesiąca i dnia; kalendarz otwiera się na dzisiejszym dniu. Zajęcia to bloki z jasnym tłem i paskiem w kolorze zajęć, z czytelnym tekstem na każdym kolorze.
 - Serie zajęć: co tydzień lub co dwa tygodnie, zakres jako daty albo tygodnie semestru.
 - Edycja „tylko ten termin” (np. zmiana sali) albo „cała seria”, odwoływanie terminów.
-- Ostrzeżenia o kolizjach, ustawienia semestru i dni wolnych.
+- Ostrzeżenia o kolizjach.
+- Ustawienia w jednym miejscu: rok akademicki, import (JSON, XLSX z planów UMK CM) i eksport (JSON, ICS), kalendarz w telefonie, wygląd (jasny, ciemny albo jak w systemie) i konto.
 - Strona logowania na start; „Wypróbuj bez konta” (plan zapisany w przeglądarce) albo konto: plan na serwerze, przeniesienie lokalnego planu przy pierwszym logowaniu, „Nie wylogowuj mnie” na 30 dni.
 - Konto i prywatność: zmiana hasła (wylogowuje pozostałe urządzenia), wylogowanie innych urządzeń, pobranie i usunięcie swoich danych, czasowa blokada po 10 nieudanych logowaniach, strona „Prywatność”.
 - Import planu z pliku Excel (.xlsx) w formacie siatki dni × godzin z blokami zajęć: wybór grup dla każdego przedmiotu, ostrzeżenia o kolizjach, podgląd i oznaczenie miejsc do poprawy.

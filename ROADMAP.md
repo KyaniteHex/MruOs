@@ -166,13 +166,13 @@ Testy muszą obejmować:
 
 ## Etap 13: Nowy układ, widok tygodnia, ustawienia i ciemny motyw
 
-- [ ] Widok tygodnia jako domyślny: poniedziałek–piątek (sobota i niedziela, gdy plan ma zajęcia w weekend), „tydzień N semestru” w tytule, godziny dopasowane do planu
-- [ ] Kalendarz otwiera się na dzisiejszym dniu (na początku semestru, gdy dziś jest poza semestrem)
-- [ ] Zajęcia jako bloki z jasnym tłem w kolorze zajęć i paskiem w pełnym kolorze; w tygodniu nazwa, godziny, typ i sala, w miesiącu jedna linia z godziną i nazwą; wybrane zajęcia wypełnione pełnym kolorem
-- [ ] Górny pasek: widoki, nawigacja, „+ Dodaj ▾” (Zajęcia, Kolokwium lub egzamin), „⚙ Ustawienia”, dla gościa „Zaloguj się”; bez nagłówka strony i przycisków importu i eksportu nad kalendarzem
-- [ ] Strona „Ustawienia”, także bez konta: Plan (rok akademicki, „Import ▾”: Format JSON, Format XLSX (UMK CM); „Eksport ▾”: Format JSON, Format ICS), Kalendarz w telefonie (subskrypcja), Wygląd, Konto (z wylogowaniem); `/konto` przekierowuje do Ustawień
-- [ ] Ciemny motyw: Jasny, Ciemny albo Jak w systemie (domyślnie), zapamiętany na urządzeniu; kolory na wspólnych zmiennych, kontrast sprawdzany w obu motywach
-- [ ] Rozwijane menu obsługiwane z klawiatury i przez czytniki ekranu
+- [x] Widok tygodnia jako domyślny: poniedziałek–piątek (sobota i niedziela, gdy plan ma zajęcia w weekend), „tydzień N semestru” w tytule, godziny dopasowane do planu
+- [x] Kalendarz otwiera się na dzisiejszym dniu (na początku semestru, gdy dziś jest poza semestrem)
+- [x] Zajęcia jako bloki z jasnym tłem w kolorze zajęć i paskiem w pełnym kolorze; w tygodniu nazwa, godziny, typ i sala, w miesiącu jedna linia z godziną i nazwą; wybrane zajęcia wypełnione pełnym kolorem
+- [x] Górny pasek: widoki, nawigacja, „+ Dodaj ▾” (Zajęcia, Kolokwium lub egzamin), „⚙ Ustawienia”, dla gościa „Zaloguj się”; bez nagłówka strony i przycisków importu i eksportu nad kalendarzem
+- [x] Strona „Ustawienia”, także bez konta: Plan (rok akademicki, „Import ▾”: Format JSON, Format XLSX (UMK CM); „Eksport ▾”: Format JSON, Format ICS), Kalendarz w telefonie (subskrypcja), Wygląd, Konto (z wylogowaniem); `/konto` przekierowuje do Ustawień
+- [x] Ciemny motyw: Jasny, Ciemny albo Jak w systemie (domyślnie), zapamiętany na urządzeniu; kolory na wspólnych zmiennych, kontrast sprawdzany w obu motywach
+- [x] Rozwijane menu obsługiwane z klawiatury i przez czytniki ekranu
 
 **Gotowe, gdy:** kalendarz otwiera się na bieżącym tygodniu, wszystkie dotychczasowe funkcje (harmonogram, importy, eksporty, subskrypcja, konto) działają z Ustawień, ciemny motyw przechodzi testy kontrastu, a scenariusze E2E przechodzą na desktopie i telefonie.
 
