@@ -134,3 +134,10 @@ test('keeps menus on the screen', async ({ page }) => {
   await expectMenuOnScreen('Import');
   await expectMenuOnScreen('Eksport');
 });
+
+test('shows which versions of the app and the API run', async ({ page }) => {
+  await openSettings(page);
+  await expect(page.locator('.settings-version')).toHaveText(
+    /^Wersja aplikacji: [0-9a-f]{7}.* · API: [0-9a-f]{7}$/,
+  );
+});
