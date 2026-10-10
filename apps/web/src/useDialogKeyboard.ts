@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 
 // Keyboard contract shared by modal dialogs: Escape closes the dialog and
-// focus returns to the element that opened it.
-export function useDialogKeyboard(onClose: () => void) {
+// focus returns to the element that opened it. An inactive dialog, e.g. one
+// with a form open on top, leaves Escape to the form.
+export function useDialogKeyboard(onClose: () => void, active = true) {
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
+  const activeRef = useRef(active);
+  activeRef.current = active;
   const mountedRef = useRef(false);
   // Read during the first render, before autoFocus moves focus into the dialog.
   const [opener] = useState(() =>
@@ -17,7 +20,7 @@ export function useDialogKeyboard(onClose: () => void) {
     mountedRef.current = true;
 
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
+      if (event.key === 'Escape' && activeRef.current) {
         event.preventDefault();
         onCloseRef.current();
       }

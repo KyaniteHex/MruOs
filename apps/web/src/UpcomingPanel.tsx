@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import type { EntryRecord, UpcomingAssessment } from '@mruos/shared';
 import {
   assessmentKindMarks,
@@ -6,9 +5,10 @@ import {
   dayLabel,
   entryMark,
   entryTitle,
+  orphanCountLabel,
 } from './entryFormModel';
 
-type UpcomingPanelProps = {
+type UpcomingListProps = {
   upcoming: readonly UpcomingAssessment[];
   orphans: readonly EntryRecord[];
   onOpenAssessment: (assessment: UpcomingAssessment) => void;
@@ -16,25 +16,18 @@ type UpcomingPanelProps = {
 };
 
 /** Kolokwia and exams of the next 14 days, and entries without a class. */
-export function UpcomingPanel({
+export function UpcomingList({
   upcoming,
   orphans,
   onOpenAssessment,
   onOpenOrphan,
-}: UpcomingPanelProps) {
-  // Phones show only the nearest one until asked for more.
-  const [expanded, setExpanded] = useState(false);
-
+}: UpcomingListProps) {
   return (
-    <section className="upcoming-panel" aria-labelledby="upcoming-title">
-      <div className="details-heading">
-        <p className="eyebrow">NAJBLIŻSZE 14 DNI</p>
-        <h2 id="upcoming-title">Nadchodzące</h2>
-      </div>
+    <>
       {upcoming.length === 0 ? (
         <p className="details-empty">Nic w najbliższych 14 dniach</p>
       ) : (
-        <ol className={`upcoming-list${expanded ? ' is-expanded' : ''}`}>
+        <ol className="upcoming-list">
           {upcoming.map((item) => (
             <li key={item.id}>
               <button
@@ -61,16 +54,6 @@ export function UpcomingPanel({
           ))}
         </ol>
       )}
-      {upcoming.length > 1 && (
-        <button
-          aria-expanded={expanded}
-          className="text-button upcoming-toggle"
-          type="button"
-          onClick={() => setExpanded((current) => !current)}
-        >
-          {expanded ? 'Pokaż mniej' : `Pokaż wszystkie (${upcoming.length})`}
-        </button>
-      )}
       {orphans.length > 0 && (
         <div className="orphan-entries">
           <h3>Wpisy bez terminu</h3>
@@ -96,6 +79,77 @@ export function UpcomingPanel({
           </ul>
         </div>
       )}
+    </>
+  );
+}
+
+/** "Nadchodzące" next to the calendar on wide screens. */
+export function UpcomingPanel(props: UpcomingListProps) {
+  return (
+    <section className="upcoming-panel" aria-labelledby="upcoming-title">
+      <div className="details-heading">
+        <p className="eyebrow">NAJBLIŻSZE 14 DNI</p>
+        <h2 id="upcoming-title">Nadchodzące</h2>
+      </div>
+      <UpcomingList {...props} />
     </section>
+  );
+}
+
+type UpcomingBarProps = {
+  upcoming: readonly UpcomingAssessment[];
+  orphans: readonly EntryRecord[];
+  onOpen: () => void;
+};
+
+/**
+ * One line above the calendar on narrow screens: the nearest kolokwium or
+ * exam, or the entries that lost their class. Hidden when there is none.
+ */
+export function UpcomingBar({ upcoming, orphans, onOpen }: UpcomingBarProps) {
+  const [nearest] = upcoming;
+  if (!nearest && orphans.length === 0) {
+    return null;
+  }
+
+  return (
+    <button
+      aria-haspopup="dialog"
+      className={`upcoming-bar upcoming-bar-${nearest?.assessment.kind ?? 'orphans'}`}
+      type="button"
+      onClick={onOpen}
+    >
+      <span className="visually-hidden">Nadchodzące: </span>
+      {nearest ? (
+        <span className="upcoming-bar-text">
+          <span aria-hidden="true">
+            {assessmentKindMarks[nearest.assessment.kind]}
+          </span>{' '}
+          <strong>
+            {countdownLabel(nearest.daysLeft)} {nearest.start.toFormat('HH:mm')}
+          </strong>{' '}
+          · {nearest.assessment.title}: {nearest.assessment.subject}
+        </span>
+      ) : (
+        <span className="upcoming-bar-text">
+          <span aria-hidden="true">!</span> {orphanCountLabel(orphans.length)}
+        </span>
+      )}
+      {upcoming.length > 1 && (
+        <span className="upcoming-bar-count">
+          +{upcoming.length - 1}
+          <span className="visually-hidden"> więcej</span>
+        </span>
+      )}
+      {nearest && orphans.length > 0 && (
+        <span className="upcoming-bar-count upcoming-bar-orphans">
+          <span aria-hidden="true">!</span> {orphans.length}
+          <span className="visually-hidden"> bez terminu</span>
+        </span>
+      )}
+      <span aria-hidden="true" className="upcoming-bar-chevron">
+        ›
+      </span>
+    </button>
   );
 }
