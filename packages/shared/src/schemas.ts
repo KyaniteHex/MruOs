@@ -303,6 +303,12 @@ export const CalendarFeedSchema = z.strictObject({
   options: CalendarFeedOptionsSchema,
 });
 
+/** GET /health: the API runs, and from which commit (e.g. "d5b820c"). */
+export const HealthSchema = z.object({
+  status: z.literal('ok'),
+  version: z.string().min(1).max(40).optional(),
+});
+
 /** A new subscription, with the secret token for its link. */
 export const CreatedCalendarFeedSchema = CalendarFeedSchema.extend({
   token: z.string().regex(/^[\w-]{43}$/),

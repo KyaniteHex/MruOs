@@ -1,7 +1,14 @@
-import { expect, test } from '@playwright/test';
-import type { Locator } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import { contrastRatio } from '../packages/shared/src/color';
-import { addClass, dayCell, openAsGuest } from './helpers';
+import {
+  addClass,
+  dayCell,
+  expect,
+  openAsGuest,
+  openSettings,
+  showMonth,
+  test,
+} from './helpers';
 
 function toHex(cssColor: string): string {
   const channels = cssColor.match(/\d+/g)?.slice(0, 3).map(Number);
@@ -15,9 +22,9 @@ function toHex(cssColor: string): string {
 async function textContrast(element: Locator): Promise<number> {
   const colors = await element.evaluate((node) => {
     const text = node.querySelector('strong') ?? node;
-    let background = node as Element | null;
+    let background: Element | null = text;
     let backgroundColor = 'rgba(0, 0, 0, 0)';
-    // Walk up until an opaque background is found.
+    // Walk up from the text until an opaque background is found.
     while (background && backgroundColor === 'rgba(0, 0, 0, 0)') {
       backgroundColor = getComputedStyle(background).backgroundColor;
       background = background.parentElement;
@@ -29,6 +36,22 @@ async function textContrast(element: Locator): Promise<number> {
   return contrastRatio(toHex(colors.text), toHex(colors.backgroundColor));
 }
 
+async function expectReadableClasses(page: Page, subjects: string[]) {
+  await showMonth(page);
+  for (const subject of subjects) {
+    const monthEvent = dayCell(page, '2026-09-29').locator('.fc-event', {
+      hasText: subject,
+    });
+    expect(await textContrast(monthEvent)).toBeGreaterThanOrEqual(4.5);
+  }
+
+  await dayCell(page, '2026-09-29').locator('.fc-daygrid-day-number').click();
+  for (const subject of subjects) {
+    const dayEvent = page.locator('.fc-event', { hasText: subject });
+    expect(await textContrast(dayEvent)).toBeGreaterThanOrEqual(4.5);
+  }
+}
+
 test.beforeEach(async ({ page }) => {
   await openAsGuest(page);
 });
@@ -36,6 +59,7 @@ test.beforeEach(async ({ page }) => {
 test('opens the day view and class details with the keyboard', async ({
   page,
 }) => {
+  await showMonth(page);
   await dayCell(page, '2026-09-30').locator('.fc-daygrid-day-number').focus();
   await page.keyboard.press('Enter');
   await expect(page.locator('.fc-timeGridDay-view')).toBeVisible();
@@ -58,7 +82,10 @@ test('opens the day view and class details with the keyboard', async ({
 });
 
 test('adds a class using only the keyboard', async ({ page }) => {
-  await page.getByRole('button', { name: 'Dodaj zajęcia' }).focus();
+  const addButton = page.getByRole('button', { name: '+ Dodaj' });
+  await addButton.focus();
+  await page.keyboard.press('ArrowDown');
+  await expect(page.getByRole('menuitem', { name: 'Zajęcia' })).toBeFocused();
   await page.keyboard.press('Enter');
   const dialog = page.getByRole('dialog', { name: 'Dodaj zajęcia' });
   await expect(dialog.getByLabel('Przedmiot')).toBeFocused();
@@ -72,15 +99,14 @@ test('adds a class using only the keyboard', async ({ page }) => {
   await page.keyboard.press('Enter');
 
   await expect(dialog).toBeHidden();
-  await dayCell(page, '2026-09-28').locator('.fc-daygrid-day-number').click();
+  // Focus is back on the menu button the form was opened from.
+  await expect(addButton).toBeFocused();
   await expect(
-    page.locator('.fc-event', { hasText: 'Ergonomia' }),
+    page.locator('.fc-timeGridWeek-view .fc-event', { hasText: 'Ergonomia' }),
   ).toBeVisible();
 });
 
-test('keeps class text readable on light and dark user colors', async ({
-  page,
-}) => {
+test('keeps class text readable in both themes', async ({ page }) => {
   await addClass(page, {
     subject: 'Jasny kolor',
     weekday: 'Wt',
@@ -91,17 +117,13 @@ test('keeps class text readable on light and dark user colors', async ({
     weekday: 'Wt',
     color: '#1a237e',
   });
+  const subjects = ['Jasny kolor', 'Ciemny kolor'];
 
-  for (const subject of ['Jasny kolor', 'Ciemny kolor']) {
-    const monthEvent = dayCell(page, '2026-09-29').locator('.fc-event', {
-      hasText: subject,
-    });
-    expect(await textContrast(monthEvent)).toBeGreaterThanOrEqual(4.5);
-  }
+  await expectReadableClasses(page, subjects);
 
-  await dayCell(page, '2026-09-29').locator('.fc-daygrid-day-number').click();
-  for (const subject of ['Jasny kolor', 'Ciemny kolor']) {
-    const dayEvent = page.locator('.fc-event', { hasText: subject });
-    expect(await textContrast(dayEvent)).toBeGreaterThanOrEqual(4.5);
-  }
+  await openSettings(page);
+  await page.getByLabel('Ciemny').check();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await page.getByRole('link', { name: '← Wróć do kalendarza' }).click();
+  await expectReadableClasses(page, subjects);
 });

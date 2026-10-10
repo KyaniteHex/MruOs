@@ -7,6 +7,7 @@ import {
   academicYearDaysOff,
   semesterFromAcademicYear,
   semesterWeekCalendar,
+  semesterWeekNumber,
   teachingDates,
   termForDate,
   weeksToDateRange,
@@ -202,5 +203,48 @@ describe('date helpers', () => {
     expect(academicStartYear('2027-09-01')).toBe(2027);
     expect(dayAfter('2026-12-31')).toBe('2027-01-01');
     expect(dayAfter('2026-10-24')).toBe('2026-10-25');
+  });
+});
+
+describe('semesterWeekNumber', () => {
+  const semester = { startDate: '2026-10-01', daysOff: [], academicYear: umk };
+
+  it('counts each weekday on its own in the academic calendar', () => {
+    // Teaching starts on Friday 2 October, so that Friday is week 1 and the
+    // Monday after it is week 1 for Monday classes.
+    expect(semesterWeekNumber(semester, '2026-10-02')).toBe(1);
+    expect(semesterWeekNumber(semester, '2026-10-05')).toBe(1);
+    expect(semesterWeekNumber(semester, '2026-10-09')).toBe(2);
+    // A holiday inside teaching still counts as a week.
+    expect(semesterWeekNumber(semester, '2026-11-11')).toBe(6);
+    // After the winter break the count goes on.
+    expect(semesterWeekNumber(semester, '2027-01-07')).toBe(12);
+  });
+
+  it('has no week number outside teaching', () => {
+    expect(semesterWeekNumber(semester, '2026-10-01')).toBeNull();
+    expect(semesterWeekNumber(semester, '2026-12-28')).toBeNull();
+    expect(semesterWeekNumber(semester, '2026-09-28')).toBeNull();
+  });
+
+  it('uses 7-day windows from the start without a calendar', () => {
+    const plain = {
+      startDate: '2026-09-28',
+      daysOff: [
+        '2026-12-21',
+        '2026-12-22',
+        '2026-12-23',
+        '2026-12-24',
+        '2026-12-25',
+      ],
+    };
+
+    expect(semesterWeekNumber(plain, '2026-09-27')).toBeNull();
+    expect(semesterWeekNumber(plain, '2026-09-28')).toBe(1);
+    expect(semesterWeekNumber(plain, '2026-10-04')).toBe(1);
+    expect(semesterWeekNumber(plain, '2026-10-05')).toBe(2);
+    // The week off is skipped.
+    expect(semesterWeekNumber(plain, '2026-12-22')).toBeNull();
+    expect(semesterWeekNumber(plain, '2026-12-28')).toBe(13);
   });
 });

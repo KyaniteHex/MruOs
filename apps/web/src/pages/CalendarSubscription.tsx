@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { CalendarFeed, CalendarFeedOptions } from '@mruos/shared';
 import { accountErrorMessages } from '../accountApi';
 import type { AccountApi, AccountApiError } from '../accountApi';
@@ -21,13 +21,12 @@ function formatDate(isoDateTime: string): string {
   return isoDateTime.slice(0, 10).split('-').reverse().join('.');
 }
 
-/** "Subskrypcja kalendarza" in the account settings. */
+/** The subscription link: "Kalendarz w telefonie" in the settings. */
 export function CalendarSubscription({
   api,
   apiBaseUrl,
   onUnauthorized,
 }: CalendarSubscriptionProps) {
-  const sectionRef = useRef<HTMLElement>(null);
   const [feed, setFeed] = useState<CalendarFeed | null>(null);
   // The link is known only right after it is created.
   const [link, setLink] = useState<string | null>(null);
@@ -46,10 +45,6 @@ export function CalendarSubscription({
       }
       setError(accountErrorMessages[result.error]);
     });
-    // Opened from "Eksport ICS" with #subskrypcja.
-    if (window.location.hash === '#subskrypcja') {
-      sectionRef.current?.scrollIntoView();
-    }
   }, [api, onUnauthorized]);
 
   function fail(code: AccountApiError) {
@@ -123,13 +118,7 @@ export function CalendarSubscription({
   }
 
   return (
-    <section
-      className="account-section"
-      id="subskrypcja"
-      ref={sectionRef}
-      aria-labelledby="feed-title"
-    >
-      <h2 id="feed-title">Subskrypcja kalendarza</h2>
+    <div className="calendar-subscription">
       <p className="field-hint">
         Link, który dodajesz w Kalendarzu Google, na iPhonie albo na Macu. Plan
         pojawi się tam i będzie aktualizował się sam. Każdy, kto zna link,
@@ -273,6 +262,6 @@ export function CalendarSubscription({
           </li>
         </ol>
       </details>
-    </section>
+    </div>
   );
 }

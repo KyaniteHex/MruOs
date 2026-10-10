@@ -4,10 +4,11 @@ Kalendarz studencki do zarządzania planem zajęć (wersja produkcyjna: https://
 
 ## Funkcje
 
-- Widok miesiąca i dnia (7:00–21:00), kolory zajęć z czytelnym tekstem na każdym tle.
+- Widok tygodnia (domyślny, z „tydzień N semestru” i godzinami dopasowanymi do planu), miesiąca i dnia; kalendarz otwiera się na dzisiejszym dniu i mieści się na ekranie. Zajęcia to bloki z jasnym tłem i paskiem w kolorze zajęć, z czytelnym tekstem na każdym kolorze.
 - Serie zajęć: co tydzień lub co dwa tygodnie, zakres jako daty albo tygodnie semestru.
 - Edycja „tylko ten termin” (np. zmiana sali) albo „cała seria”, odwoływanie terminów.
-- Ostrzeżenia o kolizjach, ustawienia semestru i dni wolnych.
+- Ostrzeżenia o kolizjach.
+- Ustawienia w jednym miejscu: rok akademicki, import (JSON, XLSX z planów UMK CM) i eksport (JSON, ICS), kalendarz w telefonie, wygląd (jasny, ciemny albo jak w systemie) i konto.
 - Strona logowania na start; „Wypróbuj bez konta” (plan zapisany w przeglądarce) albo konto: plan na serwerze, przeniesienie lokalnego planu przy pierwszym logowaniu, „Nie wylogowuj mnie” na 30 dni.
 - Konto i prywatność: zmiana hasła (wylogowuje pozostałe urządzenia), wylogowanie innych urządzeń, pobranie i usunięcie swoich danych, czasowa blokada po 10 nieudanych logowaniach, strona „Prywatność”.
 - Import planu z pliku Excel (.xlsx) w formacie siatki dni × godzin z blokami zajęć: wybór grup dla każdego przedmiotu, ostrzeżenia o kolizjach, podgląd i oznaczenie miejsc do poprawy.
@@ -15,7 +16,7 @@ Kalendarz studencki do zarządzania planem zajęć (wersja produkcyjna: https://
 - Kolokwia, egzaminy i notatki: w czasie zajęć albo w osobnym terminie, oznaczenia w kalendarzu (⚑ kolokwium, ★ egzamin, ✎ notatka), panel „Nadchodzące” z najbliższymi 14 dniami i lista wpisów, które straciły swoje zajęcia.
 - Kopia zapasowa JSON i eksport do kalendarza (.ics) z wyborem: kolokwia i egzaminy z przypomnieniami, notatki w opisach zajęć, dni wolne, przerwy i sesja. Kolokwium lub egzamin w czasie zajęć to jedno wydarzenie z zajęciami.
 - Subskrypcja kalendarza (dla kont): tajny link `/api/ical/<kod>.ics` dla Kalendarza Google, iPhone’a i Maca, który aktualizuje się sam; link widać tylko przy tworzeniu, nowy link unieważnia stary, ustawienia zmienia się bez nowego linku.
-- Obsługa klawiaturą i układ dla telefonu.
+- Obsługa klawiaturą i układ dla telefonu: szczegóły w panelu wysuwanym od dołu, „Nadchodzące” jako pasek nad kalendarzem.
 
 ## Architektura
 
@@ -59,6 +60,15 @@ pnpm build
 ```
 
 CI (GitHub Actions) uruchamia lint, testy, build oraz testy E2E dla każdego pusha i pull requesta.
+
+## Która wersja działa
+
+Każde wdrożenie podaje swój commit:
+
+- aplikacja: na dole strony „Ustawienia” („Wersja aplikacji: d5b820c z 10.10.2026, 20:25 · API: d5b820c”) i w konsoli przeglądarki przy starcie; „+ lokalne zmiany” oznacza kod jeszcze niezacommitowany (np. `pnpm dev`),
+- API: `GET /health` zwraca `{"status":"ok","version":"d5b820c"}`.
+
+Na Vercelu i Renderze commit pochodzi z ich zmiennych `VERCEL_GIT_COMMIT_SHA` i `RENDER_GIT_COMMIT`, lokalnie z `git`.
 
 ## Środowiska i wydania
 

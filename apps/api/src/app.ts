@@ -2,6 +2,7 @@ import express from 'express';
 import session from 'express-session';
 import helmet from 'helmet';
 import type { Store } from 'express-session';
+import type { Health } from '@mruos/shared';
 import { defaultLockoutPolicy } from './controllers/loginThrottle.js';
 import type { LockoutPolicy } from './controllers/loginThrottle.js';
 import { createAuthLimiter } from './middleware/authLimiter.js';
@@ -34,6 +35,8 @@ export type AppOptions = {
    * sits behind the Vercel proxy, so forwarded headers are trusted too.
    */
   originSecret?: string;
+  /** The commit the API runs, reported by GET /health. */
+  version?: string;
 };
 
 export function createApp(options: AppOptions) {
@@ -52,7 +55,10 @@ export function createApp(options: AppOptions) {
     next();
   });
   app.get('/health', (_request, response) => {
-    response.json({ status: 'ok' });
+    const health: Health = options.version
+      ? { status: 'ok', version: options.version }
+      : { status: 'ok' };
+    response.json(health);
   });
   if (options.originSecret) {
     app.use(requireOriginSecret(options.originSecret));

@@ -5,7 +5,7 @@ import {
   placeEntries,
   upcomingAssessments,
 } from '@mruos/shared';
-import { UpcomingPanel } from './UpcomingPanel';
+import { UpcomingBar, UpcomingPanel } from './UpcomingPanel';
 
 const exam = EntryRecordSchema.parse({
   id: 'exam',
@@ -82,5 +82,31 @@ describe('UpcomingPanel', () => {
       expect.objectContaining({ id: 'exam', daysLeft: 2 }),
     );
     expect(onOpenOrphan).toHaveBeenCalledWith(orphan);
+  });
+
+  it('sums up on one line on narrow screens', () => {
+    const placed = placeEntries([exam, orphan], [], { daysOff: [] });
+    const onOpen = vi.fn();
+    const { rerender } = render(
+      <UpcomingBar
+        upcoming={upcomingAssessments(placed.assessments, '2026-10-06')}
+        orphans={placed.orphans}
+        onOpen={onOpen}
+      />,
+    );
+
+    const bar = screen.getByRole('button', { name: /^Nadchodzące:/ });
+    expect(bar.textContent).toContain('jutro 10:00 · Egzamin: Fizyka');
+    expect(bar.textContent).toContain('! 1 bez terminu');
+    fireEvent.click(bar);
+    expect(onOpen).toHaveBeenCalledOnce();
+
+    rerender(
+      <UpcomingBar upcoming={[]} orphans={placed.orphans} onOpen={onOpen} />,
+    );
+    expect(bar.textContent).toContain('1 wpis bez terminu');
+
+    rerender(<UpcomingBar upcoming={[]} orphans={[]} onOpen={onOpen} />);
+    expect(screen.queryByRole('button')).toBeNull();
   });
 });

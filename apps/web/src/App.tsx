@@ -4,82 +4,89 @@ import rrulePlugin from '@fullcalendar/rrule';
 import FullCalendar from '@fullcalendar/react';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import type {
+  DatesSetArg,
   EventClickArg,
   EventContentArg,
+  EventMountArg,
   EventSourceFuncArg,
 } from '@fullcalendar/core';
 import plLocale from '@fullcalendar/core/locales/pl';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { ChangeEvent, CSSProperties } from 'react';
+import type { CSSProperties } from 'react';
+import { useLocation } from 'react-router';
 import {
   EventSchema,
+  classBlockColors,
   classKey,
   classesOn,
   expandOccurrences,
   placeEntries,
-  semesterFromAcademicYear,
+  planHours,
   todayInWarsaw,
   upcomingAssessments,
 } from '@mruos/shared';
 import type {
-  AcademicYear,
   Assessment,
-  CalendarFeedOptions,
   AssessmentKind,
+  ClassBlockColors,
   DatedClass,
   Entry,
   EntryRecord,
+  Event,
   Note,
   UpcomingAssessment,
 } from '@mruos/shared';
-import type { ClassType, Event, Semester } from '@mruos/shared';
 import { semesterWeeksToDateRange } from '@mruos/shared/semester';
-import { Link, useNavigate } from 'react-router';
-import { useAuth } from './authContext';
-import { slowServerMessage, useSlowHint } from './useSlowHint';
-import { EventForm } from './EventForm';
+import { AppHeader } from './AppHeader';
 import { AssessmentDetails } from './AssessmentDetails';
 import { AssessmentForm } from './AssessmentForm';
+import { BottomSheet } from './BottomSheet';
 import { ClassEntries } from './ClassEntries';
 import type { NewEntryKind } from './ClassEntries';
-import { IcsExportDialog } from './IcsExportDialog';
+import { EventForm } from './EventForm';
+import { MenuButton } from './MenuButton';
 import { NoteForm } from './NoteForm';
-import { UpcomingPanel } from './UpcomingPanel';
-import { assessmentKindMarks, noteMark } from './entryFormModel';
-import type { EntryContext } from './entryFormModel';
-import { AcademicYearSettings } from './AcademicYearSettings';
+import { PlanStatusScreen } from './PlanStatusScreen';
+import { UpcomingBar, UpcomingList, UpcomingPanel } from './UpcomingPanel';
 import { periodKindLabels } from './academicYearForm';
-import { DialogKeyboard } from './useDialogKeyboard';
-import { ScheduleImport } from './ScheduleImport';
-import type { ScheduleImportResult } from './ScheduleImport';
-import { classTypeLabels, defaultClassColors } from './eventFormModel';
-import type { EventEditScope } from './eventFormModel';
+import {
+  calendarTitle,
+  isWeekend,
+  startingDate,
+  visibleDates,
+  weekLabel,
+  weekendHasItems,
+} from './calendarDates';
+import type { CalendarView } from './calendarDates';
 import type {
   AnnotationDetails,
   AssessmentEventDetails,
   CalendarEventDetails,
-  EventSeries,
+  ClassMarks,
 } from './calendarEvents';
 import {
   classMarks,
   demoEventSeries,
   demoRange,
   demoSemester,
+  hasAnnotations,
   toAnnotationEvents,
   toAssessmentEvents,
   toCalendarEvents,
 } from './calendarEvents';
-import { exportCalendarBackup, importCalendarBackup } from './calendarBackup';
-import { downloadFile } from './fileDownload';
+import { assessmentKindMarks, noteMark } from './entryFormModel';
+import type { EntryContext } from './entryFormModel';
+import { classTypeLabels } from './eventFormModel';
+import type { EventEditScope } from './eventFormModel';
+import { repositoryErrorMessages, usePlan } from './planContext';
 import {
-  ApiEventRepository,
-  LocalStorageEventRepository,
-} from './eventRepository';
-import type {
-  CalendarSnapshot,
-  EventRepository,
-  RepositoryErrorCode,
-} from './eventRepository';
+  narrowScreenQuery,
+  phoneScreenQuery,
+  useMediaQuery,
+} from './useMediaQuery';
+
+/** Where the calendar opens, e.g. on the first week of an imported plan. */
+export type CalendarLocationState = { date?: string };
 
 type SelectedEvent = CalendarEventDetails & {
   title: string;
@@ -105,8 +112,34 @@ type EntrySession =
     }
   | { form: 'note'; context: EntryContext; id?: string; initial?: Note };
 
-function importColor(classType: ClassType): string {
-  return defaultClassColors[classType];
+type CalendarState = {
+  view: CalendarView;
+  /** Every day of FullCalendar's range, hidden weekends included. */
+  dates: string[];
+  /** The first day of the month, week or day. */
+  start: string;
+};
+
+/** The days on screen: phones may hide the weekend in the week view. */
+function shownDates(state: CalendarState, showWeekends: boolean): string[] {
+  return state.view === 'timeGridWeek' && !showWeekends
+    ? state.dates.filter((date) => !isWeekend(date))
+    : state.dates;
+}
+
+const views: { view: CalendarView; label: string }[] = [
+  { view: 'timeGridWeek', label: 'Tydzień' },
+  { view: 'dayGridMonth', label: 'Miesiąc' },
+  { view: 'timeGridDay', label: 'Dzień' },
+];
+
+function minutes(time: string): number {
+  const [hour = 0, minute = 0] = time.split(':').map(Number);
+  return hour * 60 + minute;
+}
+
+function hourTime(hour: number): string {
+  return `${String(hour).padStart(2, '0')}:00:00`;
 }
 
 function isAnnotation(props: Record<string, unknown>): boolean {
@@ -130,259 +163,250 @@ function EntryMark({ mark, label }: { mark: string; label: string }) {
   );
 }
 
+function ClassMarkList({ marks }: { marks: ClassMarks }) {
+  return (
+    <>
+      {marks.exam && (
+        <EntryMark mark={assessmentKindMarks.exam} label="Egzamin" />
+      )}
+      {marks.test && (
+        <EntryMark mark={assessmentKindMarks.test} label="Kolokwium" />
+      )}
+      {marks.note && <EntryMark mark={noteMark} label="Notatka" />}
+    </>
+  );
+}
+
+/** The class colours for the stylesheet, which picks them by theme. */
+function blockStyle(color: string, colors: ClassBlockColors): CSSProperties {
+  return {
+    '--event-color': color,
+    '--event-tint-light': colors.tintLight,
+    '--event-tint-dark': colors.tintDark,
+    '--event-stripe-light': colors.stripeLight,
+    '--event-stripe-dark': colors.stripeDark,
+    '--event-on-color': colors.onColor,
+  } as CSSProperties;
+}
+
 function renderEventContent(info: EventContentArg) {
+  const isMonth = info.view.type === 'dayGridMonth';
+
   if (isAssessmentEvent(info.event.extendedProps)) {
     const { kind, room } = info.event.extendedProps as AssessmentEventDetails;
+    const title = (
+      <strong className="calendar-event-subject">
+        <span className="entry-mark-inline" aria-hidden="true">
+          {assessmentKindMarks[kind]}
+        </span>
+        {info.event.title}
+      </strong>
+    );
 
-    return (
+    return isMonth ? (
+      <div className="calendar-event-copy calendar-event-line">
+        <span className="calendar-event-time">{info.timeText}</span>
+        {title}
+      </div>
+    ) : (
       <div className="calendar-event-copy">
-        <div className="calendar-event-primary">
-          <span>{info.timeText}</span>
-          <strong>
-            <span className="entry-mark-inline" aria-hidden="true">
-              {assessmentKindMarks[kind]}
-            </span>
-            {info.event.title}
-          </strong>
-        </div>
-        {room && <span className="calendar-event-location">{room}</span>}
+        {title}
+        <span className="calendar-event-meta">
+          {info.timeText}
+          {room ? ` · s. ${room}` : ''}
+        </span>
       </div>
     );
   }
 
   if (isAnnotation(info.event.extendedProps)) {
     const { kind, label } = info.event.extendedProps as AnnotationDetails;
-    // Month cells are narrow: show the name; the colour marks a day off.
+    // Only the name: the colour already marks a day off.
     const prefix =
       kind === 'day-off' && label !== 'Dzień wolny' ? 'Dzień wolny: ' : '';
-    const showPrefix = info.view.type === 'timeGridDay';
 
     return (
       <div className="calendar-annotation-copy" title={info.event.title}>
-        {prefix && (
-          <span className={showPrefix ? undefined : 'visually-hidden'}>
-            {prefix}
-          </span>
-        )}
+        {prefix && <span className="visually-hidden">{prefix}</span>}
         {label}
       </div>
     );
   }
 
   const details = info.event.extendedProps as CalendarEventDetails;
-  const isDayView = info.view.type === 'timeGridDay';
+  const length = minutes(details.endTime) - minutes(details.startTime);
+  const style = blockStyle(details.color, details.colors);
+  const subject = (
+    <strong className="calendar-event-subject">
+      <ClassMarkList marks={details.marks} />
+      {info.event.title}
+    </strong>
+  );
+
+  // Months and short classes get one line: the start and the name.
+  if (isMonth || length < 45) {
+    return (
+      <div className="calendar-event-copy calendar-event-line" style={style}>
+        <span className="calendar-event-time">{details.startTime}</span>
+        {subject}
+      </div>
+    );
+  }
 
   return (
-    <div className="calendar-event-copy">
-      <div className="calendar-event-primary">
-        <span>{info.timeText}</span>
-        <strong>
-          {details.marks.exam && (
-            <EntryMark mark={assessmentKindMarks.exam} label="Egzamin" />
-          )}
-          {details.marks.test && (
-            <EntryMark mark={assessmentKindMarks.test} label="Kolokwium" />
-          )}
-          {details.marks.note && <EntryMark mark={noteMark} label="Notatka" />}
-          {info.event.title}
-        </strong>
-      </div>
-      <span className="calendar-event-location">
-        {isDayView ? `${details.room} · ${details.building}` : details.room}
+    <div className="calendar-event-copy" style={style}>
+      {subject}
+      <span className="calendar-event-meta">
+        {details.startTime}–{details.endTime}
       </span>
+      {length >= 60 && (
+        <span className="calendar-event-meta">
+          {classTypeLabels[details.classType]} · s. {details.room}
+          {info.view.type === 'timeGridDay' ? ` · ${details.building}` : ''}
+        </span>
+      )}
     </div>
   );
 }
 
-const repositoryErrorMessages: Record<RepositoryErrorCode, string> = {
-  'read-error': 'Nie można odczytać kalendarza z pamięci przeglądarki.',
-  'invalid-data': 'Zapisane dane są uszkodzone lub mają nieobsługiwaną wersję.',
-  'write-error':
-    'Nie udało się zapisać kalendarza. Sprawdź wolne miejsce w przeglądarce.',
-  'clear-error': 'Nie udało się wyczyścić lokalnego zapisu.',
-  unauthorized: 'Zaloguj się, aby kontynuować pracę z kontem.',
-  'network-error': 'Nie można połączyć się z API. Spróbuj ponownie.',
-  'server-updating':
-    'Serwer jest właśnie aktualizowany i nie zapisał kolokwiów, egzaminów ani notatek. Spróbuj ponownie za kilka minut.',
-};
-
+/** The calendar, shown once the plan is there. */
 export function App() {
+  const plan = usePlan();
+
+  return plan.status === 'ready' ? <CalendarPage /> : <PlanStatusScreen />;
+}
+
+function CalendarPage() {
   const calendarRef = useRef<FullCalendar>(null);
-  const backupInputRef = useRef<HTMLInputElement>(null);
-  const auth = useAuth();
-  const navigate = useNavigate();
-  const { apiBaseUrl, user: authUser, refresh: refreshAuth } = auth;
-  const [localRepository] = useState(
-    () =>
-      new LocalStorageEventRepository({
-        getItem: (key) => window.localStorage.getItem(key),
-        setItem: (key, value) => window.localStorage.setItem(key, value),
-        removeItem: (key) => window.localStorage.removeItem(key),
-      }),
-  );
-  const [apiRepository] = useState(() => new ApiEventRepository(apiBaseUrl));
-  const [activeRepository, setActiveRepository] =
-    useState<EventRepository>(localRepository);
-  const [loadResult] = useState(() => localRepository.load());
-  const savedSnapshot =
-    loadResult.success && loadResult.value ? loadResult.value : null;
-  const savedSnapshotRef = useRef(savedSnapshot);
+  const location = useLocation();
+  const plan = usePlan();
+  const { eventSeries, semester, entries, storageError } = plan;
+  const persistSnapshot = plan.save;
   const [selectedAnnotation, setSelectedAnnotation] =
     useState<AnnotationDetails | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<SelectedEvent | null>(
     null,
   );
-  const [eventSeries, setEventSeries] = useState<EventSeries[]>(
-    savedSnapshot?.events ?? demoEventSeries,
-  );
-  const [semester, setSemester] = useState<Semester>(
-    savedSnapshot?.semester ?? demoSemester,
-  );
-  const [entries, setEntries] = useState<EntryRecord[]>(
-    savedSnapshot?.entries ?? [],
-  );
   const [selectedAssessmentId, setSelectedAssessmentId] = useState<
     string | null
   >(null);
   const [entrySession, setEntrySession] = useState<EntrySession | null>(null);
-  const [icsExportOpen, setIcsExportOpen] = useState(false);
   const [formSession, setFormSession] = useState<FormSession | null>(null);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [scheduleImportOpen, setScheduleImportOpen] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
-  const [pendingImport, setPendingImport] = useState<CalendarSnapshot | null>(
+  // Narrow screens show details and "Nadchodzące" in a sheet.
+  const isNarrow = useMediaQuery(narrowScreenQuery);
+  const isPhone = useMediaQuery(phoneScreenQuery);
+  const [upcomingOpen, setUpcomingOpen] = useState(false);
+  const [initialDate] = useState(
+    () =>
+      (location.state as CalendarLocationState | null)?.date ??
+      startingDate(semester, todayInWarsaw()),
+  );
+  // The day new classes and entries start from.
+  const [activeDate, setActiveDate] = useState(initialDate);
+  const [calendarState, setCalendarState] = useState<CalendarState | null>(
     null,
   );
-  const [storageError, setStorageError] = useState<RepositoryErrorCode | null>(
-    loadResult.success ? null : loadResult.error,
-  );
-  const [activeDate, setActiveDate] = useState(
-    savedSnapshot?.semester.startDate ?? demoRange.startDate,
-  );
-  // A signed-in student sees nothing to edit until the account's plan
-  // arrives, so no change lands in the browser's plan by mistake.
-  const [accountPlan, setAccountPlan] = useState<
-    'loading' | 'ready' | 'failed'
-  >(authUser ? 'loading' : 'ready');
-  const slowAccountPlan = useSlowHint(accountPlan === 'loading');
+  // The block filled with its colour; kept when the calendar redraws.
+  const selectedEventIdRef = useRef<string | null>(null);
   const semesterEndDate = semesterWeeksToDateRange(semester, 1, 20).endDate;
   const placed = useMemo(
     () => placeEntries(entries, eventSeries, semester),
     [entries, eventSeries, semester],
   );
+  const hours = useMemo(
+    () => planHours(eventSeries, entries),
+    [eventSeries, entries],
+  );
   const upcoming = upcomingAssessments(placed.assessments, todayInWarsaw());
+  const showWeekends = showsWeekend(calendarState);
+  const shown = calendarState ? shownDates(calendarState, showWeekends) : [];
+  const firstShown = shown[0] ?? '';
+  const lastShown = shown.at(-1) ?? firstShown;
+  const title = calendarState
+    ? calendarTitle(
+        calendarState.view,
+        calendarState.view === 'dayGridMonth'
+          ? calendarState.start
+          : firstShown,
+        lastShown,
+      )
+    : '';
+  // "tydzień 2 semestru"; none in the month view and outside teaching.
+  const week =
+    calendarState && calendarState.view !== 'dayGridMonth'
+      ? weekLabel(semester, shown)
+      : null;
   const selectedAssessment = placed.assessments.find(
     (scheduled) => scheduled.id === selectedAssessmentId && !scheduled.seriesId,
   );
-  const handleAuthenticatedRef = useRef(handleAuthenticated);
-  handleAuthenticatedRef.current = handleAuthenticated;
-  const authUserId = authUser?.id;
+  // The all-day row holds only days off, breaks and events.
+  const showAllDayRow =
+    shown.length > 0 && hasAnnotations(semester, firstShown, lastShown);
 
   useEffect(() => {
     calendarRef.current?.getApi().refetchEvents();
   }, [eventSeries, semester, placed]);
 
-  // A signed-in student works on the account's plan; a guest on the local one.
-  useEffect(() => {
-    if (authUserId) {
-      void handleAuthenticatedRef.current();
-    }
-  }, [authUserId]);
-
-  // A session ended elsewhere (e.g. password changed): back to the login page.
-  useEffect(() => {
-    if (storageError === 'unauthorized') {
-      void refreshAuth().then((signedIn) => {
-        if (!signedIn) {
-          navigate('/', { replace: true });
-        }
-      });
-    }
-  }, [storageError, refreshAuth, navigate]);
-
-  async function persistSnapshot(
-    events: EventSeries[],
-    nextSemester: Semester,
-    nextEntries: EntryRecord[] = entries,
-  ): Promise<boolean> {
-    const result = await activeRepository.save({
-      events,
-      semester: nextSemester,
-      entries: nextEntries,
-    });
-
-    if (!result.success) {
-      setStorageError(result.error);
-      return false;
-    }
-
-    if (activeRepository === localRepository) {
-      savedSnapshotRef.current = {
-        events,
-        semester: nextSemester,
-        entries: nextEntries,
-      };
-    }
-    setEventSeries(events);
-    setSemester(nextSemester);
-    setEntries(nextEntries);
-    setStorageError(null);
-    return true;
+  function calendarApi() {
+    return calendarRef.current?.getApi();
   }
 
-  async function handleAuthenticated(): Promise<boolean> {
-    setAccountPlan('loading');
-    const remote = await apiRepository.load();
-    if (!remote.success || !remote.value) {
-      setStorageError(remote.success ? 'network-error' : remote.error);
-      setAccountPlan('failed');
-      return false;
-    }
-
-    let snapshot = remote.value;
-    const local = savedSnapshotRef.current;
-
-    if (
-      snapshot.events.length === 0 &&
-      local &&
-      !localRepository.isMigratedToAccount()
-    ) {
-      const migrated = await apiRepository.save(local);
-      if (!migrated.success) {
-        setStorageError(migrated.error);
-        setAccountPlan('failed');
-        return false;
-      }
-
-      // The account already holds the plan; a failed marker write only risks
-      // offering the same plan to an empty account again.
-      localRepository.markMigratedToAccount();
-      snapshot = local;
-    }
-
-    setActiveRepository(apiRepository);
-    setEventSeries(snapshot.events);
-    setSemester(snapshot.semester);
-    setEntries(snapshot.entries);
-    setActiveDate(snapshot.semester.startDate);
-    calendarRef.current?.getApi().gotoDate(snapshot.semester.startDate);
-    setStorageError(null);
-    setAccountPlan('ready');
-    return true;
+  function markSelected(id: string | null, element?: HTMLElement) {
+    selectedEventIdRef.current = id;
+    document
+      .querySelectorAll('.fc-event.is-selected')
+      .forEach((node) => node.classList.remove('is-selected'));
+    element?.classList.add('is-selected');
   }
 
-  async function handleLogout() {
-    await auth.api.logout();
-    auth.signOut();
-    navigate('/', { replace: true });
+  function handleEventMount(arg: EventMountArg) {
+    if (arg.event.id === selectedEventIdRef.current) {
+      arg.el.classList.add('is-selected');
+    }
+  }
+
+  /** Phones show Monday–Friday unless that week has weekend classes. */
+  function showsWeekend(state: CalendarState | null): boolean {
+    return (
+      !isPhone ||
+      (state?.view === 'timeGridWeek' &&
+        weekendHasItems(eventSeries, placed.assessments, semester, state.start))
+    );
+  }
+
+  function handleDatesSet(arg: DatesSetArg) {
+    const view = arg.view.type as CalendarView;
+    const state: CalendarState = {
+      view,
+      dates: visibleDates(arg.startStr.slice(0, 10), arg.endStr.slice(0, 10)),
+      // With a named time zone FullCalendar passes UTC-coerced dates, so the
+      // UTC date is the Warsaw calendar day.
+      start: arg.view.currentStart.toISOString().slice(0, 10),
+    };
+    const days = shownDates(state, showsWeekend(state));
+    const today = todayInWarsaw();
+
+    setCalendarState(state);
+    setActiveDate(
+      days.includes(today)
+        ? today
+        : view === 'dayGridMonth'
+          ? state.start
+          : (days[0] ?? state.start),
+    );
+  }
+
+  function clearSelection() {
+    setSelectedEvent(null);
+    setSelectedAnnotation(null);
+    setSelectedAssessmentId(null);
+    markSelected(null);
   }
 
   function handleDateClick(info: { dateStr: string }) {
     setActiveDate(info.dateStr);
-    setSelectedEvent(null);
-    setSelectedAnnotation(null);
-    setSelectedAssessmentId(null);
-    calendarRef.current?.getApi().changeView('timeGridDay', info.dateStr);
+    clearSelection();
+    calendarApi()?.changeView('timeGridDay', info.dateStr);
   }
 
   function handleEventClick(info: EventClickArg) {
@@ -393,16 +417,19 @@ export function App() {
     if (isAssessmentEvent(info.event.extendedProps)) {
       const { assessmentId } = info.event
         .extendedProps as AssessmentEventDetails;
+      markSelected(info.event.id, info.el);
       setSelectedAssessmentId(assessmentId);
       return;
     }
     if (isAnnotation(info.event.extendedProps)) {
       // Narrow month cells cut long names; the panel shows them in full.
+      markSelected(null);
       setSelectedAnnotation(info.event.extendedProps as AnnotationDetails);
       return;
     }
     const details = info.event.extendedProps as CalendarEventDetails;
 
+    markSelected(info.event.id, info.el);
     setSelectedEvent({
       ...details,
       title: info.event.title,
@@ -470,9 +497,9 @@ export function App() {
     }
 
     setEntrySession(null);
-    // A new kolokwium or exam may be in another month, e.g. in the session.
+    // A new kolokwium or exam may be in another week, e.g. in the session.
     if (!id && entry.anchor.type !== 'subject') {
-      calendarRef.current?.getApi().gotoDate(entry.anchor.date);
+      calendarApi()?.gotoDate(entry.anchor.date);
     }
   }
 
@@ -489,14 +516,16 @@ export function App() {
 
     if (selectedAssessmentId === id) {
       setSelectedAssessmentId(null);
+      markSelected(null);
     }
     setEntrySession(null);
   }
 
   function openUpcoming(item: UpcomingAssessment) {
     setActiveDate(item.date);
+    setUpcomingOpen(false);
     setSelectedAnnotation(null);
-    calendarRef.current?.getApi().changeView('timeGridDay', item.date);
+    calendarApi()?.changeView('timeGridDay', item.date);
 
     const dated = item.seriesId
       ? classesOn(eventSeries, item.date, semester).find(
@@ -504,17 +533,20 @@ export function App() {
         )
       : undefined;
     if (!dated) {
+      markSelected(`entry-${item.id}`);
       setSelectedEvent(null);
       setSelectedAssessmentId(item.id);
       return;
     }
 
     // A kolokwium during a class is shown with the class.
+    markSelected(`${dated.seriesId}-${dated.date}`);
     setSelectedAssessmentId(null);
     setSelectedEvent({
       building: dated.event.building,
       classType: dated.event.classType,
       color: dated.event.color,
+      colors: classBlockColors(dated.event.color),
       date: dated.date,
       endTime: dated.event.endTime,
       marks: classMarks(
@@ -592,6 +624,7 @@ export function App() {
 
     setFormSession(null);
     setSelectedEvent(null);
+    markSelected(null);
   }
 
   async function handleFormDelete(scope: EventEditScope) {
@@ -630,296 +663,174 @@ export function App() {
 
     setFormSession(null);
     setSelectedEvent(null);
-  }
-
-  async function handleAcademicYearSave(academicYear: AcademicYear) {
-    const nextSemester = semesterFromAcademicYear(
-      academicYear,
-      todayInWarsaw(),
-    );
-    if (await persistSnapshot(eventSeries, nextSemester)) {
-      // Saved classes keep their dates; a plan imported before the calendar
-      // existed was dated from the semester start instead.
-      setNotice(
-        eventSeries.length > 0
-          ? 'Harmonogram zapisany. Zajęcia, które już są w planie, zachowują swoje daty. Jeśli plan był importowany przed ustawieniem harmonogramu, zaimportuj go ponownie z opcją „Zastąp obecny plan”.'
-          : null,
-      );
-      setActiveDate(nextSemester.startDate);
-      calendarRef.current?.getApi().gotoDate(nextSemester.startDate);
-      setSettingsOpen(false);
-    }
-  }
-
-  function handleExportJson() {
-    downloadFile(
-      'mruos-plan.json',
-      'application/json;charset=utf-8',
-      exportCalendarBackup({ events: eventSeries, semester, entries }),
-    );
-  }
-
-  async function handleExportIcs(options: CalendarFeedOptions) {
-    // Loaded on demand: the iCalendar library is only needed here.
-    const { calendarIcs } = await import('@mruos/shared/ics');
-
-    downloadFile(
-      'mruos-plan.ics',
-      'text/calendar;charset=utf-8',
-      calendarIcs({ events: eventSeries, semester, entries }, options),
-    );
-    setIcsExportOpen(false);
-  }
-
-  async function handleImportJson(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.currentTarget.files?.[0];
-    event.currentTarget.value = '';
-
-    if (!file) {
-      return;
-    }
-
-    let serialized: string;
-    try {
-      serialized = await file.text();
-    } catch {
-      setStorageError('invalid-data');
-      return;
-    }
-
-    const imported = importCalendarBackup(serialized);
-
-    if (!imported.success) {
-      setStorageError(imported.error);
-      return;
-    }
-
-    setStorageError(null);
-    setPendingImport(imported.value);
-  }
-
-  async function confirmImport() {
-    if (!pendingImport) {
-      return;
-    }
-
-    if (
-      !(await persistSnapshot(
-        pendingImport.events,
-        pendingImport.semester,
-        pendingImport.entries,
-      ))
-    ) {
-      return;
-    }
-
-    setPendingImport(null);
-    setSelectedEvent(null);
-    setFormSession(null);
-    setActiveDate(pendingImport.semester.startDate);
-    calendarRef.current?.getApi().gotoDate(pendingImport.semester.startDate);
-  }
-
-  async function handleScheduleImport(result: ScheduleImportResult) {
-    const imported = result.events.map((event) => ({
-      id: crypto.randomUUID(),
-      event,
-    }));
-    const nextSeries = result.replace
-      ? imported
-      : [...eventSeries, ...imported];
-    const nextSemester = result.semesterStartDate
-      ? { ...semester, startDate: result.semesterStartDate }
-      : semester;
-
-    if (!(await persistSnapshot(nextSeries, nextSemester))) {
-      return;
-    }
-
-    const firstDate =
-      imported.map((series) => series.event.recurrence.startDate).sort()[0] ??
-      nextSemester.startDate;
-    setScheduleImportOpen(false);
-    setNotice(null);
-    setSelectedEvent(null);
-    setActiveDate(firstDate);
-    calendarRef.current?.getApi().gotoDate(firstDate);
+    markSelected(null);
   }
 
   async function handleRestoreDemo() {
     if (await persistSnapshot(demoEventSeries, demoSemester, [])) {
       setActiveDate(demoRange.startDate);
-      calendarRef.current?.getApi().gotoDate(demoRange.startDate);
+      calendarApi()?.gotoDate(demoRange.startDate);
     }
   }
 
-  const topbar = (
-    <header className="topbar">
-      <a className="brand" href="/" aria-label="MruOS, strona główna">
-        <span className="brand-mark" aria-hidden="true">
-          M
-        </span>
-        <span>MruOS</span>
-      </a>
-      <div className="topbar-term">
-        {accountPlan === 'ready' && (
-          <div className="term-label">
-            <span className="term-dot" aria-hidden="true" />
-            Semestr od <span className="term-year">{semester.startDate}</span>
-          </div>
-        )}
-        {authUser ? (
-          <div className="account-controls">
-            <span className="account-email">{authUser.email}</span>
-            <div className="account-actions">
-              <Link className="secondary-button account-button" to="/konto">
-                Konto
-              </Link>
-              <button
-                className="secondary-button account-button"
-                type="button"
-                onClick={() => void handleLogout()}
-              >
-                Wyloguj
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="account-controls">
-            <span className="account-mode">Tryb bez konta</span>
-            <div className="account-actions">
-              <Link className="secondary-button account-button" to="/">
-                Zaloguj się
-              </Link>
-            </div>
-          </div>
-        )}
+  const controls = (
+    <div className="calendar-controls">
+      <div className="segmented" role="group" aria-label="Widok kalendarza">
+        {views.map(({ view, label }) => (
+          <button
+            aria-pressed={calendarState?.view === view}
+            key={view}
+            type="button"
+            onClick={() => calendarApi()?.changeView(view)}
+          >
+            {label}
+          </button>
+        ))}
       </div>
-    </header>
+      <div className="calendar-nav">
+        <button
+          aria-label="Poprzedni"
+          className="secondary-button nav-button"
+          title="Poprzedni"
+          type="button"
+          onClick={() => calendarApi()?.prev()}
+        >
+          ‹
+        </button>
+        <button
+          aria-label="Następny"
+          className="secondary-button nav-button"
+          title="Następny"
+          type="button"
+          onClick={() => calendarApi()?.next()}
+        >
+          ›
+        </button>
+        <button
+          className="secondary-button"
+          type="button"
+          onClick={() => calendarApi()?.today()}
+        >
+          Dziś
+        </button>
+      </div>
+    </div>
   );
 
-  if (accountPlan !== 'ready') {
-    return (
-      <div className="app-shell">
-        {topbar}
-        <main className="workspace">
-          {accountPlan === 'failed' ? (
-            <div className="storage-alert" role="alert">
-              <span>
-                {storageError
-                  ? repositoryErrorMessages[storageError]
-                  : 'Nie udało się wczytać planu.'}
-              </span>
-              <button
-                className="secondary-button"
-                type="button"
-                onClick={() => void handleAuthenticated()}
-              >
-                Spróbuj ponownie
-              </button>
-            </div>
-          ) : (
-            <p className="plan-loading" role="status">
-              Wczytywanie planu…{slowAccountPlan && ` ${slowServerMessage}`}
-            </p>
-          )}
-        </main>
+  const addMenu = (
+    <MenuButton
+      align="end"
+      className="primary-button add-button"
+      items={[
+        {
+          label: 'Zajęcia',
+          // A weekly class covers the whole semester unless changed.
+          onSelect: () =>
+            setFormSession({ mode: 'create', initialDate: semester.startDate }),
+        },
+        {
+          label: 'Kolokwium lub egzamin',
+          onSelect: () => addEntry('test', { date: activeDate }),
+        },
+      ]}
+    >
+      + Dodaj
+    </MenuButton>
+  );
+
+  const details = selectedEvent ? (
+    <div className="event-details">
+      <span
+        className="event-type"
+        style={
+          {
+            '--event-color': selectedEvent.color,
+          } as CSSProperties
+        }
+      >
+        {classTypeLabels[selectedEvent.classType]}
+      </span>
+      <h3>{selectedEvent.title}</h3>
+      <dl>
+        <div>
+          <dt>Data</dt>
+          <dd>{selectedEvent.date}</dd>
+        </div>
+        <div>
+          <dt>Godziny</dt>
+          <dd>
+            {selectedEvent.startTime}–{selectedEvent.endTime}
+          </dd>
+        </div>
+        <div>
+          <dt>Sala</dt>
+          <dd>{selectedEvent.room}</dd>
+        </div>
+        <div>
+          <dt>Budynek</dt>
+          <dd>{selectedEvent.building}</dd>
+        </div>
+      </dl>
+      <div className="details-actions">
+        <button
+          className="secondary-button"
+          type="button"
+          onClick={openEditForm}
+        >
+          Edytuj
+        </button>
       </div>
-    );
-  }
+      <ClassEntries
+        records={
+          placed.byClass.get(
+            classKey(selectedEvent.seriesId, selectedEvent.date),
+          ) ?? []
+        }
+        subjectNotes={placed.subjectNotes.get(selectedEvent.title) ?? []}
+        onAdd={addEntryToSelectedClass}
+        onEdit={editEntry}
+      />
+    </div>
+  ) : selectedAssessment ? (
+    <AssessmentDetails
+      scheduled={selectedAssessment}
+      onEdit={() => {
+        const record = entries.find(
+          (candidate) => candidate.id === selectedAssessment.id,
+        );
+        if (record) {
+          editEntry(record);
+        }
+      }}
+    />
+  ) : selectedAnnotation ? (
+    <div className="event-details">
+      <span className="event-type">
+        {periodKindLabels[selectedAnnotation.kind]}
+      </span>
+      <h3>{selectedAnnotation.label}</h3>
+      <dl>
+        <div>
+          <dt>
+            {selectedAnnotation.startDate === selectedAnnotation.endDate
+              ? 'Data'
+              : 'Okres'}
+          </dt>
+          <dd>
+            {selectedAnnotation.startDate === selectedAnnotation.endDate
+              ? selectedAnnotation.startDate
+              : `${selectedAnnotation.startDate} – ${selectedAnnotation.endDate}`}
+          </dd>
+        </div>
+      </dl>
+    </div>
+  ) : null;
 
   return (
     <div className="app-shell">
-      {topbar}
+      <AppHeader actions={addMenu} />
 
-      <main className="workspace">
-        <div className="page-heading">
-          <div>
-            <p className="eyebrow">TWÓJ PLAN</p>
-            <h1>Plan zajęć</h1>
-          </div>
-          <div className="page-heading-actions">
-            <p className="timezone-note">Europe/Warsaw</p>
-            <button
-              className="primary-button add-event-button"
-              type="button"
-              onClick={() =>
-                setFormSession({
-                  mode: 'create',
-                  initialDate: activeDate,
-                })
-              }
-            >
-              <span aria-hidden="true">+</span>
-              Dodaj zajęcia
-            </button>
-            <button
-              className="secondary-button add-entry-button"
-              type="button"
-              onClick={() => addEntry('test', { date: activeDate })}
-            >
-              + Kolokwium / egzamin
-            </button>
-          </div>
-        </div>
-
-        <div className="data-toolbar" aria-label="Dane kalendarza">
-          <button
-            className="secondary-button"
-            type="button"
-            onClick={() => setSettingsOpen(true)}
-          >
-            Rok akademicki
-          </button>
-          <button
-            className="secondary-button"
-            type="button"
-            onClick={handleExportJson}
-          >
-            Eksport JSON
-          </button>
-          <button
-            className="secondary-button"
-            type="button"
-            onClick={() => backupInputRef.current?.click()}
-          >
-            Import JSON
-          </button>
-          <button
-            className="secondary-button"
-            type="button"
-            onClick={() => setIcsExportOpen(true)}
-          >
-            Eksport ICS
-          </button>
-          <button
-            className="secondary-button"
-            type="button"
-            onClick={() => setScheduleImportOpen(true)}
-          >
-            Import z Excela
-          </button>
-          <input
-            ref={backupInputRef}
-            accept="application/json,.json"
-            className="visually-hidden"
-            onChange={handleImportJson}
-            type="file"
-          />
-        </div>
-
-        {notice && (
-          <div className="app-notice" role="status">
-            <span>{notice}</span>
-            <button
-              className="secondary-button"
-              type="button"
-              onClick={() => setNotice(null)}
-            >
-              OK
-            </button>
-          </div>
-        )}
+      <main className="workspace calendar-workspace">
         {storageError && (
           <div className="storage-alert" role="alert">
             <span>{repositoryErrorMessages[storageError]}</span>
@@ -927,7 +838,7 @@ export function App() {
               <button
                 className="secondary-button"
                 type="button"
-                onClick={handleRestoreDemo}
+                onClick={() => void handleRestoreDemo()}
               >
                 Wczytaj plan demonstracyjny
               </button>
@@ -936,176 +847,130 @@ export function App() {
         )}
 
         <div className="calendar-layout">
-          <UpcomingPanel
+          {isNarrow ? (
+            <UpcomingBar
+              upcoming={upcoming}
+              orphans={placed.orphans}
+              onOpen={() => setUpcomingOpen(true)}
+            />
+          ) : (
+            <UpcomingPanel
+              upcoming={upcoming}
+              orphans={placed.orphans}
+              onOpenAssessment={openUpcoming}
+              onOpenOrphan={editEntry}
+            />
+          )}
+          <section className="calendar-panel" aria-labelledby="calendar-title">
+            <div className="calendar-heading">
+              <div className="calendar-heading-text">
+                <h1 className="calendar-title" id="calendar-title">
+                  {title}
+                </h1>
+                {week && <p className="calendar-week">{week}</p>}
+              </div>
+              {controls}
+            </div>
+            <div className="calendar-body">
+              <FullCalendar
+                ref={calendarRef}
+                plugins={[
+                  dayGridPlugin,
+                  timeGridPlugin,
+                  interactionPlugin,
+                  rrulePlugin,
+                ]}
+                initialView="timeGridWeek"
+                initialDate={initialDate}
+                headerToolbar={false}
+                locale={plLocale}
+                timeZone="Europe/Warsaw"
+                firstDay={1}
+                events={(fetchInfo: EventSourceFuncArg, successCallback) => {
+                  const range = {
+                    startDate: fetchInfo.startStr.slice(0, 10),
+                    endDate: fetchInfo.endStr.slice(0, 10),
+                  };
+                  successCallback([
+                    ...toAnnotationEvents(semester),
+                    ...toCalendarEvents(eventSeries, range, semester, placed),
+                    ...toAssessmentEvents(placed.assessments, range),
+                  ]);
+                }}
+                views={{ timeGridWeek: { weekends: showWeekends } }}
+                datesSet={handleDatesSet}
+                dateClick={handleDateClick}
+                navLinks
+                navLinkDayClick={(date) =>
+                  // With a named time zone and no zone plugin FullCalendar passes
+                  // UTC-coerced dates, so the UTC date is the Warsaw calendar day.
+                  handleDateClick({ dateStr: date.toISOString().slice(0, 10) })
+                }
+                eventInteractive
+                eventClick={handleEventClick}
+                eventContent={renderEventContent}
+                eventDidMount={handleEventMount}
+                eventDisplay="block"
+                eventTimeFormat={{
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  hour12: false,
+                }}
+                slotMinTime={hourTime(hours.start)}
+                slotMaxTime={hourTime(hours.end)}
+                scrollTime={hourTime(hours.start)}
+                slotDuration="01:00:00"
+                slotEventOverlap={false}
+                allDaySlot={showAllDayRow}
+                allDayText="cały dzień"
+                // Breaks and events stay in the top row, single days below.
+                eventOrder="row,start,-duration,allDay,title"
+                // The calendar fills the screen; hours stretch to fit it.
+                height="100%"
+                expandRows
+                dayMaxEvents={3}
+                nowIndicator
+              />
+            </div>
+          </section>
+
+          {!isNarrow && (
+            <aside className="details-panel" aria-live="polite">
+              <div className="details-heading">
+                <p className="eyebrow">INFORMACJE</p>
+                <h2>Szczegóły</h2>
+              </div>
+              {details ?? (
+                <p className="details-empty">Wybierz zajęcia w kalendarzu</p>
+              )}
+            </aside>
+          )}
+        </div>
+      </main>
+      {isNarrow && details ? (
+        <BottomSheet
+          eyebrow="INFORMACJE"
+          title="Szczegóły"
+          active={!formSession && !entrySession}
+          onClose={clearSelection}
+        >
+          {details}
+        </BottomSheet>
+      ) : isNarrow && upcomingOpen ? (
+        <BottomSheet
+          eyebrow="NAJBLIŻSZE 14 DNI"
+          title="Nadchodzące"
+          active={!formSession && !entrySession}
+          onClose={() => setUpcomingOpen(false)}
+        >
+          <UpcomingList
             upcoming={upcoming}
             orphans={placed.orphans}
             onOpenAssessment={openUpcoming}
             onOpenOrphan={editEntry}
           />
-          <section className="calendar-panel" aria-label="Kalendarz zajęć">
-            <FullCalendar
-              ref={calendarRef}
-              plugins={[
-                dayGridPlugin,
-                timeGridPlugin,
-                interactionPlugin,
-                rrulePlugin,
-              ]}
-              initialView="dayGridMonth"
-              initialDate={activeDate}
-              headerToolbar={{
-                left: 'prev,next today',
-                center: 'title',
-                right: 'dayGridMonth,timeGridDay',
-              }}
-              buttonText={{
-                today: 'Dziś',
-                month: 'Miesiąc',
-                day: 'Dzień',
-              }}
-              locale={plLocale}
-              timeZone="Europe/Warsaw"
-              firstDay={1}
-              events={(fetchInfo: EventSourceFuncArg, successCallback) => {
-                const range = {
-                  startDate: fetchInfo.startStr.slice(0, 10),
-                  endDate: fetchInfo.endStr.slice(0, 10),
-                };
-                successCallback([
-                  ...toAnnotationEvents(semester),
-                  ...toCalendarEvents(eventSeries, range, semester, placed),
-                  ...toAssessmentEvents(placed.assessments, range),
-                ]);
-              }}
-              dateClick={handleDateClick}
-              navLinks
-              navLinkDayClick={(date) =>
-                // With a named time zone and no zone plugin FullCalendar passes
-                // UTC-coerced dates, so the UTC date is the Warsaw calendar day.
-                handleDateClick({ dateStr: date.toISOString().slice(0, 10) })
-              }
-              eventInteractive
-              eventClick={handleEventClick}
-              eventContent={renderEventContent}
-              eventTimeFormat={{
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: false,
-              }}
-              slotMinTime="07:00:00"
-              slotMaxTime="21:00:00"
-              scrollTime="08:00:00"
-              slotDuration="01:00:00"
-              slotEventOverlap={false}
-              allDaySlot
-              allDayText="cały dzień"
-              height="auto"
-              dayMaxEvents={3}
-              nowIndicator
-            />
-          </section>
-
-          <aside className="details-panel" aria-live="polite">
-            <div className="details-heading">
-              <p className="eyebrow">INFORMACJE</p>
-              <h2>Szczegóły</h2>
-            </div>
-            {selectedEvent ? (
-              <div className="event-details">
-                <span
-                  className="event-type"
-                  style={
-                    {
-                      '--event-color': selectedEvent.color,
-                    } as CSSProperties
-                  }
-                >
-                  {classTypeLabels[selectedEvent.classType]}
-                </span>
-                <h3>{selectedEvent.title}</h3>
-                <dl>
-                  <div>
-                    <dt>Data</dt>
-                    <dd>{selectedEvent.date}</dd>
-                  </div>
-                  <div>
-                    <dt>Godziny</dt>
-                    <dd>
-                      {selectedEvent.startTime}–{selectedEvent.endTime}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>Sala</dt>
-                    <dd>{selectedEvent.room}</dd>
-                  </div>
-                  <div>
-                    <dt>Budynek</dt>
-                    <dd>{selectedEvent.building}</dd>
-                  </div>
-                </dl>
-                <div className="details-actions">
-                  <button
-                    className="secondary-button"
-                    type="button"
-                    onClick={openEditForm}
-                  >
-                    Edytuj
-                  </button>
-                </div>
-                <ClassEntries
-                  records={
-                    placed.byClass.get(
-                      classKey(selectedEvent.seriesId, selectedEvent.date),
-                    ) ?? []
-                  }
-                  subjectNotes={
-                    placed.subjectNotes.get(selectedEvent.title) ?? []
-                  }
-                  onAdd={addEntryToSelectedClass}
-                  onEdit={editEntry}
-                />
-              </div>
-            ) : selectedAssessment ? (
-              <AssessmentDetails
-                scheduled={selectedAssessment}
-                onEdit={() => {
-                  const record = entries.find(
-                    (candidate) => candidate.id === selectedAssessment.id,
-                  );
-                  if (record) {
-                    editEntry(record);
-                  }
-                }}
-              />
-            ) : selectedAnnotation ? (
-              <div className="event-details">
-                <span className="event-type">
-                  {periodKindLabels[selectedAnnotation.kind]}
-                </span>
-                <h3>{selectedAnnotation.label}</h3>
-                <dl>
-                  <div>
-                    <dt>
-                      {selectedAnnotation.startDate ===
-                      selectedAnnotation.endDate
-                        ? 'Data'
-                        : 'Okres'}
-                    </dt>
-                    <dd>
-                      {selectedAnnotation.startDate ===
-                      selectedAnnotation.endDate
-                        ? selectedAnnotation.startDate
-                        : `${selectedAnnotation.startDate} – ${selectedAnnotation.endDate}`}
-                    </dd>
-                  </div>
-                </dl>
-              </div>
-            ) : (
-              <p className="details-empty">Wybierz zajęcia w kalendarzu</p>
-            )}
-          </aside>
-        </div>
-      </main>
+        </BottomSheet>
+      ) : null}
       {formSession && (
         <EventForm
           key={
@@ -1176,87 +1041,6 @@ export function App() {
             storageError ? repositoryErrorMessages[storageError] : undefined
           }
         />
-      )}
-      {icsExportOpen && (
-        <IcsExportDialog
-          canSubscribe={Boolean(authUser)}
-          onCancel={() => setIcsExportOpen(false)}
-          onExport={(options) => void handleExportIcs(options)}
-        />
-      )}
-      {settingsOpen && (
-        <AcademicYearSettings
-          semester={semester}
-          today={todayInWarsaw()}
-          saveError={
-            storageError ? repositoryErrorMessages[storageError] : undefined
-          }
-          onCancel={() => setSettingsOpen(false)}
-          onSave={(academicYear) => void handleAcademicYearSave(academicYear)}
-        />
-      )}
-      {scheduleImportOpen && (
-        <ScheduleImport
-          semester={semester}
-          existingSeries={eventSeries}
-          colorFor={importColor}
-          saveError={
-            storageError ? repositoryErrorMessages[storageError] : undefined
-          }
-          onCancel={() => setScheduleImportOpen(false)}
-          onImport={(result) => void handleScheduleImport(result)}
-          onOpenAcademicYear={() => {
-            setScheduleImportOpen(false);
-            setSettingsOpen(true);
-          }}
-        />
-      )}
-      {pendingImport && (
-        <div className="modal-backdrop">
-          <DialogKeyboard onClose={() => setPendingImport(null)} />
-          <section
-            className="event-form-modal backup-confirmation"
-            role="alertdialog"
-            aria-modal="true"
-            aria-labelledby="backup-confirm-title"
-          >
-            <header className="form-header">
-              <div>
-                <p className="eyebrow">IMPORT KOPII</p>
-                <h2 id="backup-confirm-title">Zastąpić obecny plan?</h2>
-              </div>
-            </header>
-            <div className="event-form">
-              <p>
-                Zaimportowany plan, semestr oraz kolokwia, egzaminy i notatki
-                zastąpią obecne dane.
-              </p>
-              {storageError && (
-                <p className="form-errors" role="alert">
-                  {repositoryErrorMessages[storageError]}
-                </p>
-              )}
-              <footer className="form-actions">
-                <span className="form-action-spacer" />
-                <button
-                  autoFocus
-                  className="secondary-button"
-                  type="button"
-                  onClick={() => setPendingImport(null)}
-                >
-                  Anuluj
-                </button>
-                <button
-                  className="primary-button"
-                  type="button"
-                  onClick={confirmImport}
-                >
-                  Importuj plan
-                </button>
-              </footer>
-            </div>
-          </section>
-        </div>
       )}
     </div>
   );

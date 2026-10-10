@@ -1,14 +1,20 @@
 import { readFile } from 'node:fs/promises';
-import { expect, test } from '@playwright/test';
-import type { Page } from '@playwright/test';
 import {
   addClass,
+  addFromMenu,
+  chooseInSettings,
   dayCell,
   eventOn,
+  expect,
+  isNarrow,
   openAsGuest,
   openDetails,
+  openUpcoming,
   register,
   reloadSignedIn,
+  showMonth,
+  test,
+  upcomingSummary,
 } from './helpers';
 
 // "Nadchodzące" counts from today, so the browser lives on Monday 2026-10-05.
@@ -16,15 +22,19 @@ test.beforeEach(async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-10-05T07:00:00+02:00'));
 });
 
-function upcoming(page: Page) {
-  return page.locator('.upcoming-panel');
-}
-
 test('adds a kolokwium to a class and lists it as upcoming', async ({
   page,
 }) => {
   await openAsGuest(page);
-  await expect(upcoming(page)).toContainText('Nic w najbliższych 14 dniach');
+  await showMonth(page);
+  if (isNarrow(page)) {
+    // Phones show "Nadchodzące" only when something is coming up.
+    await expect(upcomingSummary(page)).toHaveCount(0);
+  } else {
+    await expect(upcomingSummary(page)).toContainText(
+      'Nic w najbliższych 14 dniach',
+    );
+  }
 
   const details = await openDetails(page, '2026-10-05', 'Matematyka');
   await details.getByRole('button', { name: '+ Kolokwium' }).click();
@@ -40,14 +50,15 @@ test('adds a kolokwium to a class and lists it as upcoming', async ({
     /has-test/,
   );
   await expect(details).toContainText('Całki');
-  await expect(upcoming(page)).toContainText('dziś');
-  await expect(upcoming(page)).toContainText('Kolokwium: Matematyka');
+  await expect(upcomingSummary(page)).toContainText('dziś');
+  await expect(upcomingSummary(page)).toContainText('Kolokwium: Matematyka');
 });
 
 test('adds an exam at its own time and edits it', async ({ page }) => {
   await openAsGuest(page);
+  await showMonth(page);
 
-  await page.getByRole('button', { name: '+ Kolokwium / egzamin' }).click();
+  await addFromMenu(page, 'Kolokwium lub egzamin');
   const dialog = page.getByRole('dialog', {
     name: 'Dodaj kolokwium lub egzamin',
   });
@@ -67,9 +78,11 @@ test('adds an exam at its own time and edits it', async ({ page }) => {
       hasText: 'Egzamin: Fizyka',
     }),
   ).toBeVisible();
-  await expect(upcoming(page)).toContainText('za 9 dni');
+  await expect(upcomingSummary(page)).toContainText('za 9 dni');
 
-  await upcoming(page)
+  await (
+    await openUpcoming(page)
+  )
     .getByRole('button', { name: /Egzamin: Fizyka/ })
     .click();
   await expect(page.locator('.fc-timeGridDay-view')).toBeVisible();
@@ -92,6 +105,7 @@ test('keeps entries in the account and lists those that lost their class', async
 }) => {
   await register(page);
   await addClass(page, { subject: 'Algorytmy', weekday: 'Wt' });
+  await showMonth(page);
 
   // A note about the whole subject and a kolokwium on 2026-09-29.
   const details = await openDetails(page, '2026-09-29', 'Algorytmy');
@@ -108,6 +122,7 @@ test('keeps entries in the account and lists those that lost their class', async
     .click();
 
   await reloadSignedIn(page);
+  await showMonth(page);
   const reloaded = await openDetails(page, '2026-09-29', 'Algorytmy');
   await expect(reloaded).toContainText('Projekt zaliczeniowy w parach');
   await expect(eventOn(page, '2026-09-29', 'Algorytmy')).toHaveClass(
@@ -123,7 +138,10 @@ test('keeps entries in the account and lists those that lost their class', async
     .click();
   await expect(classDialog).toBeHidden();
 
-  const orphan = upcoming(page).getByRole('button', {
+  if (isNarrow(page)) {
+    await expect(upcomingSummary(page)).toContainText('1 wpis bez terminu');
+  }
+  const orphan = (await openUpcoming(page)).getByRole('button', {
     name: /Kolokwium · Algorytmy · 2026-09-29/,
   });
   await orphan.click();
@@ -136,14 +154,15 @@ test('keeps entries in the account and lists those that lost their class', async
   await expect(move).toBeHidden();
 
   await expect(orphan).toHaveCount(0);
-  await expect(upcoming(page)).toContainText('Kolokwium: Algorytmy');
-  await expect(upcoming(page)).toContainText('jutro');
+  await expect(upcomingSummary(page)).toContainText('Kolokwium: Algorytmy');
+  await expect(upcomingSummary(page)).toContainText('jutro');
 });
 
 test('exports kolokwia with reminders and notes only when chosen', async ({
   page,
 }) => {
   await openAsGuest(page);
+  await showMonth(page);
   const details = await openDetails(page, '2026-10-05', 'Matematyka');
   await details.getByRole('button', { name: '+ Kolokwium' }).click();
   await page
@@ -156,7 +175,7 @@ test('exports kolokwia with reminders and notes only when chosen', async ({
   await noteDialog.getByRole('button', { name: 'Zapisz notatkę' }).click();
   await expect(noteDialog).toBeHidden();
 
-  await page.getByRole('button', { name: 'Eksport ICS' }).click();
+  await chooseInSettings(page, 'Eksport', 'Format ICS');
   const exportDialog = page.getByRole('dialog', {
     name: 'Eksport do kalendarza',
   });

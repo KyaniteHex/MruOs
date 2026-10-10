@@ -1,6 +1,14 @@
 import { readFile } from 'node:fs/promises';
-import { expect, test } from '@playwright/test';
-import { login, password, register } from './helpers';
+import {
+  chooseInSettings,
+  expect,
+  expectAccountCalendar,
+  login,
+  openSettings,
+  password,
+  register,
+  test,
+} from './helpers';
 
 const newPassword = 'Ksiazka-Kwiat-Morze-7';
 
@@ -14,11 +22,9 @@ test('changing the password logs other devices out', async ({
   });
   const phone = await phoneContext.newPage();
   await login(phone, email);
-  await expect(phone.getByRole('button', { name: 'Wyloguj' })).toBeVisible({
-    timeout: 15_000,
-  });
+  await expectAccountCalendar(phone, 15_000);
 
-  await page.getByRole('link', { name: 'Konto' }).click();
+  await openSettings(page);
   await page.getByLabel('Obecne hasło').fill(password);
   await page.getByLabel('Nowe hasło', { exact: true }).fill(newPassword);
   await page.getByLabel('Powtórz nowe hasło').fill(newPassword);
@@ -35,18 +41,16 @@ test('changing the password logs other devices out', async ({
     phone.getByRole('heading', { name: 'Zaloguj się' }),
   ).toBeVisible();
   await login(phone, email, newPassword);
-  await expect(phone.getByRole('button', { name: 'Wyloguj' })).toBeVisible({
-    timeout: 15_000,
-  });
+  await expectAccountCalendar(phone, 15_000);
   await phoneContext.close();
 });
 
 test('downloads the data and deletes the account', async ({ page }) => {
   const email = await register(page);
-  await page.getByRole('link', { name: 'Konto' }).click();
 
+  // A copy of an account's plan also holds the account's details.
   const download = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Pobierz moje dane' }).click();
+  await chooseInSettings(page, 'Eksport', 'Format JSON');
   const file = await (await download).path();
   const exported = JSON.parse(await readFile(file, 'utf8'));
   expect(exported.account.email).toBe(email);

@@ -1,13 +1,18 @@
 import type { EventInput } from '@fullcalendar/core';
-import { classKey, dayAfter, semesterAnnotations } from '@mruos/shared';
+import {
+  classBlockColors,
+  classKey,
+  dayAfter,
+  semesterAnnotations,
+} from '@mruos/shared';
 import type {
   AssessmentKind,
   CalendarAnnotation,
+  ClassBlockColors,
   EntryRecord,
   PlacedEntries,
   ScheduledAssessment,
 } from '@mruos/shared';
-import { readableTextColor } from '@mruos/shared/color';
 import { expandOccurrences } from '@mruos/shared/recurrence';
 import { semesterWeeksToDateRange } from '@mruos/shared/semester';
 import type { ClassType, DateRange, Event, Semester } from '@mruos/shared';
@@ -23,6 +28,8 @@ export type CalendarEventDetails = {
   building: string;
   classType: ClassType;
   color: string;
+  /** The block's tint and stripe in both themes. */
+  colors: ClassBlockColors;
   date: string;
   endTime: string;
   marks: ClassMarks;
@@ -53,6 +60,17 @@ export function toCalendarEvents(
   semester?: Pick<Semester, 'daysOff'>,
   placed?: Pick<PlacedEntries, 'byClass'>,
 ): EventInput[] {
+  const colorsByValue = new Map<string, ClassBlockColors>();
+  const colorsOf = (color: string) => {
+    const known = colorsByValue.get(color);
+    if (known) {
+      return known;
+    }
+    const colors = classBlockColors(color);
+    colorsByValue.set(color, colors);
+    return colors;
+  };
+
   return series.flatMap(({ id, event }) =>
     expandOccurrences(event, range, semester).map((occurrence) => {
       const marks = classMarks(
@@ -64,15 +82,16 @@ export function toCalendarEvents(
         title: occurrence.event.subject,
         start: occurrence.start.toISO() ?? undefined,
         end: occurrence.end.toISO() ?? undefined,
-        backgroundColor: occurrence.event.color,
-        borderColor: occurrence.event.color,
-        textColor: readableTextColor(occurrence.event.color),
         // An exam outranks a kolokwium in the outline.
-        classNames: marks.exam ? ['has-exam'] : marks.test ? ['has-test'] : [],
+        classNames: [
+          'class-event',
+          ...(marks.exam ? ['has-exam'] : marks.test ? ['has-test'] : []),
+        ],
         extendedProps: {
           building: occurrence.event.building,
           classType: occurrence.event.classType,
           color: occurrence.event.color,
+          colors: colorsOf(occurrence.event.color),
           date: occurrence.date,
           endTime: occurrence.event.endTime,
           marks,
@@ -127,6 +146,8 @@ export type AnnotationDetails = {
   label: string;
   startDate: string;
   endDate: string;
+  /** Periods of several days go to the top row, single days below them. */
+  row: 1 | 2;
 };
 
 /**
@@ -155,8 +176,21 @@ export function toAnnotationEvents(semester: Semester): EventInput[] {
       label: annotation.label,
       startDate: annotation.startDate,
       endDate: annotation.endDate,
+      row: annotation.startDate === annotation.endDate ? 2 : 1,
     } satisfies AnnotationDetails,
   }));
+}
+
+/** Whether days off, breaks or events fall on any of the shown days. */
+export function hasAnnotations(
+  semester: Semester,
+  firstDate: string,
+  lastDate: string,
+): boolean {
+  return semesterAnnotations(semester).some(
+    (annotation) =>
+      annotation.startDate <= lastDate && annotation.endDate >= firstDate,
+  );
 }
 
 export const demoSemester: Semester = {

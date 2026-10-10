@@ -115,6 +115,46 @@ export function teachingDates(
   );
 }
 
+const weekdayCodes: Weekday[] = ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'];
+
+/**
+ * The teaching week `date` belongs to, numbered as timetables do, or null
+ * outside the teaching weeks. With an academic calendar each weekday counts
+ * its own weeks, so a Monday and the following Friday may differ.
+ */
+export function semesterWeekNumber(
+  semester: Semester,
+  date: string,
+): number | null {
+  const day = DateTime.fromISO(date, { zone });
+  const weekday = weekdayCodes[day.weekday - 1];
+  if (!day.isValid || !weekday) {
+    return null;
+  }
+
+  const year = semester.academicYear;
+  if (year) {
+    const term = termForDate(year, date);
+    const index = term ? teachingDates(year, term, weekday).indexOf(date) : -1;
+    return index === -1 ? null : index + 1;
+  }
+
+  for (let week = 1; ; week += 1) {
+    let range: DateRange;
+    try {
+      range = semesterWeekRange(semester, week);
+    } catch {
+      return null;
+    }
+    if (date < range.startDate) {
+      return null;
+    }
+    if (date <= range.endDate) {
+      return week;
+    }
+  }
+}
+
 /** Date of semester week `week` for a class held on `weekday`. */
 export type WeekCalendar = (week: number, weekday: Weekday) => string | null;
 

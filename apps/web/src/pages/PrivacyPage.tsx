@@ -69,13 +69,17 @@ export function PrivacyPage() {
         <h2>Twoje możliwości</h2>
         <ul>
           <li>
-            Pobranie kopii danych i usunięcie konta:{' '}
-            <Link to="/konto">Konto</Link> („Pobierz moje dane”, „Usuń konto”).
+            Pobranie kopii danych:{' '}
+            <Link to="/ustawienia#plan">Ustawienia → Plan</Link> („Eksport” →
+            „Format JSON”; u zalogowanych zawiera też dane konta).
           </li>
-          <li>Zmiana hasła i wylogowanie innych urządzeń: także w Koncie.</li>
+          <li>
+            Zmiana hasła, wylogowanie innych urządzeń i usunięcie konta:{' '}
+            <Link to="/ustawienia#konto">Ustawienia → Konto</Link>.
+          </li>
           <li>
             Unieważnienie linku subskrypcji: „Wygeneruj nowy link” albo „Wyłącz
-            subskrypcję” w Koncie.
+            subskrypcję” w Ustawieniach → Kalendarz w telefonie.
           </li>
         </ul>
 

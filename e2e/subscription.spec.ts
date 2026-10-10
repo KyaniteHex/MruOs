@@ -1,6 +1,13 @@
-import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { addClass, openDetails, register } from './helpers';
+import {
+  addClass,
+  expect,
+  openDetails,
+  openSettings,
+  register,
+  showMonth,
+  test,
+} from './helpers';
 
 // Calendar files fold long lines; joining them back gives the text.
 async function fetchFeed(page: Page, link: string) {
@@ -15,6 +22,7 @@ async function fetchFeed(page: Page, link: string) {
 test('subscribes to the plan with a secret link', async ({ page }) => {
   await register(page);
   await addClass(page, { subject: 'Algorytmy', weekday: 'Wt' });
+  await showMonth(page);
   const details = await openDetails(page, '2026-09-29', 'Algorytmy');
   await details.getByRole('button', { name: '+ Kolokwium' }).click();
   const dialog = page.getByRole('dialog', {
@@ -23,7 +31,7 @@ test('subscribes to the plan with a secret link', async ({ page }) => {
   await dialog.getByRole('button', { name: 'Zapisz', exact: true }).click();
   await expect(dialog).toBeHidden();
 
-  await page.getByRole('link', { name: 'Konto' }).click();
+  await openSettings(page);
   await page.getByRole('button', { name: 'Utwórz link' }).click();
   const linkField = page.getByLabel('Link subskrypcji');
   const firstLink = await linkField.inputValue();

@@ -9,6 +9,7 @@ import {
   countdownLabel,
   createAssessmentDraft,
   createNoteDraft,
+  orphanCountLabel,
 } from './entryFormModel';
 
 const series: EventSeries[] = [
@@ -222,6 +223,20 @@ describe('countdownLabel', () => {
       'jutro',
       'za 2 dni',
       'za 14 dni',
+    ]);
+  });
+});
+
+describe('orphanCountLabel', () => {
+  it('uses the Polish plural', () => {
+    expect([1, 2, 4, 5, 12, 22, 25].map(orphanCountLabel)).toEqual([
+      '1 wpis bez terminu',
+      '2 wpisy bez terminu',
+      '4 wpisy bez terminu',
+      '5 wpisów bez terminu',
+      '12 wpisów bez terminu',
+      '22 wpisy bez terminu',
+      '25 wpisów bez terminu',
     ]);
   });
 });

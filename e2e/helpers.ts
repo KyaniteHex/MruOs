@@ -1,7 +1,63 @@
-import { expect } from '@playwright/test';
+import { test as base, expect } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
 
+export { expect };
+
+/**
+ * Every test lives on Wednesday 30 September 2026, in the first week of the
+ * demo semester, since the calendar opens on today. Tests may move the
+ * clock with page.clock.setFixedTime.
+ */
+export const test = base.extend({
+  page: async ({ page }, provide) => {
+    await page.clock.setFixedTime(new Date('2026-09-30T08:00:00+02:00'));
+    await provide(page);
+  },
+});
+
 export const password = 'correct-horse-battery';
+
+/** Phones and tablets held upright get details and lists in a sheet. */
+export function isNarrow(page: Page): boolean {
+  return (page.viewportSize()?.width ?? 1280) <= 900;
+}
+
+/** Phones show the week from Monday to Friday unless it has weekend classes. */
+export function isPhone(page: Page): boolean {
+  return (page.viewportSize()?.width ?? 1280) <= 600;
+}
+
+/** The title of a week: the whole week, or Monday–Friday on phones. */
+export function weekTitle(page: Page, wholeWeek: string, workingWeek: string) {
+  return isPhone(page) ? workingWeek : wholeWeek;
+}
+
+/** Closes the sheet over the calendar, if one is open. */
+export async function closeSheet(page: Page) {
+  const sheet = page.locator('.sheet');
+  if (await sheet.isVisible()) {
+    await sheet.getByRole('button', { name: 'Zamknij' }).click();
+    await expect(sheet).toBeHidden();
+  }
+}
+
+/** "Nadchodzące" at a glance: the side panel, or the bar on phones. */
+export function upcomingSummary(page: Page): Locator {
+  return page.locator(isNarrow(page) ? '.upcoming-bar' : '.upcoming-panel');
+}
+
+/** The full "Nadchodzące" list; phones open it from the bar. */
+export async function openUpcoming(page: Page): Promise<Locator> {
+  if (!isNarrow(page)) {
+    return page.locator('.upcoming-panel');
+  }
+  await closeSheet(page);
+  await page.locator('.upcoming-bar').click();
+  const sheet = page.getByRole('dialog', { name: 'Nadchodzące' });
+  await expect(sheet).toBeVisible();
+
+  return sheet;
+}
 
 export function uniqueEmail(): string {
   return `e2e-${Date.now()}-${Math.random().toString(36).slice(2, 10)}@example.com`;
@@ -21,11 +77,17 @@ export async function register(
   }
   await page.getByRole('button', { name: 'Zarejestruj' }).click();
   // Password hashing makes registration slower than other requests.
-  await expect(page.getByRole('button', { name: 'Wyloguj' })).toBeVisible({
-    timeout: 15_000,
-  });
+  await expectAccountCalendar(page, 15_000);
 
   return email;
+}
+
+/** The calendar of a signed-in student, with the account's plan loaded. */
+export async function expectAccountCalendar(page: Page, timeout?: number) {
+  await expect(page.getByRole('button', { name: '+ Dodaj' })).toBeVisible({
+    timeout,
+  });
+  await expect(page.getByRole('link', { name: 'Zaloguj się' })).toHaveCount(0);
 }
 
 /** Fills the login page; the caller checks the outcome. */
@@ -48,7 +110,52 @@ export async function login(
 export async function openAsGuest(page: Page) {
   await page.goto('/');
   await page.getByRole('button', { name: /bez konta/ }).click();
-  await expect(page.getByText('Tryb bez konta')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Zaloguj się' })).toBeVisible();
+  await expect(page.getByRole('button', { name: '+ Dodaj' })).toBeVisible();
+}
+
+/** Picks an item of the "+ Dodaj" menu. */
+export async function addFromMenu(
+  page: Page,
+  item: 'Zajęcia' | 'Kolokwium lub egzamin',
+) {
+  await closeSheet(page);
+  await page.getByRole('button', { name: '+ Dodaj' }).click();
+  await page.getByRole('menuitem', { name: item }).click();
+}
+
+export async function showMonth(page: Page) {
+  await closeSheet(page);
+  await page.getByRole('button', { name: 'Miesiąc', exact: true }).click();
+  await expect(page.locator('.fc-dayGridMonth-view')).toBeVisible();
+}
+
+export async function openSettings(page: Page) {
+  await closeSheet(page);
+  await page.getByRole('link', { name: 'Ustawienia' }).click();
+  await expect(
+    page.getByRole('heading', { name: 'Ustawienia', level: 1 }),
+  ).toBeVisible();
+}
+
+/** Logs out in the settings and waits for the login page. */
+export async function logout(page: Page) {
+  await openSettings(page);
+  await page.getByRole('button', { name: 'Wyloguj', exact: true }).click();
+  await expect(
+    page.getByRole('heading', { name: 'Zaloguj się' }),
+  ).toBeVisible();
+}
+
+/** Picks an item of a menu button in the settings, e.g. "Import". */
+export async function chooseInSettings(
+  page: Page,
+  menu: 'Import' | 'Eksport',
+  item: string,
+) {
+  await openSettings(page);
+  await page.getByRole('button', { name: menu, exact: true }).click();
+  await page.getByRole('menuitem', { name: item }).click();
 }
 
 type NewClass = {
@@ -61,7 +168,7 @@ type NewClass = {
 };
 
 export async function addClass(page: Page, newClass: NewClass) {
-  await page.getByRole('button', { name: 'Dodaj zajęcia' }).click();
+  await addFromMenu(page, 'Zajęcia');
   const dialog = page.getByRole('dialog', { name: 'Dodaj zajęcia' });
   await dialog.getByLabel('Przedmiot').fill(newClass.subject);
   await dialog.getByLabel('Budynek').fill(newClass.building ?? 'Wydział E2E');
@@ -89,11 +196,15 @@ export function eventOn(page: Page, date: string, subject: string): Locator {
   return dayCell(page, date).locator('.fc-event', { hasText: subject });
 }
 
+/** The next month, week or day, depending on the view. */
 export async function goToNextMonth(page: Page) {
-  await page.locator('.fc-next-button').click();
+  await closeSheet(page);
+  await page.getByRole('button', { name: 'Następny' }).click();
 }
 
+/** Opens a class's details: in the side panel, or in a sheet on phones. */
 export async function openDetails(page: Page, date: string, subject: string) {
+  await closeSheet(page);
   await eventOn(page, date, subject).click();
   const details = page.locator('.event-details');
   await expect(details).toContainText(date);
@@ -104,9 +215,7 @@ export async function openDetails(page: Page, date: string, subject: string) {
 /** Reloads and waits for the session to be restored from the API. */
 export async function reloadSignedIn(page: Page) {
   await page.reload();
-  await expect(page.getByRole('button', { name: 'Wyloguj' })).toBeVisible({
-    timeout: 15_000,
-  });
+  await expectAccountCalendar(page, 15_000);
 }
 
 /** Fills the winter semester of the 2026/2027 calendar of UMK in Toruń. */

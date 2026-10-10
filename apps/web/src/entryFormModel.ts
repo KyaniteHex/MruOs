@@ -66,6 +66,22 @@ export function countdownLabel(daysLeft: number): string {
   return daysLeft === 1 ? 'jutro' : `za ${daysLeft} dni`;
 }
 
+/** "1 wpis", "3 wpisy" or "5 wpisów" bez terminu. */
+export function orphanCountLabel(count: number): string {
+  const lastDigit = count % 10;
+  const lastTwoDigits = count % 100;
+  const noun =
+    count === 1
+      ? 'wpis'
+      : lastDigit >= 2 &&
+          lastDigit <= 4 &&
+          (lastTwoDigits < 12 || lastTwoDigits > 14)
+        ? 'wpisy'
+        : 'wpisów';
+
+  return `${count} ${noun} bez terminu`;
+}
+
 /** Tells apart classes of a subject on one day in a form select. */
 export function classSlotValue(anchor: ClassAnchor): string {
   return `${anchor.classType}|${anchor.startTime}`;

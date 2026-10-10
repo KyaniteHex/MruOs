@@ -164,11 +164,50 @@ Testy muszą obejmować:
 
 **Gotowe, gdy:** link dodany w Google Calendar pokazuje plan, zmiana w MruOS pojawia się po odświeżeniu przez Google, a unieważniony link przestaje działać.
 
+## Etap 13: Nowy układ, widok tygodnia, ustawienia i ciemny motyw
+
+- [x] Widok tygodnia jako domyślny: na komputerze cały tydzień od poniedziałku do niedzieli, na telefonie poniedziałek–piątek (sobota i niedziela tylko w tygodniach z zajęciami, kolokwium lub egzaminem w weekend), „tydzień N semestru” w tytule, godziny dopasowane do planu
+- [x] Kalendarz otwiera się na dzisiejszym dniu (na początku semestru, gdy dziś jest poza semestrem)
+- [x] Zajęcia jako bloki z jasnym tłem w kolorze zajęć i paskiem w pełnym kolorze; w tygodniu nazwa, godziny, typ i sala, w miesiącu jedna linia z godziną i nazwą; wybrane zajęcia wypełnione pełnym kolorem
+- [x] Górny pasek: „+ Dodaj ▾” (Zajęcia, Kolokwium lub egzamin), „⚙ Ustawienia”, dla gościa „Zaloguj się”; bez nagłówka strony i przycisków importu i eksportu nad kalendarzem
+- [x] Widoki i nawigacja (‹ › Dziś) w nagłówku kalendarza, przy tytule i „tydzień N semestru”
+- [x] Kalendarz na wysokość ekranu: godziny rozciągają się, a gdy się nie mieszczą, siatka przewija się w środku
+- [x] Okresy (np. wakacje) zawsze w górnym wierszu, święta wiersz niżej, bez cienia całego dnia; wiersz „cały dzień” tylko w tygodniach, w których coś w nim jest
+- [x] Na telefonie i tablecie w pionie szczegóły w panelu wysuwanym od dołu, a „Nadchodzące” jako jednolinijkowy pasek nad kalendarzem, ukryty, gdy nic nie ma
+- [x] Strona „Ustawienia”, także bez konta: Plan (rok akademicki, „Import ▾”: Format JSON, Format XLSX (UMK CM); „Eksport ▾”: Format JSON, Format ICS), Kalendarz w telefonie (subskrypcja), Wygląd, Konto (z wylogowaniem); `/konto` przekierowuje do Ustawień
+- [x] Ciemny motyw: Jasny, Ciemny albo Jak w systemie (domyślnie), zapamiętany na urządzeniu; kolory na wspólnych zmiennych, kontrast sprawdzany w obu motywach
+- [x] Rozwijane menu obsługiwane z klawiatury i przez czytniki ekranu, zawsze w całości na ekranie
+- [x] Wersja aplikacji (skrót commita i czas zbudowania) w konsoli przy starcie i na dole Ustawień, obok wersji API z `/health`
+
+**Gotowe, gdy:** kalendarz otwiera się na bieżącym tygodniu, wszystkie dotychczasowe funkcje (harmonogram, importy, eksporty, subskrypcja, konto) działają z Ustawień, ciemny motyw przechodzi testy kontrastu, a scenariusze E2E przechodzą na desktopie i telefonie.
+
+## Etap 14: Telefon
+
+- [ ] Widok „Lista” jako domyślny na telefonie: kolejne dni od dziś z zajęciami, kolokwiami i egzaminami
+- [ ] Tydzień i miesiąc (z kolorowymi kropkami) w wersji na telefon
+- [ ] Pływający przycisk „+”
+- [ ] Formularze na pełny ekran z zawsze widocznym „Zapisz”, pola z czcionką 16 px (bez powiększania na iPhonie)
+- [ ] Przesuwanie palcem między dniami i tygodniami (do decyzji przy tym etapie)
+
+**Gotowe, gdy:** na telefonie plan jest widoczny od razu po otwarciu, bez przewijania przycisków, a zajęcia, szczegóły i formularze da się obsłużyć jedną ręką; sprawdzone na prawdziwym iPhonie i Androidzie.
+
+## Etap 15: Aplikacja na telefon (PWA)
+
+- [ ] Instalacja na ekranie głównym: manifest, ikony, podpowiedź dla iPhone’a
+- [ ] Szybki start i podgląd planu bez internetu: ostatni plan zapisany na urządzeniu i kasowany przy wylogowaniu; edycja tylko online
+- [ ] Informacja o nowej wersji („Odśwież”)
+- [ ] Mniejsza paczka frontendu
+
+**Gotowe, gdy:** MruOS da się zainstalować na iPhonie i Androidzie, uruchamia się od razu z ostatnim planem także bez internetu, a po wdrożeniu nowej wersji proponuje odświeżenie.
+
 ## Później (do wyboru)
 
 - Konto: reset hasła i potwierdzanie adresu e-mailem (wymaga usługi mailowej), usuwanie kont nieaktywnych, sprawdzanie haseł w bazie wycieków, logowanie przez Google
-- Na co dzień: widok tygodnia, ekran „Dziś” z linkiem do mapy, aplikacja na telefon (PWA), ciemny motyw
+- Na co dzień: ekran „Dziś” z linkiem do mapy
 - Studia: obecności z licznikiem nieobecności, oceny i zaliczenia, karta przedmiotu
-- Technika: mniejsza paczka frontendu, dostrojenie hashowania haseł
+- Technika: dostrojenie hashowania haseł
+- Logi API: zapis błędów 500 (metoda, ścieżka, komunikat i stos, bez treści zapytań i e-maili) oraz krótki log zapytań (metoda, ścieżka, status, czas; bez `/health`, z zamaskowanym kodem w `/ical/…`), żeby awarie zostawiały ślad, a pobrania subskrypcji przez Google były widoczne w logach Rendera
+- Jednorazowe zajęcia: w oknie „Dodaj zajęcia” w „Zakresie obowiązywania” opcja „Jednorazowo” (domyślna) z jednym polem daty; dni tygodnia i „Co dwa tygodnie” wtedy znikają. Bez zmiany modelu danych: seria z tą samą datą początku i końca
+- Kolokwia i egzaminy w osobnym terminie: domyślnie jedno pole „Godzina” (tylko początek), a przełącznik „Od–do” pokazuje też godzinę zakończenia; do ustalenia, jak wpis bez końca wygląda w kalendarzu i w .ics (np. blok o stałej długości). Przy okazji sprawdzić ucinany napis „W czasie zajęć” w formularzu
 - Notatki: eksport do czytelnego pliku (np. do wydruku), pogrupowany po przedmiotach
 - Długoterminowo: integracja z USOS, udostępnianie planu (zmienia założenie, że plany nie są współdzielone)

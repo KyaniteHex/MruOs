@@ -4,6 +4,7 @@ import {
   AuthResponseSchema,
   CalendarFeedSchema,
   CreatedCalendarFeedSchema,
+  HealthSchema,
 } from '@mruos/shared';
 import type {
   AccountExport,
@@ -12,9 +13,10 @@ import type {
   CalendarFeed,
   CalendarFeedOptions,
   CreatedCalendarFeed,
+  Health,
 } from '@mruos/shared';
 
-// Calls to /auth, /account and /calendar-feed. Responses are validated
+// Calls to /auth, /account, /calendar-feed and /health. Responses are validated
 // before use and every failure becomes a code the pages turn into a Polish
 // message.
 
@@ -125,6 +127,11 @@ export function createAccountApi(
   const json = (body: unknown) => JSON.stringify(body);
 
   return {
+    health: () =>
+      call('/health', {}, (body): Health | null => {
+        const parsed = HealthSchema.safeParse(body);
+        return parsed.success ? parsed.data : null;
+      }),
     me: () => call('/auth/me', {}, user),
     login: (input: LoginInput) =>
       call('/auth/login', { method: 'POST', body: json(input) }, user),

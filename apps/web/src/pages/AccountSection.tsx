@@ -1,15 +1,12 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
-import { Link } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import type { AccountInfo } from '@mruos/shared';
 import { accountErrorMessages } from '../accountApi';
 import type { AccountApiError } from '../accountApi';
 import { useAuth } from '../authContext';
-import { downloadFile } from '../fileDownload';
 import { PasswordStrengthMeter } from '../PasswordStrengthMeter';
 import { minimumPasswordLength } from '../passwordStrength';
-import { AuthLayout } from './AuthLayout';
-import { CalendarSubscription } from './CalendarSubscription';
 
 type Feedback = { kind: 'success' | 'error'; text: string } | null;
 
@@ -33,20 +30,44 @@ function FeedbackMessage({ feedback }: { feedback: Feedback }) {
   );
 }
 
-export function AccountPage() {
+/** "Konto" in the settings of a guest. */
+export function GuestAccount() {
+  return (
+    <div className="settings-block">
+      <p>
+        Używasz MruOS bez konta: plan jest zapisany tylko w tej przeglądarce.
+      </p>
+      <p className="field-hint">
+        Po założeniu konta plan z tej przeglądarki przeniesie się na nie przy
+        pierwszym logowaniu i będzie dostępny na każdym urządzeniu.
+      </p>
+      <div className="settings-actions">
+        <Link className="primary-button" to="/rejestracja">
+          Załóż konto
+        </Link>
+        <Link className="secondary-button" to="/">
+          Zaloguj się
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+/** "Konto" in the settings of a signed-in student. */
+export function AccountSection() {
   const auth = useAuth();
+  const navigate = useNavigate();
   const [account, setAccount] = useState<AccountInfo | null>(null);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [repeated, setRepeated] = useState('');
   const [passwordFeedback, setPasswordFeedback] = useState<Feedback>(null);
   const [sessionFeedback, setSessionFeedback] = useState<Feedback>(null);
-  const [exportFeedback, setExportFeedback] = useState<Feedback>(null);
   const [deletePassword, setDeletePassword] = useState('');
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleteFeedback, setDeleteFeedback] = useState<Feedback>(null);
   const [busy, setBusy] = useState(false);
-  const { api, apiBaseUrl, refresh } = auth;
+  const { api, refresh } = auth;
 
   useEffect(() => {
     void api.account().then((result) => {
@@ -70,6 +91,13 @@ export function AccountPage() {
       kind: 'error',
       text: messages[error] ?? accountErrorMessages[error],
     };
+  }
+
+  async function logout() {
+    setBusy(true);
+    await api.logout();
+    auth.signOut();
+    navigate('/', { replace: true });
   }
 
   async function changePassword(event: FormEvent<HTMLFormElement>) {
@@ -120,25 +148,6 @@ export function AccountPage() {
     );
   }
 
-  async function exportData() {
-    setBusy(true);
-    const result = await api.exportData();
-    setBusy(false);
-    if (!result.success) {
-      setExportFeedback(failure(result.error));
-      return;
-    }
-    downloadFile(
-      `mruos-moje-dane-${result.value.exportedAt.slice(0, 10)}.json`,
-      'application/json',
-      JSON.stringify(result.value, null, 2),
-    );
-    setExportFeedback({
-      kind: 'success',
-      text: 'Plik z danymi został pobrany. Możesz go wczytać przez „Import JSON”.',
-    });
-  }
-
   async function deleteAccount() {
     setBusy(true);
     const result = await api.deleteAccount(deletePassword);
@@ -152,22 +161,31 @@ export function AccountPage() {
       );
       return;
     }
-    // The account route then sends the student to the login page.
+    // The login page shows the notice; settings also work without an
+    // account, so they would not send the student there on their own.
     auth.signOut('Konto i wszystkie jego dane zostały usunięte.');
+    navigate('/', { replace: true });
   }
 
   return (
-    <AuthLayout title="Twoje konto" wide>
-      <p className="account-summary">
-        <strong>{account?.email ?? auth.user?.email}</strong>
-        {account && <> · konto od {formatDate(account.createdAt)}</>}
-      </p>
-      <p>
-        <Link to="/kalendarz">← Wróć do kalendarza</Link>
-      </p>
+    <>
+      <div className="settings-row">
+        <p className="account-summary">
+          <strong>{account?.email ?? auth.user?.email}</strong>
+          {account && <> · konto od {formatDate(account.createdAt)}</>}
+        </p>
+        <button
+          className="secondary-button"
+          disabled={busy}
+          type="button"
+          onClick={() => void logout()}
+        >
+          Wyloguj
+        </button>
+      </div>
 
-      <section className="account-section" aria-labelledby="password-title">
-        <h2 id="password-title">Zmiana hasła</h2>
+      <div className="settings-block">
+        <h3>Zmiana hasła</h3>
         <form
           className="auth-form"
           noValidate
@@ -206,16 +224,10 @@ export function AccountPage() {
             Zmień hasło
           </button>
         </form>
-      </section>
+      </div>
 
-      <CalendarSubscription
-        api={api}
-        apiBaseUrl={apiBaseUrl}
-        onUnauthorized={refresh}
-      />
-
-      <section className="account-section" aria-labelledby="sessions-title">
-        <h2 id="sessions-title">Urządzenia</h2>
+      <div className="settings-block">
+        <h3>Urządzenia</h3>
         <p className="field-hint">
           Wylogowuje wszystkie inne przeglądarki i telefony. To urządzenie
           pozostaje zalogowane.
@@ -229,32 +241,14 @@ export function AccountPage() {
         >
           Wyloguj z pozostałych urządzeń
         </button>
-      </section>
+      </div>
 
-      <section className="account-section" aria-labelledby="data-title">
-        <h2 id="data-title">Twoje dane</h2>
-        <p className="field-hint">
-          Plik JSON z danymi konta, planem i harmonogramem.
-        </p>
-        <FeedbackMessage feedback={exportFeedback} />
-        <button
-          className="secondary-button"
-          disabled={busy}
-          type="button"
-          onClick={() => void exportData()}
-        >
-          Pobierz moje dane
-        </button>
-      </section>
-
-      <section
-        className="account-section account-danger"
-        aria-labelledby="delete-title"
-      >
-        <h2 id="delete-title">Usuń konto</h2>
+      <div className="settings-block account-danger">
+        <h3>Usuń konto</h3>
         <p className="field-hint">
           Usuwa konto, plan, harmonogram, link subskrypcji i wszystkie sesje.
-          Tej operacji nie można cofnąć.
+          Tej operacji nie można cofnąć. Kopię planu pobierzesz wcześniej w
+          sekcji Plan („Eksport” → „Format JSON”).
         </p>
         <label className="form-field">
           <span>Hasło do usunięcia konta</span>
@@ -298,7 +292,7 @@ export function AccountPage() {
             Usuń konto na zawsze
           </button>
         )}
-      </section>
-    </AuthLayout>
+      </div>
+    </>
   );
 }
