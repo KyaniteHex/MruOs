@@ -30,8 +30,9 @@ describe('toCalendarEvents', () => {
 
     expect(calendarEvent?.title).toBe('Matematyka');
     expect(String(calendarEvent?.start)).toContain('T08:00:00');
-    expect(calendarEvent?.backgroundColor).toBe('#25745b');
-    expect(calendarEvent?.textColor).toBe('#ffffff');
+    // Blocks are drawn by the app from the class colour (see App.tsx).
+    expect(calendarEvent?.backgroundColor).toBeUndefined();
+    expect(calendarEvent?.classNames).toEqual(['class-event']);
     expect(calendarEvent?.extendedProps).toEqual(
       expect.objectContaining({
         building: 'Wydział Matematyki',
@@ -40,6 +41,11 @@ describe('toCalendarEvents', () => {
         endTime: '10:00',
         seriesId: 'series-1',
         date: '2026-10-05',
+        colors: expect.objectContaining({
+          tintLight: expect.stringMatching(/^#[\da-f]{6}$/),
+          stripeLight: '#25745b',
+          onColor: '#ffffff',
+        }),
       }),
     );
   });
@@ -150,13 +156,13 @@ describe('entries in the calendar', () => {
     const marked = events.find((event) => event.id === 'maths-2026-10-12');
     const plain = events.find((event) => event.id === 'maths-2026-10-05');
 
-    expect(marked?.classNames).toEqual(['has-test']);
+    expect(marked?.classNames).toEqual(['class-event', 'has-test']);
     expect(marked?.extendedProps?.marks).toEqual({
       test: true,
       exam: false,
       note: true,
     });
-    expect(plain?.classNames).toEqual([]);
+    expect(plain?.classNames).toEqual(['class-event']);
   });
 
   it('shows assessments at their own time as separate blocks', () => {

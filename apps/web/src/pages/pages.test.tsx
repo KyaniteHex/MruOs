@@ -14,6 +14,8 @@ const feedOptions = {
   periods: false,
 };
 const noFeed = () => json({ active: false, options: feedOptions });
+const emptyPlan = () =>
+  json({ events: [], semester: { startDate: '2026-10-01', daysOff: [] } });
 
 function type(label: string, value: string) {
   fireEvent.change(screen.getByLabelText(label), { target: { value } });
@@ -62,7 +64,8 @@ describe('login page', () => {
       screen.getByRole('button', { name: 'Wypróbuj bez konta →' }),
     );
 
-    expect(await screen.findByText('Tryb bez konta')).toBeTruthy();
+    expect(await screen.findByRole('button', { name: '+ Dodaj' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Zaloguj się' })).toBeTruthy();
     expect(window.localStorage.getItem('mruos-guest-mode')).toBe('true');
   });
 
@@ -77,8 +80,9 @@ describe('login page', () => {
     });
     renderApp('/');
 
-    expect(await screen.findByText('student@example.com')).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Konto' })).toBeTruthy();
+    expect(await screen.findByRole('button', { name: '+ Dodaj' })).toBeTruthy();
+    expect(screen.queryByRole('link', { name: 'Zaloguj się' })).toBeNull();
+    expect(screen.getByRole('link', { name: 'Ustawienia' })).toBeTruthy();
   });
 });
 
@@ -114,11 +118,11 @@ describe('registration page', () => {
 
     type('Powtórz hasło', 'Ksiazka-Kwiat-Morze-7');
     fireEvent.click(screen.getByRole('button', { name: 'Zarejestruj' }));
-    expect(await screen.findByText('student@example.com')).toBeTruthy();
+    expect(await screen.findByRole('button', { name: '+ Dodaj' })).toBeTruthy();
   });
 });
 
-describe('account page', () => {
+describe('settings: account', () => {
   afterEach(() => {
     cleanup();
     vi.unstubAllGlobals();
@@ -129,6 +133,7 @@ describe('account page', () => {
     stubApi({
       'GET /auth/me': () => json(student),
       'GET /account': () => json(account),
+      'GET /calendar': emptyPlan,
       'GET /calendar-feed': noFeed,
       'POST /account/password': () => {
         calls += 1;
@@ -164,6 +169,7 @@ describe('account page', () => {
     stubApi({
       'GET /auth/me': () => (deleted ? signedOut(undefined) : json(student)),
       'GET /account': () => json(account),
+      'GET /calendar': emptyPlan,
       'GET /calendar-feed': noFeed,
       'DELETE /account': (init) => {
         expect(JSON.parse(String(init?.body))).toEqual({
@@ -189,7 +195,7 @@ describe('account page', () => {
     expect(screen.getByRole('heading', { name: 'Zaloguj się' })).toBeTruthy();
   });
 
-  it('is only for signed-in students', async () => {
+  it('sends visitors without a session or guest choice to the login page', async () => {
     stubApi({ 'GET /auth/me': signedOut });
     renderApp('/konto');
 
@@ -219,6 +225,7 @@ describe('calendar subscription', () => {
     stubApi({
       'GET /auth/me': () => json(student),
       'GET /account': () => json(account),
+      'GET /calendar': emptyPlan,
       'GET /calendar-feed': feed,
       'POST /calendar-feed': () => {
         active = true;
@@ -271,6 +278,7 @@ describe('calendar subscription', () => {
     stubApi({
       'GET /auth/me': () => json(student),
       'GET /account': () => json(account),
+      'GET /calendar': emptyPlan,
       'GET /calendar-feed': () =>
         json({
           active: true,
@@ -288,5 +296,29 @@ describe('calendar subscription', () => {
     expect(
       await screen.findByRole('button', { name: 'Utwórz link' }),
     ).toBeTruthy();
+  });
+});
+
+describe('settings: look', () => {
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+    window.localStorage.clear();
+    delete document.documentElement.dataset.theme;
+  });
+
+  it('lets a guest pick a theme kept on this device', async () => {
+    stubApi({ 'GET /auth/me': signedOut });
+    window.localStorage.setItem('mruos-guest-mode', 'true');
+    renderApp('/ustawienia');
+
+    expect(await screen.findByText(/Używasz MruOS bez konta/)).toBeTruthy();
+    fireEvent.click(screen.getByLabelText('Ciemny'));
+
+    expect(document.documentElement.dataset.theme).toBe('dark');
+    expect(window.localStorage.getItem('mruos-theme')).toBe('dark');
+    expect((screen.getByLabelText('Ciemny') as HTMLInputElement).checked).toBe(
+      true,
+    );
   });
 });

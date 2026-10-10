@@ -2,11 +2,11 @@ import { Navigate, Outlet, Route, Routes } from 'react-router';
 import { App } from './App';
 import { useAuth } from './authContext';
 import { PlanProvider } from './plan';
-import { AccountPage } from './pages/AccountPage';
 import { AuthLoading } from './pages/AuthLayout';
 import { LoginPage } from './pages/LoginPage';
 import { PrivacyPage } from './pages/PrivacyPage';
 import { RegisterPage } from './pages/RegisterPage';
+import { SettingsPage } from './pages/SettingsPage';
 
 /** Pages that work on a plan: the account's, or the guest's in the browser. */
 function PlanRoute() {
@@ -25,15 +25,6 @@ function PlanRoute() {
   return status === 'loading' ? <AuthLoading /> : <Navigate to="/" replace />;
 }
 
-function AccountRoute() {
-  const { status } = useAuth();
-
-  if (status === 'loading') {
-    return <AuthLoading />;
-  }
-  return status === 'signed-in' ? <AccountPage /> : <Navigate to="/" replace />;
-}
-
 export function Root() {
   return (
     <Routes>
@@ -41,8 +32,15 @@ export function Root() {
       <Route path="/rejestracja" element={<RegisterPage />} />
       <Route element={<PlanRoute />}>
         <Route path="/kalendarz" element={<App />} />
+        <Route path="/ustawienia" element={<SettingsPage />} />
       </Route>
-      <Route path="/konto" element={<AccountRoute />} />
+      {/* The account page became a section of the settings. */}
+      <Route
+        path="/konto"
+        element={
+          <Navigate to={{ pathname: '/ustawienia', hash: '#konto' }} replace />
+        }
+      />
       <Route path="/prywatnosc" element={<PrivacyPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

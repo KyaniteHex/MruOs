@@ -1,13 +1,18 @@
 import type { EventInput } from '@fullcalendar/core';
-import { classKey, dayAfter, semesterAnnotations } from '@mruos/shared';
+import {
+  classBlockColors,
+  classKey,
+  dayAfter,
+  semesterAnnotations,
+} from '@mruos/shared';
 import type {
   AssessmentKind,
   CalendarAnnotation,
+  ClassBlockColors,
   EntryRecord,
   PlacedEntries,
   ScheduledAssessment,
 } from '@mruos/shared';
-import { readableTextColor } from '@mruos/shared/color';
 import { expandOccurrences } from '@mruos/shared/recurrence';
 import { semesterWeeksToDateRange } from '@mruos/shared/semester';
 import type { ClassType, DateRange, Event, Semester } from '@mruos/shared';
@@ -23,6 +28,8 @@ export type CalendarEventDetails = {
   building: string;
   classType: ClassType;
   color: string;
+  /** The block's tint and stripe in both themes. */
+  colors: ClassBlockColors;
   date: string;
   endTime: string;
   marks: ClassMarks;
@@ -53,6 +60,17 @@ export function toCalendarEvents(
   semester?: Pick<Semester, 'daysOff'>,
   placed?: Pick<PlacedEntries, 'byClass'>,
 ): EventInput[] {
+  const colorsByValue = new Map<string, ClassBlockColors>();
+  const colorsOf = (color: string) => {
+    const known = colorsByValue.get(color);
+    if (known) {
+      return known;
+    }
+    const colors = classBlockColors(color);
+    colorsByValue.set(color, colors);
+    return colors;
+  };
+
   return series.flatMap(({ id, event }) =>
     expandOccurrences(event, range, semester).map((occurrence) => {
       const marks = classMarks(
@@ -64,15 +82,16 @@ export function toCalendarEvents(
         title: occurrence.event.subject,
         start: occurrence.start.toISO() ?? undefined,
         end: occurrence.end.toISO() ?? undefined,
-        backgroundColor: occurrence.event.color,
-        borderColor: occurrence.event.color,
-        textColor: readableTextColor(occurrence.event.color),
         // An exam outranks a kolokwium in the outline.
-        classNames: marks.exam ? ['has-exam'] : marks.test ? ['has-test'] : [],
+        classNames: [
+          'class-event',
+          ...(marks.exam ? ['has-exam'] : marks.test ? ['has-test'] : []),
+        ],
         extendedProps: {
           building: occurrence.event.building,
           classType: occurrence.event.classType,
           color: occurrence.event.color,
+          colors: colorsOf(occurrence.event.color),
           date: occurrence.date,
           endTime: occurrence.event.endTime,
           marks,
@@ -134,29 +153,45 @@ export type AnnotationDetails = {
  * academic calendar the semester's days off get a generic name.
  */
 export function toAnnotationEvents(semester: Semester): EventInput[] {
-  return semesterAnnotations(semester).map((annotation, index) => ({
-    id: `annotation-${index}`,
-    title:
-      annotation.kind === 'day-off' && annotation.label !== 'Dzień wolny'
-        ? `Dzień wolny: ${annotation.label}`
-        : annotation.label,
-    start: annotation.startDate,
-    // FullCalendar ends all-day events on the following day, exclusively.
-    end: dayAfter(annotation.endDate),
-    allDay: true,
-    display: 'block',
-    classNames: [
-      'calendar-annotation',
-      `calendar-annotation-${annotation.kind}`,
-    ],
-    extendedProps: {
-      annotation: true,
-      kind: annotation.kind,
-      label: annotation.label,
-      startDate: annotation.startDate,
-      endDate: annotation.endDate,
-    } satisfies AnnotationDetails,
-  }));
+  const annotations = semesterAnnotations(semester);
+  // Days off also shade their whole day, e.g. a column of the week view.
+  const shades: EventInput[] = annotations
+    .filter((annotation) => annotation.kind === 'day-off')
+    .map((annotation, index) => ({
+      id: `day-off-shade-${index}`,
+      start: annotation.startDate,
+      end: dayAfter(annotation.endDate),
+      allDay: true,
+      display: 'background',
+      classNames: ['day-off-shade'],
+    }));
+
+  return [
+    ...shades,
+    ...annotations.map((annotation, index) => ({
+      id: `annotation-${index}`,
+      title:
+        annotation.kind === 'day-off' && annotation.label !== 'Dzień wolny'
+          ? `Dzień wolny: ${annotation.label}`
+          : annotation.label,
+      start: annotation.startDate,
+      // FullCalendar ends all-day events on the following day, exclusively.
+      end: dayAfter(annotation.endDate),
+      allDay: true,
+      display: 'block',
+      classNames: [
+        'calendar-annotation',
+        `calendar-annotation-${annotation.kind}`,
+      ],
+      extendedProps: {
+        annotation: true,
+        kind: annotation.kind,
+        label: annotation.label,
+        startDate: annotation.startDate,
+        endDate: annotation.endDate,
+      } satisfies AnnotationDetails,
+    })),
+  ];
 }
 
 export const demoSemester: Semester = {

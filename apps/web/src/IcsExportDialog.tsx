@@ -1,12 +1,11 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { Link } from 'react-router';
 import type { CalendarFeedOptions } from '@mruos/shared';
 import { useDialogKeyboard } from './useDialogKeyboard';
 
 type IcsExportDialogProps = {
-  /** Signed in: a subscription is available in the account settings. */
-  canSubscribe: boolean;
+  /** Signed in: shows the way to a subscription instead. */
+  onShowSubscription?: () => void;
   onCancel: () => void;
   onExport: (options: CalendarFeedOptions) => void;
 };
@@ -19,7 +18,7 @@ const optionLabels: Record<keyof CalendarFeedOptions, string> = {
 };
 
 export function IcsExportDialog({
-  canSubscribe,
+  onShowSubscription,
   onCancel,
   onExport,
 }: IcsExportDialogProps) {
@@ -75,10 +74,17 @@ export function IcsExportDialog({
           <p className="field-hint">
             Plik .ics to jednorazowa kopia planu dla Kalendarza Google, Apple
             lub Outlooka; późniejsze zmiany do niej nie trafią.{' '}
-            {canSubscribe ? (
+            {onShowSubscription ? (
               <>
                 Kalendarz, który aktualizuje się sam:{' '}
-                <Link to="/konto#subskrypcja">subskrypcja w Koncie</Link>.
+                <button
+                  className="text-button inline-button"
+                  type="button"
+                  onClick={onShowSubscription}
+                >
+                  Kalendarz w telefonie
+                </button>
+                .
               </>
             ) : (
               'Kalendarz, który aktualizuje się sam, wymaga konta.'

@@ -10,7 +10,8 @@ const emptyAccount = {
 const student = { user: { id: 'user-1', email: 'student@example.com' } };
 
 function addClass(subject: string) {
-  fireEvent.click(screen.getByRole('button', { name: 'Dodaj zajęcia' }));
+  fireEvent.click(screen.getByRole('button', { name: '+ Dodaj' }));
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Zajęcia' }));
   fireEvent.change(screen.getByLabelText('Przedmiot'), {
     target: { value: subject },
   });
@@ -33,16 +34,28 @@ function storedSubjects(): string[] {
   ).events.map((series) => series.event.subject);
 }
 
+/** The account's calendar: no "Zaloguj się" and the plan is there. */
+async function accountCalendar() {
+  await waitFor(() =>
+    expect(screen.queryByRole('link', { name: 'Zaloguj się' })).toBeNull(),
+  );
+  return screen.findByRole('button', { name: '+ Dodaj' });
+}
+
 describe('calendar', () => {
   beforeEach(() => {
     cleanup();
     window.localStorage.clear();
+    // The calendar opens on today: Monday 5 October 2026.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-05T08:00:00+02:00'));
   });
 
   afterEach(() => {
     cleanup();
     window.localStorage.clear();
     vi.unstubAllGlobals();
+    vi.useRealTimers();
   });
 
   it('sends visitors without a session or guest choice to the login page', async () => {
@@ -53,6 +66,23 @@ describe('calendar', () => {
     expect(
       await screen.findByRole('heading', { name: 'Zaloguj się' }),
     ).toBeTruthy();
+  });
+
+  it('opens on the current week with its teaching week', async () => {
+    stubApi({ 'GET /auth/me': signedOut });
+    window.localStorage.setItem('mruos-guest-mode', 'true');
+
+    renderApp('/kalendarz');
+
+    expect((await screen.findByRole('heading', { level: 1 })).textContent).toBe(
+      '5–9 października 2026',
+    );
+    expect(screen.getByText('tydzień 2 semestru')).toBeTruthy();
+    expect(
+      screen
+        .getByRole('button', { name: 'Tydzień' })
+        .getAttribute('aria-pressed'),
+    ).toBe('true');
   });
 
   it('keeps a guest plan in the browser across visits', async () => {
@@ -68,7 +98,7 @@ describe('calendar', () => {
     );
 
     const first = renderApp('/kalendarz');
-    expect(screen.getByText('Tryb bez konta')).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Zaloguj się' })).toBeTruthy();
     addClass('LocalStorage test');
     await waitFor(() =>
       expect(storedSubjects()).toContain('LocalStorage test'),
@@ -76,7 +106,10 @@ describe('calendar', () => {
 
     first.unmount();
     renderApp('/kalendarz');
-    expect(screen.getByText('2027-02-01')).toBeTruthy();
+    // Before the semester the calendar opens on its first week.
+    expect((await screen.findByRole('heading', { level: 1 })).textContent).toBe(
+      '1–5 lutego 2027',
+    );
   });
 
   it('moves the guest plan to an empty account at the first login', async () => {
@@ -116,7 +149,7 @@ describe('calendar', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Zaloguj' }));
 
     await waitFor(() => expect(migratedSubjects).toContain('Migrated plan'));
-    expect(await screen.findByText('student@example.com')).toBeTruthy();
+    expect(await accountCalendar()).toBeTruthy();
     expect(window.localStorage.getItem('mruos-calendar-v1:migrated')).toBe(
       'true',
     );
@@ -136,15 +169,14 @@ describe('calendar', () => {
     renderApp('/kalendarz');
 
     expect(await screen.findByText('Wczytywanie planu…')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Wyloguj' })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Dodaj zajęcia' })).toBeNull();
+    expect(screen.getByRole('link', { name: 'Ustawienia' })).toBeTruthy();
+    expect(screen.queryByRole('link', { name: 'Zaloguj się' })).toBeNull();
+    expect(screen.queryByRole('button', { name: '+ Dodaj' })).toBeNull();
 
     sendPlan(json(emptyAccount));
 
-    expect(
-      await screen.findByRole('button', { name: 'Dodaj zajęcia' }),
-    ).toBeTruthy();
-    expect(screen.getByText('2026-09-28')).toBeTruthy();
+    expect(await screen.findByRole('button', { name: '+ Dodaj' })).toBeTruthy();
+    expect(screen.getByText('tydzień 2 semestru')).toBeTruthy();
   });
 
   it('offers another try when the account plan cannot be loaded', async () => {
@@ -166,9 +198,7 @@ describe('calendar', () => {
     );
     fireEvent.click(screen.getByRole('button', { name: 'Spróbuj ponownie' }));
 
-    expect(
-      await screen.findByRole('button', { name: 'Dodaj zajęcia' }),
-    ).toBeTruthy();
+    expect(await screen.findByRole('button', { name: '+ Dodaj' })).toBeTruthy();
   });
 
   it('returns to the login page when the session ends elsewhere', async () => {
@@ -185,10 +215,8 @@ describe('calendar', () => {
     window.localStorage.setItem('mruos-guest-mode', 'true');
 
     renderApp('/kalendarz');
-    // First the guest calendar, then the account; its e-mail shows while
-    // the account's plan is still loading.
-    expect(await screen.findByText('student@example.com')).toBeTruthy();
-    await screen.findByRole('button', { name: 'Dodaj zajęcia' });
+    // First the guest calendar, then the account's.
+    await accountCalendar();
     addClass('Lost change');
 
     expect(
@@ -211,7 +239,7 @@ describe('calendar', () => {
 
     renderApp('/kalendarz');
 
-    expect(await screen.findByText('other@example.com')).toBeTruthy();
+    expect(await accountCalendar()).toBeTruthy();
     expect(fetcher.mock.calls.some(([, init]) => init?.method === 'PUT')).toBe(
       false,
     );

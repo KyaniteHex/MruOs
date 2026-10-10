@@ -131,12 +131,115 @@ a {
 
 .topbar {
   display: flex;
-  height: 64px;
+  min-height: 64px;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 clamp(16px, 4vw, 56px);
+  gap: 16px;
+  padding: 10px clamp(16px, 4vw, 56px);
   border-bottom: 1px solid var(--color-border);
   background: var(--color-surface);
+}
+
+.topbar-controls {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.icon-button {
+  display: inline-flex;
+  width: 38px;
+  height: 38px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.icon-button[aria-current='page'],
+.icon-button:hover {
+  border-color: var(--color-accent-line);
+  background: var(--color-accent-soft);
+  color: var(--color-accent-text);
+}
+
+/* Week / month / day switch. */
+.segmented {
+  display: inline-flex;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+}
+
+.segmented button {
+  min-height: 36px;
+  border: 0;
+  border-left: 1px solid var(--color-border);
+  padding: 0 14px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.segmented button:first-child {
+  border-left: 0;
+}
+
+.segmented button:hover {
+  background: var(--color-accent-soft);
+}
+
+.segmented button[aria-pressed='true'] {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.calendar-nav {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.nav-button {
+  min-width: 38px;
+  padding: 0;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.calendar-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 14px;
+  margin-bottom: 14px;
+}
+
+.calendar-title {
+  margin: 0;
+  color: var(--color-text-strong);
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 24px;
+  font-weight: 500;
+}
+
+.calendar-week {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  font-weight: 650;
 }
 
 .brand {
@@ -161,43 +264,6 @@ a {
   font-size: 19px;
 }
 
-.topbar-term {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  color: var(--color-text);
-  font-size: 13px;
-}
-
-.term-label,
-.account-controls,
-.account-actions {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-}
-
-.account-controls,
-.account-actions {
-  gap: 8px;
-}
-
-.account-email {
-  max-width: 190px;
-  overflow: hidden;
-  color: var(--color-text-muted);
-  font-size: 12px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.account-button {
-  min-height: 34px;
-  padding: 0 10px;
-  font-size: 12px;
-  white-space: nowrap;
-}
-
 .text-button {
   min-height: 36px;
   border: 0;
@@ -214,29 +280,10 @@ a {
   text-decoration: underline;
 }
 
-.term-dot {
-  flex: 0 0 auto;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--color-brand-dot);
-}
-
-.term-year {
-  color: var(--color-text-subtle);
-}
-
 .workspace {
   width: min(1500px, 100%);
   margin: 0 auto;
   padding: 36px clamp(16px, 4vw, 56px) 56px;
-}
-
-.page-heading {
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  margin-bottom: 24px;
 }
 
 .eyebrow {
@@ -245,57 +292,6 @@ a {
   font-size: 10px;
   font-weight: 750;
   letter-spacing: 0.12em;
-}
-
-.page-heading h1 {
-  margin: 0;
-  color: var(--color-text-strong);
-  font-family: Georgia, 'Times New Roman', serif;
-  font-size: 32px;
-  font-weight: 500;
-}
-
-.timezone-note {
-  margin: 0 0 4px;
-  color: var(--color-text-subtle);
-  font-size: 12px;
-}
-
-.page-heading-actions {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.data-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: -8px 0 18px;
-}
-
-.data-toolbar .secondary-button {
-  min-height: 34px;
-  padding: 0 10px;
-  font-size: 12px;
-}
-
-.app-notice {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 16px;
-  border-left: 3px solid var(--color-info-line);
-  border-radius: 3px;
-  padding: 11px 13px;
-  background: var(--color-info-soft);
-  color: var(--color-info-text);
-  font-size: 13px;
-}
-
-.app-notice .secondary-button {
-  flex: 0 0 auto;
 }
 
 .import-calendar-hint {
@@ -586,25 +582,6 @@ a {
   color: var(--color-text);
 }
 
-.account-section {
-  display: grid;
-  gap: 10px;
-  margin-top: 22px;
-  border-top: 1px solid var(--color-border);
-  padding-top: 18px;
-}
-
-.account-section h2 {
-  margin: 0;
-  color: var(--color-text-strong);
-  font-size: 16px;
-}
-
-.account-section > .secondary-button,
-.account-section > .danger-button {
-  justify-self: start;
-}
-
 .account-danger h2 {
   color: var(--color-danger-text);
 }
@@ -668,11 +645,6 @@ a {
 .feed-help ol {
   margin: 0;
   padding-left: 20px;
-}
-
-.account-mode {
-  color: var(--color-text);
-  font-size: 12px;
 }
 
 .privacy-text {
@@ -1046,18 +1018,6 @@ a.secondary-button {
   background: var(--color-danger-soft);
 }
 
-.add-event-button {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.add-event-button span {
-  font-size: 18px;
-  font-weight: 400;
-  line-height: 1;
-}
-
 .modal-backdrop {
   position: fixed;
   z-index: 1000;
@@ -1333,50 +1293,6 @@ a.secondary-button {
   font-size: 13px;
 }
 
-.fc .fc-toolbar {
-  gap: 12px;
-  margin-bottom: 20px !important;
-}
-
-.fc .fc-toolbar-title {
-  color: var(--color-text-strong);
-  font-family: Georgia, 'Times New Roman', serif;
-  font-size: 21px;
-  font-weight: 500;
-  text-transform: capitalize;
-}
-
-.fc .fc-button-primary {
-  border-color: var(--color-border);
-  border-radius: 4px;
-  background: var(--color-surface);
-  color: var(--color-text);
-  box-shadow: none;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.fc .fc-button-primary:hover,
-.fc .fc-button-primary:focus {
-  border-color: var(--color-accent-line);
-  background: var(--color-accent-soft);
-  color: var(--color-accent-text);
-  box-shadow: none;
-}
-
-.fc .fc-button-primary:disabled {
-  border-color: var(--color-border);
-  background: var(--color-surface);
-  color: var(--color-text-subtle);
-}
-
-.fc .fc-button-primary:not(:disabled).fc-button-active,
-.fc .fc-button-primary:not(:disabled):active {
-  border-color: var(--color-accent-line);
-  background: var(--color-accent);
-  color: var(--color-on-accent);
-}
-
 .fc .fc-col-header-cell-cushion {
   padding: 10px 4px;
   color: var(--color-text-subtle);
@@ -1398,7 +1314,7 @@ a.secondary-button {
   font-weight: 750;
 }
 
-.fc .fc-daygrid-day-frame {
+.fc .fc-dayGridMonth-view .fc-daygrid-day-frame {
   min-height: 112px;
 }
 
@@ -1415,29 +1331,92 @@ a.secondary-button {
   line-height: 1.25;
 }
 
-.fc .calendar-event-primary {
-  display: flex;
-  min-width: 0;
-  gap: 4px;
+/* Classes: a tint of the class colour with a stripe in the colour itself.
+   The colours come from the block (see blockStyle in App.tsx). */
+.fc .fc-event.class-event {
+  border: 0;
+  padding: 0;
+  background: transparent;
 }
 
-.fc .calendar-event-primary strong {
+.fc .fc-event.class-event .fc-event-main {
+  height: 100%;
+  padding: 0;
+  color: inherit;
+}
+
+.fc .class-event .calendar-event-copy {
+  --event-tint: var(--event-tint-light);
+  --event-stripe: var(--event-stripe-light);
+  box-sizing: border-box;
+  height: 100%;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  border-left: 4px solid var(--event-stripe);
+  border-radius: 4px;
+  padding: 3px 6px;
+  background: var(--event-tint);
+  color: var(--color-text-strong);
 }
 
-.fc .calendar-event-location {
+:root[data-theme='dark'] .fc .class-event .calendar-event-copy {
+  --event-tint: var(--event-tint-dark);
+  --event-stripe: var(--event-stripe-dark);
+}
+
+.fc .class-event:hover .calendar-event-copy {
+  background: color-mix(in srgb, var(--event-tint) 82%, var(--event-color));
+}
+
+/* The class shown in "Szczegóły" is filled with its colour. */
+.fc .class-event.is-selected .calendar-event-copy {
+  border-left-color: var(--event-color);
+  background: var(--event-color);
+  color: var(--event-on-color);
+}
+
+.fc .calendar-event-subject {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  font-weight: 700;
+}
+
+.fc .calendar-event-meta {
   display: block;
   overflow: hidden;
-  font-size: 10px;
-  opacity: 0.88;
+  font-size: 11px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.fc .calendar-event-primary span {
+.fc .calendar-event-line {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.fc .calendar-event-line .calendar-event-subject {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fc .calendar-event-time {
+  flex: none;
+  font-size: 11px;
   font-weight: 650;
+}
+
+.fc .fc-timegrid-slot {
+  height: 3rem;
+}
+
+/* Days off shade their whole day, e.g. a column of the week. */
+.fc .fc-bg-event.day-off-shade {
+  background: var(--color-day-off-soft);
+  opacity: 0.7;
 }
 
 .fc .entry-mark-inline {
@@ -1455,8 +1434,22 @@ a.secondary-button {
   outline-offset: 1px;
 }
 
-.fc .calendar-assessment {
+.fc .fc-event.calendar-assessment {
+  border: 0;
+  border-left: 4px solid var(--fc-event-border-color);
+  border-radius: 4px;
+  padding: 3px 6px;
+  background: var(--fc-event-bg-color);
   color: var(--fc-event-text-color);
+}
+
+.fc .calendar-assessment .fc-event-main {
+  color: inherit;
+}
+
+.fc .calendar-assessment.is-selected {
+  outline: 2px solid var(--fc-event-border-color);
+  outline-offset: 1px;
 }
 
 .fc .calendar-assessment-test {
@@ -1466,9 +1459,9 @@ a.secondary-button {
 }
 
 .fc .calendar-assessment-exam {
-  --fc-event-bg-color: var(--color-exam);
-  --fc-event-border-color: var(--color-exam-border);
-  --fc-event-text-color: var(--color-on-accent);
+  --fc-event-bg-color: var(--color-exam-soft);
+  --fc-event-border-color: var(--color-exam);
+  --fc-event-text-color: var(--color-exam-text);
 }
 
 .fc .fc-timegrid-slot-label {
@@ -1641,53 +1634,57 @@ a.secondary-button {
 }
 
 @media (max-width: 600px) {
+  /* Phones: logo and actions, then the calendar's views and navigation. */
   .topbar {
-    display: grid;
-    height: auto;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 6px 12px;
-    padding-block: 10px;
+    flex-wrap: wrap;
+    gap: 10px;
   }
 
-  .topbar-term,
-  .account-controls {
-    display: contents;
+  .topbar-controls {
+    order: 3;
+    flex-basis: 100%;
+    justify-content: space-between;
   }
 
-  .topbar .brand,
-  .account-actions {
-    grid-row: 1;
+  .segmented button,
+  .topbar-actions .primary-button,
+  .topbar-actions .secondary-button {
+    min-height: 34px;
+    padding: 0 10px;
+    font-size: 12px;
   }
 
-  .account-actions {
-    grid-column: 2;
-    justify-self: end;
+  .topbar-actions .icon-button {
+    width: 34px;
+    height: 34px;
   }
 
-  .term-label {
-    grid-row: 2;
-    grid-column: 1;
-    white-space: nowrap;
+  /* Week columns are narrow on phones: names only, details on tap. */
+  .fc .fc-timeGridWeek-view .calendar-event-meta {
+    display: none;
   }
 
-  .account-email,
-  .account-mode {
-    grid-row: 2;
-    grid-column: 2;
-    justify-self: end;
-  }
-
-  .topbar-term {
-    gap: 6px;
+  .fc .fc-timeGridWeek-view .calendar-event-copy {
+    padding: 2px 4px;
     font-size: 11px;
   }
 
-  .term-label {
-    gap: 5px;
+  .calendar-title {
+    font-size: 20px;
   }
 
-  .account-controls {
-    gap: 5px;
+  .fc .fc-timegrid-slot {
+    height: 2.5rem;
+  }
+
+  /* Month cells are too narrow for names; screen readers still get them. */
+  .fc .fc-daygrid .calendar-event-line .calendar-event-subject {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 
   .import-subjects > li {
@@ -1696,58 +1693,15 @@ a.secondary-button {
     gap: 6px;
   }
 
-  .account-email {
-    max-width: 120px;
-    font-size: 11px;
-  }
-
-  .account-mode {
-    font-size: 11px;
-  }
-
-  .account-button {
-    min-height: 31px;
-    padding: 0 7px;
-    font-size: 10px;
-  }
-
   .workspace {
     padding-top: 25px;
-  }
-
-  .page-heading {
-    margin-bottom: 17px;
-  }
-
-  .page-heading h1 {
-    font-size: 27px;
   }
 
   .calendar-panel {
     padding: 10px 8px;
   }
 
-  .fc .fc-toolbar {
-    flex-wrap: wrap;
-    justify-content: space-between;
-    gap: 8px;
-  }
-
-  .fc .fc-toolbar-chunk:nth-child(2) {
-    order: -1;
-    width: 100%;
-    text-align: left;
-  }
-
-  .fc .fc-toolbar-title {
-    font-size: 19px;
-  }
-
-  .fc .fc-button {
-    padding: 0.35em 0.5em;
-  }
-
-  .fc .fc-daygrid-day-frame {
+  .fc .fc-dayGridMonth-view .fc-daygrid-day-frame {
     min-height: 78px;
   }
 
@@ -1766,23 +1720,7 @@ a.secondary-button {
     white-space: nowrap;
   }
 
-  .timezone-note {
-    font-size: 10px;
-  }
-
-  .data-toolbar {
-    gap: 6px;
-    margin-top: 0;
-  }
-
-  .data-toolbar .secondary-button {
-    min-height: 32px;
-    padding: 0 7px;
-    font-size: 10px;
-  }
-
   .storage-alert,
-  .app-notice,
   .import-calendar-hint {
     align-items: stretch;
     flex-direction: column;
@@ -1805,19 +1743,6 @@ a.secondary-button {
   .academic-day-off > input:nth-child(2) {
     grid-column: 1 / -1;
     grid-row: 2;
-  }
-
-  .page-heading-actions {
-    flex-direction: column;
-    align-items: end;
-    gap: 8px;
-  }
-
-  .add-event-button,
-  .add-entry-button {
-    min-height: 34px;
-    padding: 0 9px;
-    font-size: 11px;
   }
 
   .upcoming-panel {
@@ -1925,4 +1850,135 @@ a.secondary-button {
 .menu-item:focus-visible {
   outline: 2px solid var(--color-accent-line);
   outline-offset: -2px;
+}
+
+/* Settings */
+.settings-layout {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 760px);
+  align-items: start;
+  gap: 32px;
+}
+
+.settings-nav {
+  position: sticky;
+  top: 16px;
+  display: grid;
+  gap: 2px;
+}
+
+.settings-nav a {
+  border-radius: 4px;
+  padding: 8px 10px;
+  color: var(--color-text);
+  font-size: 14px;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.settings-nav a:hover {
+  background: var(--color-accent-soft);
+  color: var(--color-accent-text);
+}
+
+.settings-content > p:first-child {
+  margin-top: 0;
+}
+
+.settings-content h1 {
+  margin: 0 0 8px;
+  color: var(--color-text-strong);
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 30px;
+  font-weight: 500;
+}
+
+.settings-section {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 20px;
+  background: var(--color-surface);
+  scroll-margin-top: 16px;
+}
+
+.settings-section h2 {
+  margin: 0;
+  color: var(--color-text-strong);
+  font-size: 18px;
+}
+
+.settings-section h3 {
+  margin: 0 0 4px;
+  color: var(--color-text-strong);
+  font-size: 14px;
+}
+
+.settings-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid var(--color-border-soft);
+  padding-top: 14px;
+}
+
+.settings-row p {
+  margin: 0;
+}
+
+.settings-block {
+  display: grid;
+  gap: 10px;
+  border-top: 1px solid var(--color-border-soft);
+  padding-top: 14px;
+}
+
+.settings-block p {
+  margin: 0;
+}
+
+.settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.settings-footer {
+  margin: 18px 0 0;
+}
+
+.settings-content a:not([class]) {
+  color: var(--color-accent-text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.inline-button {
+  min-height: 0;
+  padding: 0;
+  font-size: inherit;
+}
+
+@media (max-width: 760px) {
+  .settings-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .settings-nav {
+    position: static;
+    display: flex;
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 420px) {
+  /* The logo alone, so the guest's buttons fit next to it. */
+  .topbar .brand-name {
+    display: none;
+  }
 }
