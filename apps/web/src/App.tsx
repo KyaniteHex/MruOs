@@ -32,7 +32,7 @@ import type {
   Note,
   UpcomingAssessment,
 } from '@mruos/shared';
-import type { ClassType, Event, Semester } from '@mruos/shared';
+import type { ClassType, Event } from '@mruos/shared';
 import { semesterWeeksToDateRange } from '@mruos/shared/semester';
 import { Link, useNavigate } from 'react-router';
 import { useAuth } from './authContext';
@@ -58,7 +58,6 @@ import type {
   AnnotationDetails,
   AssessmentEventDetails,
   CalendarEventDetails,
-  EventSeries,
 } from './calendarEvents';
 import {
   classMarks,
@@ -71,15 +70,8 @@ import {
 } from './calendarEvents';
 import { exportCalendarBackup, importCalendarBackup } from './calendarBackup';
 import { downloadFile } from './fileDownload';
-import {
-  ApiEventRepository,
-  LocalStorageEventRepository,
-} from './eventRepository';
-import type {
-  CalendarSnapshot,
-  EventRepository,
-  RepositoryErrorCode,
-} from './eventRepository';
+import type { CalendarSnapshot } from './eventRepository';
+import { repositoryErrorMessages, usePlan } from './planContext';
 
 type SelectedEvent = CalendarEventDetails & {
   title: string;
@@ -194,52 +186,21 @@ function renderEventContent(info: EventContentArg) {
   );
 }
 
-const repositoryErrorMessages: Record<RepositoryErrorCode, string> = {
-  'read-error': 'Nie można odczytać kalendarza z pamięci przeglądarki.',
-  'invalid-data': 'Zapisane dane są uszkodzone lub mają nieobsługiwaną wersję.',
-  'write-error':
-    'Nie udało się zapisać kalendarza. Sprawdź wolne miejsce w przeglądarce.',
-  'clear-error': 'Nie udało się wyczyścić lokalnego zapisu.',
-  unauthorized: 'Zaloguj się, aby kontynuować pracę z kontem.',
-  'network-error': 'Nie można połączyć się z API. Spróbuj ponownie.',
-  'server-updating':
-    'Serwer jest właśnie aktualizowany i nie zapisał kolokwiów, egzaminów ani notatek. Spróbuj ponownie za kilka minut.',
-};
-
 export function App() {
   const calendarRef = useRef<FullCalendar>(null);
   const backupInputRef = useRef<HTMLInputElement>(null);
   const auth = useAuth();
   const navigate = useNavigate();
-  const { apiBaseUrl, user: authUser, refresh: refreshAuth } = auth;
-  const [localRepository] = useState(
-    () =>
-      new LocalStorageEventRepository({
-        getItem: (key) => window.localStorage.getItem(key),
-        setItem: (key, value) => window.localStorage.setItem(key, value),
-        removeItem: (key) => window.localStorage.removeItem(key),
-      }),
-  );
-  const [apiRepository] = useState(() => new ApiEventRepository(apiBaseUrl));
-  const [activeRepository, setActiveRepository] =
-    useState<EventRepository>(localRepository);
-  const [loadResult] = useState(() => localRepository.load());
-  const savedSnapshot =
-    loadResult.success && loadResult.value ? loadResult.value : null;
-  const savedSnapshotRef = useRef(savedSnapshot);
+  const { user: authUser } = auth;
+  const plan = usePlan();
+  const { eventSeries, semester, entries, storageError, setStorageError } =
+    plan;
+  const accountPlan = plan.status;
+  const persistSnapshot = plan.save;
   const [selectedAnnotation, setSelectedAnnotation] =
     useState<AnnotationDetails | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<SelectedEvent | null>(
     null,
-  );
-  const [eventSeries, setEventSeries] = useState<EventSeries[]>(
-    savedSnapshot?.events ?? demoEventSeries,
-  );
-  const [semester, setSemester] = useState<Semester>(
-    savedSnapshot?.semester ?? demoSemester,
-  );
-  const [entries, setEntries] = useState<EntryRecord[]>(
-    savedSnapshot?.entries ?? [],
   );
   const [selectedAssessmentId, setSelectedAssessmentId] = useState<
     string | null
@@ -253,17 +214,9 @@ export function App() {
   const [pendingImport, setPendingImport] = useState<CalendarSnapshot | null>(
     null,
   );
-  const [storageError, setStorageError] = useState<RepositoryErrorCode | null>(
-    loadResult.success ? null : loadResult.error,
-  );
-  const [activeDate, setActiveDate] = useState(
-    savedSnapshot?.semester.startDate ?? demoRange.startDate,
-  );
-  // A signed-in student sees nothing to edit until the account's plan
-  // arrives, so no change lands in the browser's plan by mistake.
-  const [accountPlan, setAccountPlan] = useState<
-    'loading' | 'ready' | 'failed'
-  >(authUser ? 'loading' : 'ready');
+  // Set once the student moves around; until then the plan decides.
+  const [activeDate, setActiveDate] = useState<string | null>(null);
+  const currentDate = activeDate ?? semester.startDate;
   const slowAccountPlan = useSlowHint(accountPlan === 'loading');
   const semesterEndDate = semesterWeeksToDateRange(semester, 1, 20).endDate;
   const placed = useMemo(
@@ -274,102 +227,10 @@ export function App() {
   const selectedAssessment = placed.assessments.find(
     (scheduled) => scheduled.id === selectedAssessmentId && !scheduled.seriesId,
   );
-  const handleAuthenticatedRef = useRef(handleAuthenticated);
-  handleAuthenticatedRef.current = handleAuthenticated;
-  const authUserId = authUser?.id;
 
   useEffect(() => {
     calendarRef.current?.getApi().refetchEvents();
   }, [eventSeries, semester, placed]);
-
-  // A signed-in student works on the account's plan; a guest on the local one.
-  useEffect(() => {
-    if (authUserId) {
-      void handleAuthenticatedRef.current();
-    }
-  }, [authUserId]);
-
-  // A session ended elsewhere (e.g. password changed): back to the login page.
-  useEffect(() => {
-    if (storageError === 'unauthorized') {
-      void refreshAuth().then((signedIn) => {
-        if (!signedIn) {
-          navigate('/', { replace: true });
-        }
-      });
-    }
-  }, [storageError, refreshAuth, navigate]);
-
-  async function persistSnapshot(
-    events: EventSeries[],
-    nextSemester: Semester,
-    nextEntries: EntryRecord[] = entries,
-  ): Promise<boolean> {
-    const result = await activeRepository.save({
-      events,
-      semester: nextSemester,
-      entries: nextEntries,
-    });
-
-    if (!result.success) {
-      setStorageError(result.error);
-      return false;
-    }
-
-    if (activeRepository === localRepository) {
-      savedSnapshotRef.current = {
-        events,
-        semester: nextSemester,
-        entries: nextEntries,
-      };
-    }
-    setEventSeries(events);
-    setSemester(nextSemester);
-    setEntries(nextEntries);
-    setStorageError(null);
-    return true;
-  }
-
-  async function handleAuthenticated(): Promise<boolean> {
-    setAccountPlan('loading');
-    const remote = await apiRepository.load();
-    if (!remote.success || !remote.value) {
-      setStorageError(remote.success ? 'network-error' : remote.error);
-      setAccountPlan('failed');
-      return false;
-    }
-
-    let snapshot = remote.value;
-    const local = savedSnapshotRef.current;
-
-    if (
-      snapshot.events.length === 0 &&
-      local &&
-      !localRepository.isMigratedToAccount()
-    ) {
-      const migrated = await apiRepository.save(local);
-      if (!migrated.success) {
-        setStorageError(migrated.error);
-        setAccountPlan('failed');
-        return false;
-      }
-
-      // The account already holds the plan; a failed marker write only risks
-      // offering the same plan to an empty account again.
-      localRepository.markMigratedToAccount();
-      snapshot = local;
-    }
-
-    setActiveRepository(apiRepository);
-    setEventSeries(snapshot.events);
-    setSemester(snapshot.semester);
-    setEntries(snapshot.entries);
-    setActiveDate(snapshot.semester.startDate);
-    calendarRef.current?.getApi().gotoDate(snapshot.semester.startDate);
-    setStorageError(null);
-    setAccountPlan('ready');
-    return true;
-  }
 
   async function handleLogout() {
     await auth.api.logout();
@@ -438,7 +299,7 @@ export function App() {
     const context: EntryContext = {
       date:
         entry.anchor.type === 'subject'
-          ? (selectedEvent?.date ?? activeDate)
+          ? (selectedEvent?.date ?? currentDate)
           : entry.anchor.date,
       subject: entry.subject,
     };
@@ -813,7 +674,7 @@ export function App() {
               <button
                 className="secondary-button"
                 type="button"
-                onClick={() => void handleAuthenticated()}
+                onClick={() => void plan.retry()}
               >
                 Spróbuj ponownie
               </button>
@@ -846,7 +707,7 @@ export function App() {
               onClick={() =>
                 setFormSession({
                   mode: 'create',
-                  initialDate: activeDate,
+                  initialDate: currentDate,
                 })
               }
             >
@@ -856,7 +717,7 @@ export function App() {
             <button
               className="secondary-button add-entry-button"
               type="button"
-              onClick={() => addEntry('test', { date: activeDate })}
+              onClick={() => addEntry('test', { date: currentDate })}
             >
               + Kolokwium / egzamin
             </button>
@@ -952,7 +813,7 @@ export function App() {
                 rrulePlugin,
               ]}
               initialView="dayGridMonth"
-              initialDate={activeDate}
+              initialDate={currentDate}
               headerToolbar={{
                 left: 'prev,next today',
                 center: 'title',
