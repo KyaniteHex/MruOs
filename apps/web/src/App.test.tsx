@@ -75,7 +75,7 @@ describe('calendar', () => {
     renderApp('/kalendarz');
 
     expect((await screen.findByRole('heading', { level: 1 })).textContent).toBe(
-      '5–9 października 2026',
+      '5–11 października 2026',
     );
     expect(screen.getByText('tydzień 2 semestru')).toBeTruthy();
     expect(
@@ -108,7 +108,7 @@ describe('calendar', () => {
     renderApp('/kalendarz');
     // Before the semester the calendar opens on its first week.
     expect((await screen.findByRole('heading', { level: 1 })).textContent).toBe(
-      '1–5 lutego 2027',
+      '1–7 lutego 2027',
     );
   });
 

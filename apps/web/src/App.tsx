@@ -51,8 +51,6 @@ import { UpcomingBar, UpcomingList, UpcomingPanel } from './UpcomingPanel';
 import { periodKindLabels } from './academicYearForm';
 import {
   calendarTitle,
-  isWeekend,
-  planHasWeekend,
   startingDate,
   visibleDates,
   weekLabel,
@@ -113,7 +111,7 @@ type CalendarState = {
   title: string;
   /** "tydzień 2 semestru", or null in the month view and outside teaching. */
   week: string | null;
-  /** The first and the last day shown, without hidden weekends. */
+  /** The first and the last day shown. */
   firstDate: string;
   lastDate: string;
 };
@@ -307,7 +305,6 @@ function CalendarPage() {
     () => planHours(eventSeries, entries),
     [eventSeries, entries],
   );
-  const showWeekends = planHasWeekend(eventSeries, placed.assessments);
   const upcoming = upcomingAssessments(placed.assessments, todayInWarsaw());
   const selectedAssessment = placed.assessments.find(
     (scheduled) => scheduled.id === selectedAssessmentId && !scheduled.seriesId,
@@ -341,15 +338,10 @@ function CalendarPage() {
 
   function handleDatesSet(arg: DatesSetArg) {
     const view = arg.view.type as CalendarView;
-    const dates = visibleDates(
+    const shown = visibleDates(
       arg.startStr.slice(0, 10),
       arg.endStr.slice(0, 10),
     );
-    // Hidden weekends are still part of FullCalendar's range.
-    const shown =
-      view === 'timeGridWeek' && !showWeekends
-        ? dates.filter((date) => !isWeekend(date))
-        : dates;
     // With a named time zone FullCalendar passes UTC-coerced dates, so the
     // UTC date is the Warsaw calendar day.
     const first =
@@ -860,7 +852,6 @@ function CalendarPage() {
                 locale={plLocale}
                 timeZone="Europe/Warsaw"
                 firstDay={1}
-                views={{ timeGridWeek: { weekends: showWeekends } }}
                 events={(fetchInfo: EventSourceFuncArg, successCallback) => {
                   const range = {
                     startDate: fetchInfo.startStr.slice(0, 10),
