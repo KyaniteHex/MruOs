@@ -1,5 +1,14 @@
-import { expect, test } from '@playwright/test';
-import { login, openAsGuest, password, register } from './helpers';
+import {
+  expect,
+  expectAccountCalendar,
+  login,
+  logout,
+  openAsGuest,
+  password,
+  register,
+  reloadSignedIn,
+  test,
+} from './helpers';
 
 const loginHeading = { name: 'Zaloguj się' };
 const day = 24 * 60 * 60 * 1000;
@@ -18,11 +27,10 @@ test('starts at the login page and opens the calendar after registering', async 
 test('logs out to the login page and logs back in', async ({ page }) => {
   const email = await register(page);
 
-  await page.getByRole('button', { name: 'Wyloguj' }).click();
-  await expect(page.getByRole('heading', loginHeading)).toBeVisible();
+  await logout(page);
 
   await login(page, email);
-  await expect(page.getByRole('button', { name: 'Wyloguj' })).toBeVisible();
+  await expectAccountCalendar(page);
 });
 
 test('remembers the session for 30 days only when asked', async ({
@@ -38,9 +46,9 @@ test('remembers the session for 30 days only when asked', async ({
     29 * day,
   );
 
-  await page.getByRole('button', { name: 'Wyloguj' }).click();
+  await logout(page);
   await login(page, email, password, { remember: false });
-  await expect(page.getByRole('button', { name: 'Wyloguj' })).toBeVisible();
+  await expectAccountCalendar(page);
   // -1 marks a cookie that ends with the browser session.
   expect((await sessionCookie())?.expires).toBe(-1);
 });
@@ -48,14 +56,12 @@ test('remembers the session for 30 days only when asked', async ({
 test('keeps the session after a page reload', async ({ page }) => {
   await register(page);
 
-  await page.reload();
-
-  await expect(page.getByRole('button', { name: 'Wyloguj' })).toBeVisible();
+  await reloadSignedIn(page);
 });
 
 test('rejects a wrong password', async ({ page }) => {
   const email = await register(page);
-  await page.getByRole('button', { name: 'Wyloguj' }).click();
+  await logout(page);
 
   await login(page, email, 'wrong-password-123');
 
@@ -66,7 +72,7 @@ test('rejects a wrong password', async ({ page }) => {
 
 test('rejects registering the same e-mail twice', async ({ page }) => {
   const email = await register(page);
-  await page.getByRole('button', { name: 'Wyloguj' }).click();
+  await logout(page);
 
   await page.goto('/rejestracja');
   await page.getByLabel('E-mail').fill(email);
@@ -102,8 +108,11 @@ test('fits the screen width with and without an account', async ({ page }) => {
   expect(await overflow()).toBeLessThanOrEqual(0);
 
   await register(page);
+  expect(await overflow()).toBeLessThanOrEqual(0);
+
+  await page.getByRole('link', { name: 'Ustawienia' }).click();
   await expect(
-    page.getByRole('button', { name: 'Dodaj zajęcia' }),
+    page.getByRole('heading', { name: 'Ustawienia', level: 1 }),
   ).toBeVisible();
   expect(await overflow()).toBeLessThanOrEqual(0);
 });

@@ -1,16 +1,19 @@
-import { expect, test } from '@playwright/test';
 import {
   addClass,
   eventOn,
+  expect,
   goToNextMonth,
   register,
   reloadSignedIn,
+  showMonth,
+  test,
 } from './helpers';
 
-// A fresh account starts with an empty plan; the calendar opens on the
-// semester start, Monday 2026-09-28.
+// A fresh account starts with an empty plan; its semester starts on Monday
+// 2026-09-28, and new classes cover the whole semester.
 test.beforeEach(async ({ page }) => {
   await register(page);
+  await showMonth(page);
 });
 
 test('shows a weekly class on every Tuesday and keeps it after reload', async ({
@@ -27,6 +30,7 @@ test('shows a weekly class on every Tuesday and keeps it after reload', async ({
   }
 
   await reloadSignedIn(page);
+  await showMonth(page);
   await expect(eventOn(page, '2026-09-29', 'Algorytmy')).toBeVisible();
 });
 

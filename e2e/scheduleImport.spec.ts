@@ -1,11 +1,18 @@
-import { expect, test } from '@playwright/test';
-import { eventOn, goToNextMonth, openAsGuest } from './helpers';
+import {
+  chooseInSettings,
+  eventOn,
+  expect,
+  goToNextMonth,
+  openAsGuest,
+  showMonth,
+  test,
+} from './helpers';
 
 const plan = 'e2e/fixtures/plans/260922_Kosmetologia_st2_rok2_sem3.xlsx';
 
 test('imports a faculty timetable for the chosen groups', async ({ page }) => {
   await openAsGuest(page);
-  await page.getByRole('button', { name: 'Import z Excela' }).click();
+  await chooseInSettings(page, 'Import', 'Format XLSX (UMK CM)');
   const dialog = page.getByRole('dialog', { name: 'Import z Excela' });
 
   await dialog.getByLabel('Plik planu (.xlsx)').setInputFiles(plan);
@@ -32,6 +39,11 @@ test('imports a faculty timetable for the chosen groups', async ({ page }) => {
   await dialog.getByRole('button', { name: 'Importuj 8 zajęć' }).click();
   await expect(dialog).toBeHidden();
 
+  // The calendar opens on the first imported week.
+  await expect(page.locator('#calendar-title')).toHaveText(
+    '5–9 października 2026',
+  );
+  await showMonth(page);
   // Lab for group 1 in weeks 1-5 on Mondays; the demo plan is replaced.
   await expect(
     eventOn(page, '2026-10-05', 'Kosmetologia z elementami SPA i Wellness'),

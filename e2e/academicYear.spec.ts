@@ -1,9 +1,13 @@
-import { expect, test } from '@playwright/test';
 import {
+  chooseInSettings,
   dayCell,
+  expect,
   fillUmkWinterSemester,
   goToNextMonth,
   openAsGuest,
+  openSettings,
+  showMonth,
+  test,
 } from './helpers';
 
 const pharmacyPlan = 'e2e/fixtures/plans/260922_Farmacja_rok5_sem9.xlsx';
@@ -12,7 +16,8 @@ test('dates an imported timetable by the academic calendar', async ({
   page,
 }) => {
   await openAsGuest(page);
-  await page.getByRole('button', { name: 'Rok akademicki' }).click();
+  await openSettings(page);
+  await page.getByRole('button', { name: 'Ustaw harmonogram' }).click();
   const settings = page.getByRole('dialog', { name: 'Rok akademicki' });
 
   // Statutory holidays are listed before anything is typed.
@@ -27,7 +32,11 @@ test('dates an imported timetable by the academic calendar', async ({
     page.getByRole('status').filter({ hasText: 'zachowują swoje daty' }),
   ).toBeVisible();
 
-  // Days off and breaks are shown in the calendar.
+  // Days off and breaks are shown in the calendar, which now starts with
+  // the winter semester on 1 October.
+  await page.getByRole('link', { name: '← Wróć do kalendarza' }).click();
+  await showMonth(page);
+  await expect(page.locator('#calendar-title')).toHaveText('Październik 2026');
   await goToNextMonth(page);
   const holiday = dayCell(page, '2026-11-11').getByTitle(
     'Dzień wolny: Narodowe Święto Niepodległości',
@@ -43,7 +52,7 @@ test('dates an imported timetable by the academic calendar', async ({
     dayCell(page, '2026-12-21').getByText('Wakacje zimowe'),
   ).toBeVisible();
 
-  await page.getByRole('button', { name: 'Import z Excela' }).click();
+  await chooseInSettings(page, 'Import', 'Format XLSX (UMK CM)');
   const importDialog = page.getByRole('dialog', { name: 'Import z Excela' });
   await importDialog
     .getByLabel('Plik planu (.xlsx)')
@@ -62,6 +71,9 @@ test('dates an imported timetable by the academic calendar', async ({
     .click();
   await expect(importDialog).toBeHidden();
 
+  // The calendar opens on the first imported class, in October.
+  await showMonth(page);
+  await expect(page.locator('#calendar-title')).toHaveText('Październik 2026');
   // Week 15 of Tuesday classes is 2.02.2027, the day of the room change.
   for (let month = 0; month < 4; month += 1) {
     await goToNextMonth(page);

@@ -1,10 +1,12 @@
-import { expect, test } from '@playwright/test';
 import {
   addClass,
+  expect,
   goToNextMonth,
   openDetails,
   register,
   reloadSignedIn,
+  showMonth,
+  test,
 } from './helpers';
 
 async function editOccurrence(
@@ -28,6 +30,7 @@ async function editOccurrence(
 test.beforeEach(async ({ page }) => {
   await register(page);
   await addClass(page, { subject: 'Bazy danych', weekday: 'Wt', room: '101' });
+  await showMonth(page);
   await goToNextMonth(page);
 });
 
@@ -61,6 +64,7 @@ test('changes the whole series and keeps single-occurrence changes', async ({
   ).toContainText('999');
 
   await reloadSignedIn(page);
+  await showMonth(page);
   await goToNextMonth(page);
   await expect(
     await openDetails(page, '2026-10-27', 'Bazy danych'),

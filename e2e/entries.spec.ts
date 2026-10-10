@@ -1,14 +1,18 @@
 import { readFile } from 'node:fs/promises';
-import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import {
   addClass,
+  addFromMenu,
+  chooseInSettings,
   dayCell,
   eventOn,
+  expect,
   openAsGuest,
   openDetails,
   register,
   reloadSignedIn,
+  showMonth,
+  test,
 } from './helpers';
 
 // "Nadchodzące" counts from today, so the browser lives on Monday 2026-10-05.
@@ -24,6 +28,7 @@ test('adds a kolokwium to a class and lists it as upcoming', async ({
   page,
 }) => {
   await openAsGuest(page);
+  await showMonth(page);
   await expect(upcoming(page)).toContainText('Nic w najbliższych 14 dniach');
 
   const details = await openDetails(page, '2026-10-05', 'Matematyka');
@@ -46,8 +51,9 @@ test('adds a kolokwium to a class and lists it as upcoming', async ({
 
 test('adds an exam at its own time and edits it', async ({ page }) => {
   await openAsGuest(page);
+  await showMonth(page);
 
-  await page.getByRole('button', { name: '+ Kolokwium / egzamin' }).click();
+  await addFromMenu(page, 'Kolokwium lub egzamin');
   const dialog = page.getByRole('dialog', {
     name: 'Dodaj kolokwium lub egzamin',
   });
@@ -92,6 +98,7 @@ test('keeps entries in the account and lists those that lost their class', async
 }) => {
   await register(page);
   await addClass(page, { subject: 'Algorytmy', weekday: 'Wt' });
+  await showMonth(page);
 
   // A note about the whole subject and a kolokwium on 2026-09-29.
   const details = await openDetails(page, '2026-09-29', 'Algorytmy');
@@ -108,6 +115,7 @@ test('keeps entries in the account and lists those that lost their class', async
     .click();
 
   await reloadSignedIn(page);
+  await showMonth(page);
   const reloaded = await openDetails(page, '2026-09-29', 'Algorytmy');
   await expect(reloaded).toContainText('Projekt zaliczeniowy w parach');
   await expect(eventOn(page, '2026-09-29', 'Algorytmy')).toHaveClass(
@@ -144,6 +152,7 @@ test('exports kolokwia with reminders and notes only when chosen', async ({
   page,
 }) => {
   await openAsGuest(page);
+  await showMonth(page);
   const details = await openDetails(page, '2026-10-05', 'Matematyka');
   await details.getByRole('button', { name: '+ Kolokwium' }).click();
   await page
@@ -156,7 +165,7 @@ test('exports kolokwia with reminders and notes only when chosen', async ({
   await noteDialog.getByRole('button', { name: 'Zapisz notatkę' }).click();
   await expect(noteDialog).toBeHidden();
 
-  await page.getByRole('button', { name: 'Eksport ICS' }).click();
+  await chooseInSettings(page, 'Eksport', 'Format ICS');
   const exportDialog = page.getByRole('dialog', {
     name: 'Eksport do kalendarza',
   });
