@@ -169,10 +169,14 @@ Testy muszą obejmować:
 - [x] Widok tygodnia jako domyślny: poniedziałek–piątek (sobota i niedziela, gdy plan ma zajęcia w weekend), „tydzień N semestru” w tytule, godziny dopasowane do planu
 - [x] Kalendarz otwiera się na dzisiejszym dniu (na początku semestru, gdy dziś jest poza semestrem)
 - [x] Zajęcia jako bloki z jasnym tłem w kolorze zajęć i paskiem w pełnym kolorze; w tygodniu nazwa, godziny, typ i sala, w miesiącu jedna linia z godziną i nazwą; wybrane zajęcia wypełnione pełnym kolorem
-- [x] Górny pasek: widoki, nawigacja, „+ Dodaj ▾” (Zajęcia, Kolokwium lub egzamin), „⚙ Ustawienia”, dla gościa „Zaloguj się”; bez nagłówka strony i przycisków importu i eksportu nad kalendarzem
+- [x] Górny pasek: „+ Dodaj ▾” (Zajęcia, Kolokwium lub egzamin), „⚙ Ustawienia”, dla gościa „Zaloguj się”; bez nagłówka strony i przycisków importu i eksportu nad kalendarzem
+- [x] Widoki i nawigacja (‹ › Dziś) w nagłówku kalendarza, przy tytule i „tydzień N semestru”
+- [x] Kalendarz na wysokość ekranu: godziny rozciągają się, a gdy się nie mieszczą, siatka przewija się w środku
+- [x] Okresy (np. wakacje) zawsze w górnym wierszu, święta wiersz niżej, bez cienia całego dnia; wiersz „cały dzień” tylko w tygodniach, w których coś w nim jest
+- [x] Na telefonie i tablecie w pionie szczegóły w panelu wysuwanym od dołu, a „Nadchodzące” jako jednolinijkowy pasek nad kalendarzem, ukryty, gdy nic nie ma
 - [x] Strona „Ustawienia”, także bez konta: Plan (rok akademicki, „Import ▾”: Format JSON, Format XLSX (UMK CM); „Eksport ▾”: Format JSON, Format ICS), Kalendarz w telefonie (subskrypcja), Wygląd, Konto (z wylogowaniem); `/konto` przekierowuje do Ustawień
 - [x] Ciemny motyw: Jasny, Ciemny albo Jak w systemie (domyślnie), zapamiętany na urządzeniu; kolory na wspólnych zmiennych, kontrast sprawdzany w obu motywach
-- [x] Rozwijane menu obsługiwane z klawiatury i przez czytniki ekranu
+- [x] Rozwijane menu obsługiwane z klawiatury i przez czytniki ekranu, zawsze w całości na ekranie
 
 **Gotowe, gdy:** kalendarz otwiera się na bieżącym tygodniu, wszystkie dotychczasowe funkcje (harmonogram, importy, eksporty, subskrypcja, konto) działają z Ustawień, ciemny motyw przechodzi testy kontrastu, a scenariusze E2E przechodzą na desktopie i telefonie.
 
@@ -180,9 +184,8 @@ Testy muszą obejmować:
 
 - [ ] Widok „Lista” jako domyślny na telefonie: kolejne dni od dziś z zajęciami, kolokwiami i egzaminami
 - [ ] Tydzień i miesiąc (z kolorowymi kropkami) w wersji na telefon
-- [ ] Szczegóły w panelu wysuwanym od dołu, pływający przycisk „+”
+- [ ] Pływający przycisk „+”
 - [ ] Formularze na pełny ekran z zawsze widocznym „Zapisz”, pola z czcionką 16 px (bez powiększania na iPhonie)
-- [ ] „Nadchodzące” jako krótki pasek, ukryty, gdy nic nie ma
 - [ ] Przesuwanie palcem między dniami i tygodniami (do decyzji przy tym etapie)
 
 **Gotowe, gdy:** na telefonie plan jest widoczny od razu po otwarciu, bez przewijania przycisków, a zajęcia, szczegóły i formularze da się obsłużyć jedną ręką; sprawdzone na prawdziwym iPhonie i Androidzie.

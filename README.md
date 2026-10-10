@@ -4,7 +4,7 @@ Kalendarz studencki do zarządzania planem zajęć (wersja produkcyjna: https://
 
 ## Funkcje
 
-- Widok tygodnia (domyślny, z „tydzień N semestru” i godzinami dopasowanymi do planu), miesiąca i dnia; kalendarz otwiera się na dzisiejszym dniu. Zajęcia to bloki z jasnym tłem i paskiem w kolorze zajęć, z czytelnym tekstem na każdym kolorze.
+- Widok tygodnia (domyślny, z „tydzień N semestru” i godzinami dopasowanymi do planu), miesiąca i dnia; kalendarz otwiera się na dzisiejszym dniu i mieści się na ekranie. Zajęcia to bloki z jasnym tłem i paskiem w kolorze zajęć, z czytelnym tekstem na każdym kolorze.
 - Serie zajęć: co tydzień lub co dwa tygodnie, zakres jako daty albo tygodnie semestru.
 - Edycja „tylko ten termin” (np. zmiana sali) albo „cała seria”, odwoływanie terminów.
 - Ostrzeżenia o kolizjach.
@@ -16,7 +16,7 @@ Kalendarz studencki do zarządzania planem zajęć (wersja produkcyjna: https://
 - Kolokwia, egzaminy i notatki: w czasie zajęć albo w osobnym terminie, oznaczenia w kalendarzu (⚑ kolokwium, ★ egzamin, ✎ notatka), panel „Nadchodzące” z najbliższymi 14 dniami i lista wpisów, które straciły swoje zajęcia.
 - Kopia zapasowa JSON i eksport do kalendarza (.ics) z wyborem: kolokwia i egzaminy z przypomnieniami, notatki w opisach zajęć, dni wolne, przerwy i sesja. Kolokwium lub egzamin w czasie zajęć to jedno wydarzenie z zajęciami.
 - Subskrypcja kalendarza (dla kont): tajny link `/api/ical/<kod>.ics` dla Kalendarza Google, iPhone’a i Maca, który aktualizuje się sam; link widać tylko przy tworzeniu, nowy link unieważnia stary, ustawienia zmienia się bez nowego linku.
-- Obsługa klawiaturą i układ dla telefonu.
+- Obsługa klawiaturą i układ dla telefonu: szczegóły w panelu wysuwanym od dołu, „Nadchodzące” jako pasek nad kalendarzem.
 
 ## Architektura
 
