@@ -41,7 +41,7 @@ test('imports a faculty timetable for the chosen groups', async ({ page }) => {
 
   // The calendar opens on the first imported week.
   await expect(page.locator('#calendar-title')).toHaveText(
-    '5–9 października 2026',
+    '5–11 października 2026',
   );
   await showMonth(page);
   // Lab for group 1 in weeks 1-5 on Mondays; the demo plan is replaced.

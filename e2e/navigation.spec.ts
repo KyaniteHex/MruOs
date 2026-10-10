@@ -16,7 +16,7 @@ test.beforeEach(async ({ page }) => {
 
 test('opens on the current week and moves between weeks', async ({ page }) => {
   const title = page.locator('#calendar-title');
-  await expect(title).toHaveText('28 września – 2 października 2026');
+  await expect(title).toHaveText('28 września – 4 października 2026');
   await expect(page.getByText('tydzień 1 semestru')).toBeVisible();
   await expect(
     page.locator('.fc-timeGridWeek-view .fc-event', {
@@ -25,11 +25,11 @@ test('opens on the current week and moves between weeks', async ({ page }) => {
   ).toContainText('Laboratorium · s. Lab 3');
 
   await page.getByRole('button', { name: 'Następny' }).click();
-  await expect(title).toHaveText('5–9 października 2026');
+  await expect(title).toHaveText('5–11 października 2026');
   await expect(page.getByText('tydzień 2 semestru')).toBeVisible();
 
   await page.getByRole('button', { name: 'Dziś' }).click();
-  await expect(title).toHaveText('28 września – 2 października 2026');
+  await expect(title).toHaveText('28 września – 4 października 2026');
 });
 
 test('moves between months', async ({ page }) => {
@@ -87,7 +87,7 @@ test('shows the all-day row only in weeks with days off', async ({ page }) => {
     await page.getByRole('button', { name: 'Następny' }).click();
   }
   await expect(page.locator('#calendar-title')).toHaveText(
-    '9–13 listopada 2026',
+    '9–15 listopada 2026',
   );
   await expect(page.getByText('cały dzień')).toBeVisible();
   await expect(page.locator('.calendar-annotation-day-off')).toHaveText(
