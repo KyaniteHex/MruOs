@@ -164,12 +164,44 @@ Testy muszą obejmować:
 
 **Gotowe, gdy:** link dodany w Google Calendar pokazuje plan, zmiana w MruOS pojawia się po odświeżeniu przez Google, a unieważniony link przestaje działać.
 
+## Etap 13: Nowy układ, widok tygodnia, ustawienia i ciemny motyw
+
+- [ ] Widok tygodnia jako domyślny: poniedziałek–piątek (sobota i niedziela, gdy plan ma zajęcia w weekend), „tydzień N semestru” w tytule, godziny dopasowane do planu
+- [ ] Kalendarz otwiera się na dzisiejszym dniu (na początku semestru, gdy dziś jest poza semestrem)
+- [ ] Zajęcia jako bloki z jasnym tłem w kolorze zajęć i paskiem w pełnym kolorze; w tygodniu nazwa, godziny, typ i sala, w miesiącu jedna linia z godziną i nazwą; wybrane zajęcia wypełnione pełnym kolorem
+- [ ] Górny pasek: widoki, nawigacja, „+ Dodaj ▾” (Zajęcia, Kolokwium lub egzamin), „⚙ Ustawienia”, dla gościa „Zaloguj się”; bez nagłówka strony i przycisków importu i eksportu nad kalendarzem
+- [ ] Strona „Ustawienia”, także bez konta: Plan (rok akademicki, „Import ▾”: Format JSON, Format XLSX (UMK CM); „Eksport ▾”: Format JSON, Format ICS), Kalendarz w telefonie (subskrypcja), Wygląd, Konto (z wylogowaniem); `/konto` przekierowuje do Ustawień
+- [ ] Ciemny motyw: Jasny, Ciemny albo Jak w systemie (domyślnie), zapamiętany na urządzeniu; kolory na wspólnych zmiennych, kontrast sprawdzany w obu motywach
+- [ ] Rozwijane menu obsługiwane z klawiatury i przez czytniki ekranu
+
+**Gotowe, gdy:** kalendarz otwiera się na bieżącym tygodniu, wszystkie dotychczasowe funkcje (harmonogram, importy, eksporty, subskrypcja, konto) działają z Ustawień, ciemny motyw przechodzi testy kontrastu, a scenariusze E2E przechodzą na desktopie i telefonie.
+
+## Etap 14: Telefon
+
+- [ ] Widok „Lista” jako domyślny na telefonie: kolejne dni od dziś z zajęciami, kolokwiami i egzaminami
+- [ ] Tydzień i miesiąc (z kolorowymi kropkami) w wersji na telefon
+- [ ] Szczegóły w panelu wysuwanym od dołu, pływający przycisk „+”
+- [ ] Formularze na pełny ekran z zawsze widocznym „Zapisz”, pola z czcionką 16 px (bez powiększania na iPhonie)
+- [ ] „Nadchodzące” jako krótki pasek, ukryty, gdy nic nie ma
+- [ ] Przesuwanie palcem między dniami i tygodniami (do decyzji przy tym etapie)
+
+**Gotowe, gdy:** na telefonie plan jest widoczny od razu po otwarciu, bez przewijania przycisków, a zajęcia, szczegóły i formularze da się obsłużyć jedną ręką; sprawdzone na prawdziwym iPhonie i Androidzie.
+
+## Etap 15: Aplikacja na telefon (PWA)
+
+- [ ] Instalacja na ekranie głównym: manifest, ikony, podpowiedź dla iPhone’a
+- [ ] Szybki start i podgląd planu bez internetu: ostatni plan zapisany na urządzeniu i kasowany przy wylogowaniu; edycja tylko online
+- [ ] Informacja o nowej wersji („Odśwież”)
+- [ ] Mniejsza paczka frontendu
+
+**Gotowe, gdy:** MruOS da się zainstalować na iPhonie i Androidzie, uruchamia się od razu z ostatnim planem także bez internetu, a po wdrożeniu nowej wersji proponuje odświeżenie.
+
 ## Później (do wyboru)
 
 - Konto: reset hasła i potwierdzanie adresu e-mailem (wymaga usługi mailowej), usuwanie kont nieaktywnych, sprawdzanie haseł w bazie wycieków, logowanie przez Google
-- Na co dzień: widok tygodnia, ekran „Dziś” z linkiem do mapy, aplikacja na telefon (PWA), ciemny motyw
+- Na co dzień: ekran „Dziś” z linkiem do mapy
 - Studia: obecności z licznikiem nieobecności, oceny i zaliczenia, karta przedmiotu
-- Technika: mniejsza paczka frontendu, dostrojenie hashowania haseł
+- Technika: dostrojenie hashowania haseł
 - Logi API: zapis błędów 500 (metoda, ścieżka, komunikat i stos, bez treści zapytań i e-maili) oraz krótki log zapytań (metoda, ścieżka, status, czas; bez `/health`, z zamaskowanym kodem w `/ical/…`), żeby awarie zostawiały ślad, a pobrania subskrypcji przez Google były widoczne w logach Rendera
 - Wersjonowanie: numer wersji aplikacji (np. z `package.json` i skrótu commita) wypisywany w konsoli devtools przy starcie, żeby było widać, która wersja działa na produkcji, a która w podglądzie; podobnie wersja API, np. w `/health`
 - Jednorazowe zajęcia: w oknie „Dodaj zajęcia” w „Zakresie obowiązywania” opcja „Jednorazowo” (domyślna) z jednym polem daty; dni tygodnia i „Co dwa tygodnie” wtedy znikają. Bez zmiany modelu danych: seria z tą samą datą początku i końca
