@@ -39,12 +39,18 @@ export {
   WeekdaySchema,
 } from './schemas.js';
 export {
+  classBlockColors,
   contrastRatio,
   darkEventTextColor,
   lightEventTextColor,
+  mixColors,
   readableTextColor,
   relativeLuminance,
+  themeColors,
 } from './color.js';
+export type { ClassBlockColors } from './color.js';
+export { planHours } from './planHours.js';
+export type { HourRange } from './planHours.js';
 export {
   academicAnnotations,
   academicStartYear,
@@ -54,6 +60,7 @@ export {
   findSemester,
   semesterAnnotations,
   semesterFromAcademicYear,
+  semesterWeekNumber,
   semesterWeekCalendar,
   teachingDates,
   termForDate,
