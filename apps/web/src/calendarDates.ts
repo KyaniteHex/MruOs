@@ -1,5 +1,7 @@
 import {
+  classesOn,
   datesBetween,
+  dayAfter,
   findSemester,
   semesterWeekNumber,
   semesterWeeksToDateRange,
@@ -53,15 +55,29 @@ export function startingDate(semester: Semester, today: string): string {
     : semester.startDate;
 }
 
-/** Whether anything in the plan takes place on a Saturday or a Sunday. */
-export function planHasWeekend(
+/** Saturday and Sunday of the week that starts on `monday`. */
+export function weekendOf(monday: string): [string, string] {
+  let saturday = monday;
+  for (let day = 0; day < 5; day += 1) {
+    saturday = dayAfter(saturday);
+  }
+  return [saturday, dayAfter(saturday)];
+}
+
+/**
+ * Whether classes, kolokwia or exams take place at the weekend of the week
+ * that starts on `monday`; cancelled classes and days off do not count.
+ */
+export function weekendHasItems(
   series: readonly EventSeries[],
   assessments: readonly ScheduledAssessment[],
+  semester: Pick<Semester, 'daysOff'>,
+  monday: string,
 ): boolean {
+  const weekend = weekendOf(monday);
   return (
-    series.some(({ event }) =>
-      event.recurrence.byDay.some((day) => day === 'SA' || day === 'SU'),
-    ) || assessments.some((scheduled) => scheduled.start.weekday >= 6)
+    weekend.some((date) => classesOn(series, date, semester).length > 0) ||
+    assessments.some((scheduled) => weekend.includes(scheduled.date))
   );
 }
 

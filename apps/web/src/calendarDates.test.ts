@@ -4,10 +4,11 @@ import type { Semester } from '@mruos/shared';
 import {
   calendarTitle,
   isWeekend,
-  planHasWeekend,
   startingDate,
   visibleDates,
   weekLabel,
+  weekendHasItems,
+  weekendOf,
 } from './calendarDates';
 
 const semester: Semester = { startDate: '2026-09-28', daysOff: [] };
@@ -100,8 +101,8 @@ describe('startingDate', () => {
   });
 });
 
-describe('planHasWeekend', () => {
-  function onDays(byDay: string[]) {
+describe('weekendHasItems', () => {
+  function onDays(byDay: string[], exceptions: unknown[] = []) {
     return {
       id: byDay.join(''),
       event: EventSchema.parse({
@@ -121,11 +122,18 @@ describe('planHasWeekend', () => {
           startDate: '2026-10-05',
           endDate: '2026-12-20',
         },
+        exceptions,
       }),
     };
   }
+  const noDaysOff = { daysOff: [] };
 
-  it('looks for classes and exams on Saturdays and Sundays', () => {
+  it('finds the weekend of a week', () => {
+    expect(weekendOf('2026-10-05')).toEqual(['2026-10-10', '2026-10-11']);
+    expect(weekendOf('2026-12-28')).toEqual(['2027-01-02', '2027-01-03']);
+  });
+
+  it('looks only at the weekend of the shown week', () => {
     const exam = placeEntries(
       [
         {
@@ -145,11 +153,39 @@ describe('planHasWeekend', () => {
         },
       ],
       [],
-      { daysOff: [] },
+      noDaysOff,
     ).assessments;
 
-    expect(planHasWeekend([onDays(['MO', 'FR'])], [])).toBe(false);
-    expect(planHasWeekend([onDays(['MO', 'SA'])], [])).toBe(true);
-    expect(planHasWeekend([onDays(['MO'])], exam)).toBe(true);
+    expect(
+      weekendHasItems([onDays(['MO', 'FR'])], [], noDaysOff, '2026-10-05'),
+    ).toBe(false);
+    expect(
+      weekendHasItems([onDays(['MO', 'SA'])], [], noDaysOff, '2026-10-05'),
+    ).toBe(true);
+    // A Saturday exam in February does not show this week's weekend.
+    expect(weekendHasItems([], exam, noDaysOff, '2026-10-05')).toBe(false);
+    expect(weekendHasItems([], exam, noDaysOff, '2027-02-01')).toBe(true);
+  });
+
+  it('skips cancelled weekend classes and days off', () => {
+    const cancelled = onDays(
+      ['SA'],
+      [{ date: '2026-10-10', status: 'cancelled' }],
+    );
+
+    expect(weekendHasItems([cancelled], [], noDaysOff, '2026-10-05')).toBe(
+      false,
+    );
+    expect(weekendHasItems([cancelled], [], noDaysOff, '2026-10-12')).toBe(
+      true,
+    );
+    expect(
+      weekendHasItems(
+        [onDays(['SU'])],
+        [],
+        { daysOff: ['2026-10-18'] },
+        '2026-10-12',
+      ),
+    ).toBe(false);
   });
 });

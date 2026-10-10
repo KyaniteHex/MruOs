@@ -52,10 +52,10 @@ import { periodKindLabels } from './academicYearForm';
 import {
   calendarTitle,
   isWeekend,
-  planHasWeekend,
   startingDate,
   visibleDates,
   weekLabel,
+  weekendHasItems,
 } from './calendarDates';
 import type { CalendarView } from './calendarDates';
 import type {
@@ -318,9 +318,7 @@ function CalendarPage() {
     [eventSeries, entries],
   );
   const upcoming = upcomingAssessments(placed.assessments, todayInWarsaw());
-  // Phones show Monday–Friday unless the plan has something at the weekend.
-  const showWeekends =
-    !isPhone || planHasWeekend(eventSeries, placed.assessments);
+  const showWeekends = showsWeekend(calendarState);
   const shown = calendarState ? shownDates(calendarState, showWeekends) : [];
   const firstShown = shown[0] ?? '';
   const lastShown = shown.at(-1) ?? firstShown;
@@ -367,6 +365,15 @@ function CalendarPage() {
     }
   }
 
+  /** Phones show Monday–Friday unless that week has weekend classes. */
+  function showsWeekend(state: CalendarState | null): boolean {
+    return (
+      !isPhone ||
+      (state?.view === 'timeGridWeek' &&
+        weekendHasItems(eventSeries, placed.assessments, semester, state.start))
+    );
+  }
+
   function handleDatesSet(arg: DatesSetArg) {
     const view = arg.view.type as CalendarView;
     const state: CalendarState = {
@@ -376,7 +383,7 @@ function CalendarPage() {
       // UTC date is the Warsaw calendar day.
       start: arg.view.currentStart.toISOString().slice(0, 10),
     };
-    const days = shownDates(state, showWeekends);
+    const days = shownDates(state, showsWeekend(state));
     const today = todayInWarsaw();
 
     setCalendarState(state);
