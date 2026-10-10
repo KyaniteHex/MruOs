@@ -5,7 +5,7 @@ import {
   semesterWeeksToDateRange,
   termForDate,
 } from '@mruos/shared';
-import type { Semester } from '@mruos/shared';
+import type { EventSeries, ScheduledAssessment, Semester } from '@mruos/shared';
 
 export type CalendarView = 'timeGridWeek' | 'dayGridMonth' | 'timeGridDay';
 
@@ -51,6 +51,24 @@ export function startingDate(semester: Semester, today: string): string {
   return today >= semester.startDate && today <= semesterEnd(semester)
     ? today
     : semester.startDate;
+}
+
+/** Whether anything in the plan takes place on a Saturday or a Sunday. */
+export function planHasWeekend(
+  series: readonly EventSeries[],
+  assessments: readonly ScheduledAssessment[],
+): boolean {
+  return (
+    series.some(({ event }) =>
+      event.recurrence.byDay.some((day) => day === 'SA' || day === 'SU'),
+    ) || assessments.some((scheduled) => scheduled.start.weekday >= 6)
+  );
+}
+
+/** Saturday or Sunday. */
+export function isWeekend(date: string): boolean {
+  const day = fromIso(date).getUTCDay();
+  return day === 0 || day === 6;
 }
 
 function fromIso(date: string): Date {

@@ -51,6 +51,8 @@ import { UpcomingBar, UpcomingList, UpcomingPanel } from './UpcomingPanel';
 import { periodKindLabels } from './academicYearForm';
 import {
   calendarTitle,
+  isWeekend,
+  planHasWeekend,
   startingDate,
   visibleDates,
   weekLabel,
@@ -77,7 +79,11 @@ import type { EntryContext } from './entryFormModel';
 import { classTypeLabels } from './eventFormModel';
 import type { EventEditScope } from './eventFormModel';
 import { repositoryErrorMessages, usePlan } from './planContext';
-import { narrowScreenQuery, useMediaQuery } from './useMediaQuery';
+import {
+  narrowScreenQuery,
+  phoneScreenQuery,
+  useMediaQuery,
+} from './useMediaQuery';
 
 /** Where the calendar opens, e.g. on the first week of an imported plan. */
 export type CalendarLocationState = { date?: string };
@@ -108,13 +114,18 @@ type EntrySession =
 
 type CalendarState = {
   view: CalendarView;
-  title: string;
-  /** "tydzień 2 semestru", or null in the month view and outside teaching. */
-  week: string | null;
-  /** The first and the last day shown. */
-  firstDate: string;
-  lastDate: string;
+  /** Every day of FullCalendar's range, hidden weekends included. */
+  dates: string[];
+  /** The first day of the month, week or day. */
+  start: string;
 };
+
+/** The days on screen: phones may hide the weekend in the week view. */
+function shownDates(state: CalendarState, showWeekends: boolean): string[] {
+  return state.view === 'timeGridWeek' && !showWeekends
+    ? state.dates.filter((date) => !isWeekend(date))
+    : state.dates;
+}
 
 const views: { view: CalendarView; label: string }[] = [
   { view: 'timeGridWeek', label: 'Tydzień' },
@@ -283,6 +294,7 @@ function CalendarPage() {
   const [formSession, setFormSession] = useState<FormSession | null>(null);
   // Narrow screens show details and "Nadchodzące" in a sheet.
   const isNarrow = useMediaQuery(narrowScreenQuery);
+  const isPhone = useMediaQuery(phoneScreenQuery);
   const [upcomingOpen, setUpcomingOpen] = useState(false);
   const [initialDate] = useState(
     () =>
@@ -306,13 +318,32 @@ function CalendarPage() {
     [eventSeries, entries],
   );
   const upcoming = upcomingAssessments(placed.assessments, todayInWarsaw());
+  // Phones show Monday–Friday unless the plan has something at the weekend.
+  const showWeekends =
+    !isPhone || planHasWeekend(eventSeries, placed.assessments);
+  const shown = calendarState ? shownDates(calendarState, showWeekends) : [];
+  const firstShown = shown[0] ?? '';
+  const lastShown = shown.at(-1) ?? firstShown;
+  const title = calendarState
+    ? calendarTitle(
+        calendarState.view,
+        calendarState.view === 'dayGridMonth'
+          ? calendarState.start
+          : firstShown,
+        lastShown,
+      )
+    : '';
+  // "tydzień 2 semestru"; none in the month view and outside teaching.
+  const week =
+    calendarState && calendarState.view !== 'dayGridMonth'
+      ? weekLabel(semester, shown)
+      : null;
   const selectedAssessment = placed.assessments.find(
     (scheduled) => scheduled.id === selectedAssessmentId && !scheduled.seriesId,
   );
   // The all-day row holds only days off, breaks and events.
   const showAllDayRow =
-    calendarState !== null &&
-    hasAnnotations(semester, calendarState.firstDate, calendarState.lastDate);
+    shown.length > 0 && hasAnnotations(semester, firstShown, lastShown);
 
   useEffect(() => {
     calendarRef.current?.getApi().refetchEvents();
@@ -338,26 +369,24 @@ function CalendarPage() {
 
   function handleDatesSet(arg: DatesSetArg) {
     const view = arg.view.type as CalendarView;
-    const shown = visibleDates(
-      arg.startStr.slice(0, 10),
-      arg.endStr.slice(0, 10),
-    );
-    // With a named time zone FullCalendar passes UTC-coerced dates, so the
-    // UTC date is the Warsaw calendar day.
-    const first =
-      view === 'dayGridMonth'
-        ? arg.view.currentStart.toISOString().slice(0, 10)
-        : (shown[0] ?? '');
+    const state: CalendarState = {
+      view,
+      dates: visibleDates(arg.startStr.slice(0, 10), arg.endStr.slice(0, 10)),
+      // With a named time zone FullCalendar passes UTC-coerced dates, so the
+      // UTC date is the Warsaw calendar day.
+      start: arg.view.currentStart.toISOString().slice(0, 10),
+    };
+    const days = shownDates(state, showWeekends);
     const today = todayInWarsaw();
 
-    setCalendarState({
-      view,
-      title: calendarTitle(view, first, shown.at(-1) ?? first),
-      week: view === 'dayGridMonth' ? null : weekLabel(semester, shown),
-      firstDate: shown[0] ?? first,
-      lastDate: shown.at(-1) ?? first,
-    });
-    setActiveDate(shown.includes(today) ? today : first);
+    setCalendarState(state);
+    setActiveDate(
+      days.includes(today)
+        ? today
+        : view === 'dayGridMonth'
+          ? state.start
+          : (days[0] ?? state.start),
+    );
   }
 
   function clearSelection() {
@@ -829,11 +858,9 @@ function CalendarPage() {
             <div className="calendar-heading">
               <div className="calendar-heading-text">
                 <h1 className="calendar-title" id="calendar-title">
-                  {calendarState?.title}
+                  {title}
                 </h1>
-                {calendarState?.week && (
-                  <p className="calendar-week">{calendarState.week}</p>
-                )}
+                {week && <p className="calendar-week">{week}</p>}
               </div>
               {controls}
             </div>
@@ -863,6 +890,7 @@ function CalendarPage() {
                     ...toAssessmentEvents(placed.assessments, range),
                   ]);
                 }}
+                views={{ timeGridWeek: { weekends: showWeekends } }}
                 datesSet={handleDatesSet}
                 dateClick={handleDateClick}
                 navLinks

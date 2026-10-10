@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import { EventSchema, placeEntries } from '@mruos/shared';
 import type { Semester } from '@mruos/shared';
 import {
   calendarTitle,
+  isWeekend,
+  planHasWeekend,
   startingDate,
   visibleDates,
   weekLabel,
@@ -26,6 +29,14 @@ describe('calendarTitle', () => {
     expect(calendarTitle('timeGridDay', '2026-10-05', '2026-10-05')).toBe(
       'Poniedziałek, 5 października 2026',
     );
+  });
+});
+
+describe('isWeekend', () => {
+  it('knows Saturdays and Sundays', () => {
+    expect(
+      ['2026-10-09', '2026-10-10', '2026-10-11', '2026-10-12'].map(isWeekend),
+    ).toEqual([false, true, true, false]);
   });
 });
 
@@ -86,5 +97,59 @@ describe('startingDate', () => {
   it('opens on the semester start before or after it', () => {
     expect(startingDate(semester, '2026-09-01')).toBe('2026-09-28');
     expect(startingDate(semester, '2027-06-01')).toBe('2026-09-28');
+  });
+});
+
+describe('planHasWeekend', () => {
+  function onDays(byDay: string[]) {
+    return {
+      id: byDay.join(''),
+      event: EventSchema.parse({
+        kind: 'class',
+        subject: 'Matematyka',
+        classType: 'wyklad',
+        color: '#25745b',
+        building: 'A',
+        room: '1',
+        startTime: '08:00',
+        endTime: '10:00',
+        timezone: 'Europe/Warsaw',
+        recurrence: {
+          freq: 'WEEKLY',
+          interval: 1,
+          byDay,
+          startDate: '2026-10-05',
+          endDate: '2026-12-20',
+        },
+      }),
+    };
+  }
+
+  it('looks for classes and exams on Saturdays and Sundays', () => {
+    const exam = placeEntries(
+      [
+        {
+          id: 'exam',
+          entry: {
+            kind: 'exam',
+            subject: 'Matematyka',
+            title: 'Egzamin',
+            reminders: [],
+            anchor: {
+              type: 'own',
+              date: '2027-02-06',
+              startTime: '09:00',
+              endTime: '11:00',
+            },
+          },
+        },
+      ],
+      [],
+      { daysOff: [] },
+    ).assessments;
+
+    expect(planHasWeekend([onDays(['MO', 'FR'])], [])).toBe(false);
+    expect(planHasWeekend([onDays(['MO', 'SA'])], [])).toBe(true);
+    expect(planHasWeekend([onDays(['MO'])], exam)).toBe(true);
   });
 });
