@@ -8,6 +8,7 @@ import {
   DeleteAccountInputSchema,
   EventCreateInputSchema,
   EventUpdateInputSchema,
+  HealthSchema,
   LoginInputSchema,
   RegistrationInputSchema,
 } from './schemas.js';
@@ -132,5 +133,14 @@ describe('calendar subscription schemas', () => {
     expect(
       CalendarFeedOptionsSchema.safeParse({ assessments: true }).success,
     ).toBe(false);
+  });
+
+  it('reads the health of the API with or without its version', () => {
+    expect(HealthSchema.parse({ status: 'ok' })).toEqual({ status: 'ok' });
+    expect(HealthSchema.parse({ status: 'ok', version: 'd5b820c' })).toEqual({
+      status: 'ok',
+      version: 'd5b820c',
+    });
+    expect(HealthSchema.safeParse({ status: 'down' }).success).toBe(false);
   });
 });
