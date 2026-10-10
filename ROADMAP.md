@@ -171,5 +171,6 @@ Testy muszą obejmować:
 - Studia: obecności z licznikiem nieobecności, oceny i zaliczenia, karta przedmiotu
 - Technika: mniejsza paczka frontendu, dostrojenie hashowania haseł
 - Logi API: zapis błędów 500 (metoda, ścieżka, komunikat i stos, bez treści zapytań i e-maili) oraz krótki log zapytań (metoda, ścieżka, status, czas; bez `/health`, z zamaskowanym kodem w `/ical/…`), żeby awarie zostawiały ślad, a pobrania subskrypcji przez Google były widoczne w logach Rendera
+- Wersjonowanie: numer wersji aplikacji (np. z `package.json` i skrótu commita) wypisywany w konsoli devtools przy starcie, żeby było widać, która wersja działa na produkcji, a która w podglądzie; podobnie wersja API, np. w `/health`
 - Notatki: eksport do czytelnego pliku (np. do wydruku), pogrupowany po przedmiotach
 - Długoterminowo: integracja z USOS, udostępnianie planu (zmienia założenie, że plany nie są współdzielone)
