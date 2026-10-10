@@ -343,7 +343,6 @@ function Settings() {
                 </div>
                 <div className="settings-actions">
                   <MenuButton
-                    align="end"
                     items={[
                       {
                         label: 'Format JSON',
@@ -358,7 +357,6 @@ function Settings() {
                     Import
                   </MenuButton>
                   <MenuButton
-                    align="end"
                     items={[
                       {
                         label: 'Format JSON',

@@ -63,6 +63,22 @@ describe('MenuButton', () => {
     expect(json).not.toHaveBeenCalled();
   });
 
+  it('moves a menu that would stick out of the screen back onto it', () => {
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(
+      function (this: HTMLElement) {
+        // A 220 px menu lined up with a button near the left edge.
+        return this.getAttribute('role') === 'menu'
+          ? DOMRect.fromRect({ x: -60, y: 40, width: 220, height: 80 })
+          : DOMRect.fromRect();
+      },
+    );
+    const { button } = renderMenu();
+
+    fireEvent.click(button);
+    expect(screen.getByRole('menu').style.transform).toBe('translateX(68px)');
+    vi.restoreAllMocks();
+  });
+
   it('closes when the student clicks elsewhere', () => {
     const { button } = renderMenu();
 

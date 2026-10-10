@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import type { KeyboardEvent, ReactNode } from 'react';
 
 export type MenuItem = {
@@ -29,8 +29,28 @@ export function MenuButton({
   const buttonRef = useRef<HTMLButtonElement>(null);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [focusIndex, setFocusIndex] = useState(0);
+
+  // Moves the menu back on screen, e.g. on a phone held upright.
+  useLayoutEffect(() => {
+    const menu = menuRef.current;
+    if (!open || !menu) {
+      return;
+    }
+    const margin = 8;
+    const screenWidth =
+      document.documentElement.clientWidth || window.innerWidth;
+    const { left, right } = menu.getBoundingClientRect();
+    const shift =
+      left < margin
+        ? margin - left
+        : right > screenWidth - margin
+          ? screenWidth - margin - right
+          : 0;
+    menu.style.transform = shift === 0 ? '' : `translateX(${shift}px)`;
+  }, [open]);
 
   useEffect(() => {
     if (open) {
@@ -117,6 +137,7 @@ export function MenuButton({
       </button>
       {open && (
         <div
+          ref={menuRef}
           className={`menu-list menu-list-${align}`}
           id={menuId}
           role="menu"
