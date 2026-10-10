@@ -166,7 +166,7 @@ Testy muszą obejmować:
 
 ## Etap 13: Nowy układ, widok tygodnia, ustawienia i ciemny motyw
 
-- [x] Widok tygodnia jako domyślny: poniedziałek–piątek (sobota i niedziela, gdy plan ma zajęcia w weekend), „tydzień N semestru” w tytule, godziny dopasowane do planu
+- [x] Widok tygodnia jako domyślny: cały tydzień od poniedziałku do niedzieli, „tydzień N semestru” w tytule, godziny dopasowane do planu
 - [x] Kalendarz otwiera się na dzisiejszym dniu (na początku semestru, gdy dziś jest poza semestrem)
 - [x] Zajęcia jako bloki z jasnym tłem w kolorze zajęć i paskiem w pełnym kolorze; w tygodniu nazwa, godziny, typ i sala, w miesiącu jedna linia z godziną i nazwą; wybrane zajęcia wypełnione pełnym kolorem
 - [x] Górny pasek: „+ Dodaj ▾” (Zajęcia, Kolokwium lub egzamin), „⚙ Ustawienia”, dla gościa „Zaloguj się”; bez nagłówka strony i przycisków importu i eksportu nad kalendarzem
