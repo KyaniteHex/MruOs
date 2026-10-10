@@ -1,11 +1,14 @@
 import {
+  addClass,
   dayCell,
   expect,
   isNarrow,
+  isPhone,
   openAsGuest,
   openSettings,
   showMonth,
   test,
+  weekTitle,
 } from './helpers';
 
 // Uses the demo plan shown to visitors without an account; the clock says
@@ -16,7 +19,12 @@ test.beforeEach(async ({ page }) => {
 
 test('opens on the current week and moves between weeks', async ({ page }) => {
   const title = page.locator('#calendar-title');
-  await expect(title).toHaveText('28 września – 4 października 2026');
+  const firstWeek = weekTitle(
+    page,
+    '28 września – 4 października 2026',
+    '28 września – 2 października 2026',
+  );
+  await expect(title).toHaveText(firstWeek);
   await expect(page.getByText('tydzień 1 semestru')).toBeVisible();
   await expect(
     page.locator('.fc-timeGridWeek-view .fc-event', {
@@ -25,11 +33,13 @@ test('opens on the current week and moves between weeks', async ({ page }) => {
   ).toContainText('Laboratorium · s. Lab 3');
 
   await page.getByRole('button', { name: 'Następny' }).click();
-  await expect(title).toHaveText('5–11 października 2026');
+  await expect(title).toHaveText(
+    weekTitle(page, '5–11 października 2026', '5–9 października 2026'),
+  );
   await expect(page.getByText('tydzień 2 semestru')).toBeVisible();
 
   await page.getByRole('button', { name: 'Dziś' }).click();
-  await expect(title).toHaveText('28 września – 4 października 2026');
+  await expect(title).toHaveText(firstWeek);
 });
 
 test('moves between months', async ({ page }) => {
@@ -87,7 +97,7 @@ test('shows the all-day row only in weeks with days off', async ({ page }) => {
     await page.getByRole('button', { name: 'Następny' }).click();
   }
   await expect(page.locator('#calendar-title')).toHaveText(
-    '9–15 listopada 2026',
+    weekTitle(page, '9–15 listopada 2026', '9–13 listopada 2026'),
   );
   await expect(page.getByText('cały dzień')).toBeVisible();
   await expect(page.locator('.calendar-annotation-day-off')).toHaveText(
@@ -139,5 +149,18 @@ test('shows which versions of the app and the API run', async ({ page }) => {
   await openSettings(page);
   await expect(page.locator('.settings-version')).toHaveText(
     /^Wersja aplikacji: [0-9a-f]{7}.* · API: [0-9a-f]{7}$/,
+  );
+});
+
+test('shows the weekend on phones only when the plan has weekend classes', async ({
+  page,
+}) => {
+  const days = page.locator('.fc-timeGridWeek-view .fc-col-header-cell');
+  await expect(days).toHaveCount(isPhone(page) ? 5 : 7);
+
+  await addClass(page, { subject: 'Zajęcia sobotnie', weekday: 'Sob' });
+  await expect(days).toHaveCount(7);
+  await expect(page.locator('#calendar-title')).toHaveText(
+    '28 września – 4 października 2026',
   );
 });

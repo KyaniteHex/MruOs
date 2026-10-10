@@ -22,6 +22,16 @@ export function isNarrow(page: Page): boolean {
   return (page.viewportSize()?.width ?? 1280) <= 900;
 }
 
+/** Phones show the week from Monday to Friday unless it has weekend classes. */
+export function isPhone(page: Page): boolean {
+  return (page.viewportSize()?.width ?? 1280) <= 600;
+}
+
+/** The title of a week: the whole week, or Monday–Friday on phones. */
+export function weekTitle(page: Page, wholeWeek: string, workingWeek: string) {
+  return isPhone(page) ? workingWeek : wholeWeek;
+}
+
 /** Closes the sheet over the calendar, if one is open. */
 export async function closeSheet(page: Page) {
   const sheet = page.locator('.sheet');
