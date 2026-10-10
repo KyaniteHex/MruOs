@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   AccountExportSchema,
   CalendarBackupSchema,
+  CalendarFeedOptionsSchema,
   ChangePasswordInputSchema,
+  CreatedCalendarFeedSchema,
   DeleteAccountInputSchema,
   EventCreateInputSchema,
   EventUpdateInputSchema,
@@ -93,5 +95,42 @@ describe('AccountExportSchema', () => {
     });
 
     expect(CalendarBackupSchema.safeParse(exported).success).toBe(true);
+  });
+});
+
+describe('calendar subscription schemas', () => {
+  const options = {
+    assessments: true,
+    notes: false,
+    daysOff: false,
+    periods: false,
+  };
+
+  it('accepts a new subscription with a 43-character token', () => {
+    expect(
+      CreatedCalendarFeedSchema.safeParse({
+        active: true,
+        createdAt: '2026-10-07T12:00:00.000Z',
+        options,
+        token: 'a'.repeat(42) + '-',
+      }).success,
+    ).toBe(true);
+    expect(
+      CreatedCalendarFeedSchema.safeParse({
+        active: true,
+        options,
+        token: 'too-short',
+      }).success,
+    ).toBe(false);
+  });
+
+  it('accepts only the four known options', () => {
+    expect(CalendarFeedOptionsSchema.safeParse(options).success).toBe(true);
+    expect(
+      CalendarFeedOptionsSchema.safeParse({ ...options, extra: true }).success,
+    ).toBe(false);
+    expect(
+      CalendarFeedOptionsSchema.safeParse({ assessments: true }).success,
+    ).toBe(false);
   });
 });

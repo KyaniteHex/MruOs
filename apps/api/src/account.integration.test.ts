@@ -6,6 +6,7 @@ import { AccountExportSchema } from '@mruos/shared';
 import { createApp } from './app.js';
 import { startInMemoryDatabase } from './inMemoryDatabase.js';
 import type { InMemoryDatabase } from './inMemoryDatabase.js';
+import { CalendarFeedModel } from './models/calendarFeed.js';
 import { EntryModel } from './models/entry.js';
 import { EventModel } from './models/event.js';
 import { LoginThrottleModel } from './models/loginThrottle.js';
@@ -73,6 +74,7 @@ describe('account settings', () => {
       EventModel.init(),
       EntryModel.init(),
       SemesterModel.init(),
+      CalendarFeedModel.init(),
       LoginThrottleModel.init(),
     ]);
     app = createApp({
@@ -88,6 +90,7 @@ describe('account settings', () => {
       EventModel.deleteMany({}),
       EntryModel.deleteMany({}),
       SemesterModel.deleteMany({}),
+      CalendarFeedModel.deleteMany({}),
       LoginThrottleModel.deleteMany({}),
     ]);
   });
@@ -175,6 +178,7 @@ describe('account settings', () => {
       semester: { startDate: '2026-10-01', daysOff: [] },
       entries: [{ id: 'exam-1', entry: exam }],
     });
+    const { token } = (await laptop.post('/calendar-feed')).body;
 
     expect(
       (await laptop.delete('/account').send({ password: 'wrong-password' }))
@@ -187,6 +191,8 @@ describe('account settings', () => {
     expect(await UserModel.countDocuments({ _id: userId })).toBe(0);
     expect(await EventModel.countDocuments({ userId })).toBe(0);
     expect(await EntryModel.countDocuments({ userId })).toBe(0);
+    expect(await CalendarFeedModel.countDocuments({ userId })).toBe(0);
+    expect((await request(app).get(`/ical/${token}.ics`)).status).toBe(404);
     expect(await SemesterModel.countDocuments({ userId })).toBe(0);
     expect((await laptop.get('/auth/me')).status).toBe(401);
     expect((await phone.get('/calendar')).status).toBe(401);

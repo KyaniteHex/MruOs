@@ -10,8 +10,11 @@ export {
   AssessmentKindSchema,
   AssessmentSchema,
   CalendarBackupSchema,
+  CalendarFeedOptionsSchema,
+  CalendarFeedSchema,
   ChangePasswordInputSchema,
   ClassAnchorSchema,
+  CreatedCalendarFeedSchema,
   DeleteAccountInputSchema,
   CalendarSnapshotSchema,
   AuthenticatedUserSchema,
@@ -49,6 +52,7 @@ export {
   academicWeekCalendar,
   academicYearDaysOff,
   findSemester,
+  semesterAnnotations,
   semesterFromAcademicYear,
   semesterWeekCalendar,
   teachingDates,
@@ -74,6 +78,12 @@ export type {
   UpcomingAssessment,
 } from './entries.js';
 export { easterSunday, polishPublicHolidays } from './holidays.js';
+export {
+  assessmentKindLabels,
+  assessmentKindMarks,
+  classTypeLabels,
+  noteMark,
+} from './labels.js';
 export { expandOccurrences } from './recurrence.js';
 export {
   displaySubject,
@@ -120,7 +130,10 @@ export type {
   Assessment,
   AssessmentKind,
   CalendarBackup,
+  CalendarFeed,
+  CalendarFeedOptions,
   ClassAnchor,
+  CreatedCalendarFeed,
   ChangePasswordInput,
   DeleteAccountInput,
   CalendarSnapshot,

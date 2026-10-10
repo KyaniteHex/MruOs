@@ -507,6 +507,67 @@ a {
   color: #8f3f2b;
 }
 
+.feed-link {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0;
+  border-left: 3px solid #25745b;
+  border-radius: 3px;
+  padding: 12px;
+  background: #eef6f1;
+  color: #24332d;
+}
+
+.feed-link p {
+  margin: 0;
+}
+
+.feed-link input {
+  width: 100%;
+  min-width: 0;
+  height: 40px;
+  border: 1px solid #dce4db;
+  border-radius: 4px;
+  padding: 0 10px;
+  background: #fff;
+  color: #293a31;
+  font: inherit;
+  font-size: 13px;
+}
+
+.feed-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.feed-options {
+  margin: 12px 0 0;
+}
+
+.feed-help {
+  margin-top: 14px;
+  color: #26342b;
+  font-size: 13px;
+}
+
+.feed-help summary {
+  color: #25745b;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.feed-help h3 {
+  margin: 12px 0 4px;
+  font-size: 13px;
+}
+
+.feed-help ol {
+  margin: 0;
+  padding-left: 20px;
+}
+
 .account-mode {
   color: #43544a;
   font-size: 12px;

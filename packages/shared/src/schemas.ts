@@ -284,6 +284,30 @@ export const CalendarBackupSchema = CalendarSnapshotSchema.extend({
   version: z.literal(1),
 });
 
+/** What a calendar file or subscription contains besides the classes. */
+export const CalendarFeedOptionsSchema = z.strictObject({
+  /** Kolokwia and exams, with their reminders. */
+  assessments: z.boolean(),
+  /** Notes, in the descriptions of their classes. */
+  notes: z.boolean(),
+  /** Days off as all-day events. */
+  daysOff: z.boolean(),
+  /** Breaks, exam sessions and other periods as all-day events. */
+  periods: z.boolean(),
+});
+
+/** The account's subscription; the link itself is shown only once. */
+export const CalendarFeedSchema = z.strictObject({
+  active: z.boolean(),
+  createdAt: z.iso.datetime().optional(),
+  options: CalendarFeedOptionsSchema,
+});
+
+/** A new subscription, with the secret token for its link. */
+export const CreatedCalendarFeedSchema = CalendarFeedSchema.extend({
+  token: z.string().regex(/^[\w-]{43}$/),
+});
+
 const emailSchema = z.string().trim().toLowerCase().email();
 
 const newPasswordSchema = z.string().min(12).max(128);

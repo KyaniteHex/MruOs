@@ -5,8 +5,13 @@ import type { Store } from 'express-session';
 import { defaultLockoutPolicy } from './controllers/loginThrottle.js';
 import type { LockoutPolicy } from './controllers/loginThrottle.js';
 import { createAuthLimiter } from './middleware/authLimiter.js';
+import { createRateLimiter } from './middleware/rateLimiter.js';
 import { createAccountRoutes } from './routes/accountRoutes.js';
 import { createAuthRoutes } from './routes/authRoutes.js';
+import {
+  calendarFeedRoutes,
+  createIcalRoutes,
+} from './routes/calendarFeedRoutes.js';
 import { calendarRoutes } from './routes/calendarRoutes.js';
 import { eventRoutes } from './routes/eventRoutes.js';
 import { semesterRoutes } from './routes/semesterRoutes.js';
@@ -22,6 +27,8 @@ export type AppOptions = {
   authAttemptLimit?: number;
   /** Failed logins per e-mail that lock it for a while. */
   loginLockout?: Partial<LockoutPolicy>;
+  /** Subscription downloads per IP in a 15-minute window. */
+  feedRequestLimit?: number;
   /**
    * Required header value on every request except /health. When set, the API
    * sits behind the Vercel proxy, so forwarded headers are trusted too.
@@ -77,6 +84,17 @@ export function createApp(options: AppOptions) {
     });
   }
 
+  // Subscribed calendars send no cookies, so these come before sessions.
+  app.use(
+    '/ical',
+    createIcalRoutes(
+      createRateLimiter(
+        options.feedRequestLimit ?? 60,
+        Boolean(options.originSecret),
+      ),
+    ),
+  );
+
   app.use(
     session({
       name: 'mruos.sid',
@@ -112,6 +130,7 @@ export function createApp(options: AppOptions) {
   app.use('/events', eventRoutes);
   app.use('/semester', semesterRoutes);
   app.use('/calendar', calendarRoutes);
+  app.use('/calendar-feed', calendarFeedRoutes);
   app.use(errorHandler);
 
   return app;

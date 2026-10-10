@@ -155,10 +155,12 @@ Testy muszą obejmować:
 
 ## Etap 12: Subskrypcja kalendarza
 
-- [ ] Tajny link subskrypcji dla każdego konta, z generowaniem nowego i unieważnianiem starego; na serwerze tylko skrót tokenu
-- [ ] Adres .ics bez logowania: zajęcia z wyjątkami, dni wolne, kolokwia i egzaminy z przypomnieniami; notatki tylko po włączeniu przełącznika (domyślnie wyłączony)
-- [ ] Limit zapytań do adresu subskrypcji
-- [ ] Instrukcja dodania w Google Calendar, na iPhonie i Macu
+- [x] Tajny link subskrypcji dla każdego konta, pokazany tylko raz przy utworzeniu; generowanie nowego unieważnia stary, można też wyłączyć subskrypcję; na serwerze tylko skrót tokenu
+- [x] Adres .ics bez logowania: zajęcia z wyjątkami oraz do wyboru kolokwia i egzaminy z przypomnieniami (domyślnie włączone), notatki, dni wolne, przerwy i sesja (domyślnie wyłączone); zmiana ustawień bez nowego linku
+- [x] Kolokwium lub egzamin w czasie zajęć to jedno wydarzenie z zajęciami (np. „⚑ Matematyka · Kolokwium”), także w pobieranym pliku .ics; te same opcje w oknie „Eksport ICS”
+- [x] Generowanie .ics w `packages/shared`, wspólne dla pliku i subskrypcji
+- [x] Limit zapytań do adresu subskrypcji
+- [x] Instrukcja dodania w Google Calendar, na iPhonie i Macu
 
 **Gotowe, gdy:** link dodany w Google Calendar pokazuje plan, zmiana w MruOS pojawia się po odświeżeniu przez Google, a unieważniony link przestaje działać.
 

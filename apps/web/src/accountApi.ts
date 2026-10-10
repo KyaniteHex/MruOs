@@ -2,15 +2,21 @@ import {
   AccountExportSchema,
   AccountInfoSchema,
   AuthResponseSchema,
+  CalendarFeedSchema,
+  CreatedCalendarFeedSchema,
 } from '@mruos/shared';
 import type {
   AccountExport,
   AccountInfo,
   AuthenticatedUser,
+  CalendarFeed,
+  CalendarFeedOptions,
+  CreatedCalendarFeed,
 } from '@mruos/shared';
 
-// Calls to /auth and /account. Responses are validated before use and every
-// failure becomes a code the pages turn into a Polish message.
+// Calls to /auth, /account and /calendar-feed. Responses are validated
+// before use and every failure becomes a code the pages turn into a Polish
+// message.
 
 export type AccountApiError =
   | 'invalid-credentials'
@@ -112,6 +118,10 @@ export function createAccountApi(
     return parsed.success ? parsed.data.user : null;
   };
   const done = (): true => true;
+  const feed = (body: unknown): CalendarFeed | null => {
+    const parsed = CalendarFeedSchema.safeParse(body);
+    return parsed.success ? parsed.data : null;
+  };
   const json = (body: unknown) => JSON.stringify(body);
 
   return {
@@ -141,6 +151,25 @@ export function createAccountApi(
       }),
     deleteAccount: (password: string) =>
       call('/account', { method: 'DELETE', body: json({ password }) }, done),
+    calendarFeed: () => call('/calendar-feed', {}, feed),
+    /** A new secret link; an existing one stops working. */
+    createCalendarFeed: () =>
+      call(
+        '/calendar-feed',
+        { method: 'POST' },
+        (body): CreatedCalendarFeed | null => {
+          const parsed = CreatedCalendarFeedSchema.safeParse(body);
+          return parsed.success ? parsed.data : null;
+        },
+      ),
+    updateCalendarFeedOptions: (options: CalendarFeedOptions) =>
+      call(
+        '/calendar-feed/options',
+        { method: 'PUT', body: json(options) },
+        feed,
+      ),
+    deleteCalendarFeed: () =>
+      call('/calendar-feed', { method: 'DELETE' }, done),
   };
 }
 

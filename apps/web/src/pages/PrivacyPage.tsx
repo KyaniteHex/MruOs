@@ -21,6 +21,13 @@ export function PrivacyPage() {
             egzaminy i notatki, harmonogram roku akademickiego i dni wolne.
           </li>
           <li>
+            <strong>Subskrypcja kalendarza:</strong> jeśli ją włączysz, skrót
+            tajnego kodu z linku (samego kodu nie zapisujemy) i wybrane
+            ustawienia. Kalendarz, któremu podasz link, na przykład Google lub
+            Apple, pobiera z niego plan i przechowuje go u siebie na swoich
+            zasadach.
+          </li>
+          <li>
             <strong>Sesja:</strong> identyfikator sesji w ciasteczku
             <code> mruos.sid</code>, dzięki któremu pozostajesz zalogowany.
           </li>
@@ -66,6 +73,10 @@ export function PrivacyPage() {
             <Link to="/konto">Konto</Link> („Pobierz moje dane”, „Usuń konto”).
           </li>
           <li>Zmiana hasła i wylogowanie innych urządzeń: także w Koncie.</li>
+          <li>
+            Unieważnienie linku subskrypcji: „Wygeneruj nowy link” albo „Wyłącz
+            subskrypcję” w Koncie.
+          </li>
         </ul>
 
         <h2>Kontakt</h2>

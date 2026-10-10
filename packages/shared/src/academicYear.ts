@@ -215,6 +215,21 @@ export function academicAnnotations(year: AcademicYear): CalendarAnnotation[] {
   );
 }
 
+/**
+ * Days off, breaks, exams and events of a semester. Without an academic
+ * calendar its days off get a generic name.
+ */
+export function semesterAnnotations(semester: Semester): CalendarAnnotation[] {
+  return semester.academicYear
+    ? academicAnnotations(semester.academicYear)
+    : semester.daysOff.map((date) => ({
+        kind: 'day-off',
+        label: 'Dzień wolny',
+        startDate: date,
+        endDate: date,
+      }));
+}
+
 /** Today's date in the app's time zone. */
 export function todayInWarsaw(): string {
   return isoDate(DateTime.now().setZone(zone));

@@ -1,5 +1,5 @@
 import type { EventInput } from '@fullcalendar/core';
-import { academicAnnotations, classKey, dayAfter } from '@mruos/shared';
+import { classKey, dayAfter, semesterAnnotations } from '@mruos/shared';
 import type {
   AssessmentKind,
   CalendarAnnotation,
@@ -134,16 +134,7 @@ export type AnnotationDetails = {
  * academic calendar the semester's days off get a generic name.
  */
 export function toAnnotationEvents(semester: Semester): EventInput[] {
-  const annotations: CalendarAnnotation[] = semester.academicYear
-    ? academicAnnotations(semester.academicYear)
-    : semester.daysOff.map((date) => ({
-        kind: 'day-off',
-        label: 'Dzień wolny',
-        startDate: date,
-        endDate: date,
-      }));
-
-  return annotations.map((annotation, index) => ({
+  return semesterAnnotations(semester).map((annotation, index) => ({
     id: `annotation-${index}`,
     title:
       annotation.kind === 'day-off' && annotation.label !== 'Dzień wolny'

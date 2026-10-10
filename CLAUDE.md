@@ -70,6 +70,7 @@ Zasady, których trzeba przestrzegać:
 - Kolokwia, egzaminy i notatki to wpisy w osobnej kolekcji `entries` (jeden dokument na wpis, `{ id, entry }` w planie). Kolokwium i egzamin są „w czasie zajęć” (`anchor.type: 'class'`) albo w osobnym terminie (`'own'`: data, godziny, opcjonalnie budynek i sala); notatka dotyczy terminu zajęć albo całego przedmiotu (`'subject'`). Przypomnienia to `P7D`, `P1D`, `PT2H`.
 - Wpis „w czasie zajęć” jest przypięty przez przedmiot, typ zajęć, datę i godzinę rozpoczęcia, a nie przez id serii, dzięki czemu przetrwa ponowny import planu. Gdy godzina się zmieni, a tego dnia jest tylko jedne takie zajęcia, wpis zostaje przy nich. Wpisy, których zajęcia zniknęły (odwołane, dzień wolny, inny plan), trafiają na listę „Wpisy bez terminu”.
 - Zapis planu bez pola `entries` (np. ze strony wczytanej przed wydaniem z wpisami) nie usuwa wpisów na serwerze.
+- Pliki .ics buduje tylko `calendarIcs` z `@mruos/shared/ics`, wspólny dla pobierania i subskrypcji (frontend ładuje go dynamicznie). Kolokwium lub egzamin w czasie zajęć jest częścią wydarzenia zajęć; w osobnym terminie to osobne wydarzenie. Opcje: kolokwia i egzaminy, notatki, dni wolne, przerwy i sesja.
 - Typy i schematy zod są zdefiniowane wyłącznie w `packages/shared` i importowane przez frontend oraz backend.
 
 ## Konwencje kodu
@@ -89,6 +90,7 @@ Zasady, których trzeba przestrzegać:
 - Każde zapytanie do bazy dotyczące wydarzeń jest filtrowane po `userId` zalogowanego użytkownika.
 - Walidacja wejścia schematami zod na każdym endpoincie.
 - `helmet` oraz rate limiting na endpointach logowania i rejestracji.
+- Subskrypcja kalendarza (kolekcja `calendarfeeds`, jedna na konto): w bazie tylko SHA-256 tokenu z linku, token pokazywany raz; nieznany lub unieważniony link daje 404; `/ical` działa bez sesji, ma własny limit zapytań i jest usuwany razem z kontem.
 - Zmiana hasła i usunięcie konta wymagają obecnego hasła. Zmiana hasła i „wyloguj pozostałe urządzenia” zwiększają `sessionVersion` użytkownika, co unieważnia jego pozostałe sesje.
 - Sekrety tylko w zmiennych środowiskowych, nigdy w repozytorium.
 
