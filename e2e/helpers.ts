@@ -17,6 +17,38 @@ export const test = base.extend({
 
 export const password = 'correct-horse-battery';
 
+/** Phones and tablets held upright get details and lists in a sheet. */
+export function isNarrow(page: Page): boolean {
+  return (page.viewportSize()?.width ?? 1280) <= 900;
+}
+
+/** Closes the sheet over the calendar, if one is open. */
+export async function closeSheet(page: Page) {
+  const sheet = page.locator('.sheet');
+  if (await sheet.isVisible()) {
+    await sheet.getByRole('button', { name: 'Zamknij' }).click();
+    await expect(sheet).toBeHidden();
+  }
+}
+
+/** "Nadchodzące" at a glance: the side panel, or the bar on phones. */
+export function upcomingSummary(page: Page): Locator {
+  return page.locator(isNarrow(page) ? '.upcoming-bar' : '.upcoming-panel');
+}
+
+/** The full "Nadchodzące" list; phones open it from the bar. */
+export async function openUpcoming(page: Page): Promise<Locator> {
+  if (!isNarrow(page)) {
+    return page.locator('.upcoming-panel');
+  }
+  await closeSheet(page);
+  await page.locator('.upcoming-bar').click();
+  const sheet = page.getByRole('dialog', { name: 'Nadchodzące' });
+  await expect(sheet).toBeVisible();
+
+  return sheet;
+}
+
 export function uniqueEmail(): string {
   return `e2e-${Date.now()}-${Math.random().toString(36).slice(2, 10)}@example.com`;
 }
@@ -77,16 +109,19 @@ export async function addFromMenu(
   page: Page,
   item: 'Zajęcia' | 'Kolokwium lub egzamin',
 ) {
+  await closeSheet(page);
   await page.getByRole('button', { name: '+ Dodaj' }).click();
   await page.getByRole('menuitem', { name: item }).click();
 }
 
 export async function showMonth(page: Page) {
+  await closeSheet(page);
   await page.getByRole('button', { name: 'Miesiąc', exact: true }).click();
   await expect(page.locator('.fc-dayGridMonth-view')).toBeVisible();
 }
 
 export async function openSettings(page: Page) {
+  await closeSheet(page);
   await page.getByRole('link', { name: 'Ustawienia' }).click();
   await expect(
     page.getByRole('heading', { name: 'Ustawienia', level: 1 }),
@@ -153,10 +188,13 @@ export function eventOn(page: Page, date: string, subject: string): Locator {
 
 /** The next month, week or day, depending on the view. */
 export async function goToNextMonth(page: Page) {
+  await closeSheet(page);
   await page.getByRole('button', { name: 'Następny' }).click();
 }
 
+/** Opens a class's details: in the side panel, or in a sheet on phones. */
 export async function openDetails(page: Page, date: string, subject: string) {
+  await closeSheet(page);
   await eventOn(page, date, subject).click();
   const details = page.locator('.event-details');
   await expect(details).toContainText(date);

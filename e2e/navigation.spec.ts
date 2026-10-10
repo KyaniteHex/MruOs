@@ -1,4 +1,12 @@
-import { dayCell, expect, openAsGuest, showMonth, test } from './helpers';
+import {
+  dayCell,
+  expect,
+  isNarrow,
+  openAsGuest,
+  openSettings,
+  showMonth,
+  test,
+} from './helpers';
 
 // Uses the demo plan shown to visitors without an account; the clock says
 // Wednesday 30 September 2026.
@@ -57,6 +65,72 @@ test('opens the day view with hours and class details', async ({ page }) => {
   await expect(page.locator('.event-details')).toContainText('2026-09-30');
   await expect(classBlock).toHaveClass(/is-selected/);
 
-  await page.getByRole('button', { name: 'Miesiąc', exact: true }).click();
-  await expect(page.locator('.fc-dayGridMonth-view')).toBeVisible();
+  await showMonth(page);
+});
+
+test('fits the calendar to the screen in every view', async ({ page }) => {
+  const screenHeight = page.viewportSize()?.height ?? 0;
+  for (const view of ['Tydzień', 'Miesiąc', 'Dzień']) {
+    await page.getByRole('button', { name: view, exact: true }).click();
+    const box = await page.locator('.calendar-panel').boundingBox();
+    expect((box?.y ?? 0) + (box?.height ?? Infinity)).toBeLessThanOrEqual(
+      screenHeight + 1,
+    );
+  }
+});
+
+test('shows the all-day row only in weeks with days off', async ({ page }) => {
+  await expect(page.getByText('cały dzień')).toHaveCount(0);
+
+  // 11 November is a day off of the demo semester.
+  for (let week = 0; week < 6; week += 1) {
+    await page.getByRole('button', { name: 'Następny' }).click();
+  }
+  await expect(page.locator('#calendar-title')).toHaveText(
+    '9–13 listopada 2026',
+  );
+  await expect(page.getByText('cały dzień')).toBeVisible();
+  await expect(page.locator('.calendar-annotation-day-off')).toHaveText(
+    'Dzień wolny',
+  );
+});
+
+test('shows details in a sheet over the calendar on phones', async ({
+  page,
+}) => {
+  test.skip(!isNarrow(page), 'Wide screens show details next to it.');
+  const classBlock = page.locator('.fc-event', { hasText: 'Programowanie' });
+  const sheet = page.getByRole('dialog', { name: 'Szczegóły' });
+
+  await classBlock.click();
+  await expect(sheet).toContainText('Programowanie');
+  await expect(sheet).toContainText('2026-09-30');
+  await page.keyboard.press('Escape');
+  await expect(sheet).toBeHidden();
+  await expect(classBlock).not.toHaveClass(/is-selected/);
+
+  // A tap above the sheet closes it too.
+  await classBlock.click();
+  await expect(sheet).toBeVisible();
+  await page.mouse.click(20, 20);
+  await expect(sheet).toBeHidden();
+});
+
+test('keeps menus on the screen', async ({ page }) => {
+  const screenWidth = page.viewportSize()?.width ?? 0;
+  async function expectMenuOnScreen(button: string) {
+    await page.getByRole('button', { name: button, exact: true }).click();
+    const box = await page.getByRole('menu').boundingBox();
+    expect(box?.x ?? -1).toBeGreaterThanOrEqual(0);
+    expect((box?.x ?? 0) + (box?.width ?? Infinity)).toBeLessThanOrEqual(
+      screenWidth,
+    );
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('menu')).toHaveCount(0);
+  }
+
+  await expectMenuOnScreen('+ Dodaj');
+  await openSettings(page);
+  await expectMenuOnScreen('Import');
+  await expectMenuOnScreen('Eksport');
 });

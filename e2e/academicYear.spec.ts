@@ -48,9 +48,16 @@ test('dates an imported timetable by the academic calendar', async ({
     'Narodowe Święto Niepodległości',
   );
   await goToNextMonth(page);
-  await expect(
-    dayCell(page, '2026-12-21').getByText('Wakacje zimowe'),
-  ).toBeVisible();
+  const winterBreak = dayCell(page, '2026-12-21').getByText('Wakacje zimowe');
+  await expect(winterBreak).toBeVisible();
+  // A holiday in the break sits in the row below the break's bar.
+  const breakBox = await winterBreak.boundingBox();
+  const christmasEveBox = await dayCell(page, '2026-12-24')
+    .getByTitle('Dzień wolny: Wigilia Bożego Narodzenia')
+    .boundingBox();
+  expect(christmasEveBox?.y ?? 0).toBeGreaterThanOrEqual(
+    (breakBox?.y ?? Infinity) + (breakBox?.height ?? 0),
+  );
 
   await chooseInSettings(page, 'Import', 'Format XLSX (UMK CM)');
   const importDialog = page.getByRole('dialog', { name: 'Import z Excela' });
