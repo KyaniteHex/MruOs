@@ -2,6 +2,7 @@ import { DateTime } from 'luxon';
 import { weekdayPlanNames } from './labels.js';
 import { semesterWeekRange } from './semester.js';
 import type {
+  AcademicDayPlan,
   AcademicPeriodKind,
   AcademicSemester,
   AcademicTerm,
@@ -186,6 +187,97 @@ export function academicWeekCalendar(
     cache.set(weekday, dates);
 
     return dates[week - 1] ?? null;
+  };
+}
+
+/** Class dates by calendar week, as plans exported from CELCAT count them. */
+export type CalendarWeeks = {
+  /** Dates of a weekday in week N, with days that follow its plan. */
+  weekDates: (week: number, weekday: Weekday) => string[];
+  weekCount: number;
+};
+
+/**
+ * Calendar weeks as UG numbers them: week 1 is the Monday–Sunday week with
+ * the first teaching day, and weeks keep counting through breaks, so "I
+ * tydzień" is every odd week. Only dates in teaching periods are class dates.
+ */
+export function calendarWeeks(
+  year: AcademicYear,
+  term: AcademicTerm,
+): CalendarWeeks | null {
+  const periods = (findSemester(year, term)?.periods ?? [])
+    .filter((period) => period.kind === 'teaching')
+    .sort((left, right) => left.startDate.localeCompare(right.startDate));
+  const first = periods[0];
+  const last = periods.at(-1);
+  if (!first || !last) {
+    return null;
+  }
+  const isTeaching = (date: string) =>
+    periods.some(
+      (period) => date >= period.startDate && date <= period.endDate,
+    );
+
+  return weeksFrom(
+    first.startDate,
+    last.endDate,
+    isTeaching,
+    year.dayPlans ?? [],
+  );
+}
+
+/** Without a calendar: weeks from the semester start, all of them teaching. */
+export function calendarWeeksFrom(
+  startDate: string,
+  weekCount = 15,
+): CalendarWeeks {
+  const lastDay = isoDate(
+    DateTime.fromISO(startDate, { zone })
+      .startOf('week')
+      .plus({ weeks: weekCount, days: -1 }),
+  );
+
+  return weeksFrom(startDate, lastDay, (date) => date >= startDate, []);
+}
+
+function weeksFrom(
+  firstDay: string,
+  lastDay: string,
+  isTeaching: (date: string) => boolean,
+  dayPlans: readonly AcademicDayPlan[],
+): CalendarWeeks {
+  const firstWeek = DateTime.fromISO(firstDay, { zone }).startOf('week');
+  const lastWeek = DateTime.fromISO(lastDay, { zone }).startOf('week');
+  const plans = new Map(dayPlans.map((plan) => [plan.date, plan.weekday]));
+
+  return {
+    weekCount: Math.round(lastWeek.diff(firstWeek, 'weeks').weeks) + 1,
+    weekDates: (week, weekday) => {
+      const weekStart = firstWeek.plus({ weeks: week - 1 });
+      const own = isoDate(
+        weekStart.plus({ days: weekdayNumbers[weekday] - 1 }),
+      );
+      const ownPlan = plans.get(own);
+      const dates =
+        isTeaching(own) && (ownPlan === undefined || ownPlan === weekday)
+          ? [own]
+          : [];
+      const monday = isoDate(weekStart);
+      const sunday = isoDate(weekStart.plus({ days: 6 }));
+      for (const [date, planned] of plans) {
+        if (
+          planned === weekday &&
+          date !== own &&
+          date >= monday &&
+          date <= sunday &&
+          isTeaching(date)
+        ) {
+          dates.push(date);
+        }
+      }
+      return dates.sort();
+    },
   };
 }
 

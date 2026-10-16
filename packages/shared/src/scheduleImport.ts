@@ -1,9 +1,19 @@
 import { DateTime } from 'luxon';
 import { displaySubject } from './scheduleBlock.js';
-import type { BlockIssueCode, ParsedBlock } from './scheduleBlock.js';
+import type {
+  BlockIssueCode,
+  ParsedBlock,
+  WeekParity,
+} from './scheduleBlock.js';
 import { EventSchema } from './schemas.js';
 import type { WeekCalendar } from './academicYear.js';
-import type { ClassType, Event, EventException, Weekday } from './types.js';
+import type {
+  AcademicDayPlan,
+  ClassType,
+  Event,
+  EventException,
+  Weekday,
+} from './types.js';
 
 // Turns parsed timetable blocks into class series for the chosen groups.
 // Every block that cannot become a valid series is still returned as a
@@ -25,6 +35,7 @@ export type ImportIssueCode =
   | BlockIssueCode
   | 'invalid-event'
   | 'room-change-unmatched'
+  | 'date-unmatched'
   | 'week-out-of-range';
 
 export type ImportIssue = { code: ImportIssueCode; detail?: string };
@@ -39,9 +50,12 @@ export type ImportCandidate = {
   startTime: string | null;
   endTime: string | null;
   weeks: number[];
+  /** Set when the plan gives a rhythm, e.g. "I tydzień", not week numbers. */
+  parity?: WeekParity;
   group: string | null;
   room: string;
   building: string;
+  teacher: string | null;
   /** Null when the block lacks data needed to create a series. */
   event: Event | null;
   issues: ImportIssue[];
@@ -50,6 +64,12 @@ export type ImportCandidate = {
 export type ImportOptions = {
   /** Date of semester week N for a weekday; null beyond the semester. */
   weekDate: WeekCalendar;
+  /** Dates of week N when there can be several, e.g. with day swaps. */
+  weekDates?: (week: number, weekday: Weekday) => string[];
+  /** How many weeks a rhythm such as "I tydzień" spans. */
+  weekCount?: number;
+  /** Days with another weekday's classes, cancelled when not class dates. */
+  dayPlans?: readonly AcademicDayPlan[];
   selection: ImportSelection;
   colorFor: (classType: ClassType) => string;
   /** Subject names written elsewhere in the sheet, used for nicer casing. */
@@ -148,6 +168,15 @@ export function defaultSelection(
   );
 }
 
+function sameDay(date: string, day: number, month: number): boolean {
+  const value = DateTime.fromISO(date, { zone: 'Europe/Warsaw' });
+  return value.day === day && value.month === month;
+}
+
+function dayMonthLabel(day: number, month: number): string {
+  return `${day}.${String(month).padStart(2, '0')}`;
+}
+
 function buildEvent(
   base: Omit<ImportCandidate, 'event' | 'issues' | 'id'>,
   block: ParsedBlock,
@@ -159,20 +188,40 @@ function buildEvent(
     return null;
   }
 
-  const classDates = new Map<number, string>();
+  const weekDates =
+    options.weekDates ??
+    ((week: number, day: Weekday) => {
+      const date = options.weekDate(week, day);
+      return date ? [date] : [];
+    });
+  const classDates = new Set<string>();
   const missingWeeks: number[] = [];
   for (const week of weeks) {
-    const date = options.weekDate(week, weekday);
-    if (date) {
-      classDates.set(week, date);
-    } else {
+    const dates = weekDates(week, weekday);
+    dates.forEach((date) => classDates.add(date));
+    if (dates.length === 0) {
       missingWeeks.push(week);
     }
   }
-  if (missingWeeks.length > 0) {
+  // A rhythm spans breaks, so its weeks without classes are expected.
+  if (missingWeeks.length > 0 && !base.parity) {
     issues.push({ code: 'week-out-of-range', detail: missingWeeks.join(', ') });
   }
-  const dates = [...classDates.values()].sort();
+  let dates = [...classDates].sort();
+  if (block.onlyOn.length > 0) {
+    const onDates = dates.filter((date) =>
+      block.onlyOn.some(({ day, month }) => sameDay(date, day, month)),
+    );
+    if (onDates.length === 0) {
+      issues.push({
+        code: 'date-unmatched',
+        detail: block.onlyOn
+          .map(({ day, month }) => dayMonthLabel(day, month))
+          .join(', '),
+      });
+    }
+    dates = onDates;
+  }
   const first = dates[0];
   const last = dates.at(-1);
   if (!first || !last) {
@@ -180,29 +229,50 @@ function buildEvent(
   }
 
   // A weekly series runs through breaks between teaching periods, so every
-  // date between the first and last class that is not a class is cancelled.
+  // date between the first and last class that is not a class is cancelled,
+  // like days with this weekday's plan that are not class dates.
   const exceptions: EventException[] = [];
   const classDays = new Set(dates);
+  const plans = new Map(
+    (options.dayPlans ?? []).map((plan) => [plan.date, plan.weekday]),
+  );
   const lastDay = DateTime.fromISO(last, { zone: 'Europe/Warsaw' });
   for (
-    let day = DateTime.fromISO(first, { zone: 'Europe/Warsaw' });
-    day <= lastDay;
-    day = day.plus({ weeks: 1 })
+    let weekStart = DateTime.fromISO(first, { zone: 'Europe/Warsaw' }).startOf(
+      'week',
+    );
+    weekStart <= lastDay;
+    weekStart = weekStart.plus({ weeks: 1 })
   ) {
-    const date = day.toISODate() ?? '';
-    if (!classDays.has(date)) {
+    const date =
+      weekStart.plus({ days: weekdayNumbers[weekday] - 1 }).toISODate() ?? '';
+    const planned = plans.get(date);
+    if (
+      date >= first &&
+      date <= last &&
+      !classDays.has(date) &&
+      (planned === undefined || planned === weekday)
+    ) {
+      exceptions.push({ date, status: 'cancelled' });
+    }
+  }
+  for (const [date, planned] of plans) {
+    if (
+      planned === weekday &&
+      date >= first &&
+      date <= last &&
+      !classDays.has(date) &&
+      !exceptions.some((exception) => exception.date === date)
+    ) {
       exceptions.push({ date, status: 'cancelled' });
     }
   }
   for (const change of block.roomChanges) {
-    const match = dates.find((date) => {
-      const day = DateTime.fromISO(date, { zone: 'Europe/Warsaw' });
-      return day.day === change.day && day.month === change.month;
-    });
+    const match = dates.find((date) => sameDay(date, change.day, change.month));
     if (!match) {
       issues.push({
         code: 'room-change-unmatched',
-        detail: `${change.day}.${String(change.month).padStart(2, '0')}`,
+        detail: dayMonthLabel(change.day, change.month),
       });
       continue;
     }
@@ -223,6 +293,7 @@ function buildEvent(
     color: options.colorFor(classType),
     building: base.building,
     room: base.room,
+    ...(base.teacher ? { teacher: base.teacher } : {}),
     startTime,
     endTime,
     timezone: 'Europe/Warsaw',
@@ -233,7 +304,9 @@ function buildEvent(
       startDate: first,
       endDate: last,
     },
-    exceptions,
+    exceptions: exceptions.sort((left, right) =>
+      left.date.localeCompare(right.date),
+    ),
   });
 
   if (!parsed.success) {
@@ -242,6 +315,14 @@ function buildEvent(
   }
 
   return parsed.data;
+}
+
+/** Week numbers of a rhythm over the semester's weeks. */
+function parityWeeks(parity: WeekParity, weekCount: number): number[] {
+  return Array.from({ length: weekCount }, (_, index) => index + 1).filter(
+    (week) =>
+      parity === 'all' || (parity === 'odd' ? week % 2 === 1 : week % 2 === 0),
+  );
 }
 
 export function buildImportCandidates(
@@ -268,7 +349,12 @@ export function buildImportCandidates(
     // group rotation becomes one series with several weeks.
     const merged = new Map<
       string,
-      { startTime: string | null; endTime: string | null; weeks: Set<number> }
+      {
+        startTime: string | null;
+        endTime: string | null;
+        weeks: Set<number>;
+        parity?: WeekParity;
+      }
     >();
     const sessions =
       block.sessions.length > 0
@@ -281,13 +367,17 @@ export function buildImportCandidates(
       if (!forStudent) {
         continue;
       }
-      const timeKey = `${session.startTime}-${session.endTime}`;
+      const timeKey = `${session.startTime}-${session.endTime}-${session.parity ?? ''}`;
       const entry = merged.get(timeKey) ?? {
         startTime: session.startTime,
         endTime: session.endTime,
         weeks: new Set<number>(),
+        ...(session.parity ? { parity: session.parity } : {}),
       };
-      session.weeks.forEach((week) => entry.weeks.add(week));
+      const weeks = session.parity
+        ? parityWeeks(session.parity, options.weekCount ?? 0)
+        : session.weeks;
+      weeks.forEach((week) => entry.weeks.add(week));
       merged.set(timeKey, entry);
     }
 
@@ -302,6 +392,7 @@ export function buildImportCandidates(
         startTime: session.startTime,
         endTime: session.endTime,
         weeks: [...session.weeks].sort((left, right) => left - right),
+        ...(session.parity ? { parity: session.parity } : {}),
         group: block.sessions.some((s) => s.groups.length > 0)
           ? choice.group
           : null,
@@ -309,6 +400,7 @@ export function buildImportCandidates(
         building: block.remote
           ? remoteBuilding
           : (block.building ?? missingValue),
+        teacher: block.teacher,
       };
       const event = buildEvent(base, block, options, issues);
       candidates.push({ ...base, id: `${block.id}:${index}`, event, issues });

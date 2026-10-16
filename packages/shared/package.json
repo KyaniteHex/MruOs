@@ -24,6 +24,14 @@
     "./ics": {
       "types": "./dist/ics.d.ts",
       "import": "./dist/ics.js"
+    },
+    "./pdf": {
+      "types": "./dist/pdf.d.ts",
+      "import": "./dist/pdf.js"
+    },
+    "./ugSchedule": {
+      "types": "./dist/ugSchedule.d.ts",
+      "import": "./dist/ugSchedule.js"
     }
   },
   "scripts": {

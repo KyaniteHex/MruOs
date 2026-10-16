@@ -58,6 +58,8 @@ export {
   academicStartYear,
   dayAfter,
   academicWeekCalendar,
+  calendarWeeks,
+  calendarWeeksFrom,
   academicYearDaysOff,
   findSemester,
   semesterAnnotations,
@@ -69,7 +71,11 @@ export {
   todayInWarsaw,
   weeksToDateRange,
 } from './academicYear.js';
-export type { CalendarAnnotation, WeekCalendar } from './academicYear.js';
+export type {
+  CalendarAnnotation,
+  CalendarWeeks,
+  WeekCalendar,
+} from './academicYear.js';
 export {
   classAnchor,
   classesOn,
