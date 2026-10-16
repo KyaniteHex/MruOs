@@ -245,9 +245,13 @@ class ObjectParser {
 type PdfObject = { value: PdfValue; stream?: Uint8Array };
 
 async function inflate(bytes: Uint8Array): Promise<Uint8Array> {
-  const stream = new Blob([bytes as BlobPart])
-    .stream()
-    .pipeThrough(new DecompressionStream('deflate'));
+  const source = new ReadableStream<BufferSource>({
+    start(controller) {
+      controller.enqueue(new Uint8Array(bytes));
+      controller.close();
+    },
+  });
+  const stream = source.pipeThrough(new DecompressionStream('deflate'));
   return new Uint8Array(await new Response(stream).arrayBuffer());
 }
 
