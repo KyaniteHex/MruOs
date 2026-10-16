@@ -37,6 +37,7 @@ export const ExceptionOverrideSchema = z
     color: z.string().regex(/^#[\da-fA-F]{6}$/),
     building: z.string().trim().min(1),
     room: z.string().trim().min(1),
+    teacher: z.string().trim().min(1).max(300),
     startTime: timeSchema,
     endTime: timeSchema,
   })
@@ -74,6 +75,8 @@ export const EventSchema = z
     color: z.string().regex(/^#[\da-fA-F]{6}$/),
     building: z.string().trim().min(1),
     room: z.string().trim().min(1),
+    /** "Prowadzący", e.g. "Babula (Dr Elżbieta)"; optional. */
+    teacher: z.string().trim().min(1).max(300).optional(),
     startTime: timeSchema,
     endTime: timeSchema,
     timezone: z.literal('Europe/Warsaw'),
@@ -163,6 +166,12 @@ export const AcademicDayOffSchema = z.strictObject({
   label: academicLabelSchema,
 });
 
+/** A date with classes as on another weekday, e.g. Thursday as Monday. */
+export const AcademicDayPlanSchema = z.strictObject({
+  date: dateSchema,
+  weekday: WeekdaySchema,
+});
+
 export const AcademicYearSchema = z.strictObject({
   /** 2026 for the 2026/2027 academic year. */
   startYear: z.number().int().min(2000).max(2100),
@@ -183,6 +192,15 @@ export const AcademicYearSchema = z.strictObject({
         new Set(daysOff.map((dayOff) => dayOff.date)).size === daysOff.length,
       { message: 'days off must be unique' },
     ),
+  /** Days with classes as on another weekday; optional. */
+  dayPlans: z
+    .array(AcademicDayPlanSchema)
+    .max(40)
+    .refine(
+      (plans) => new Set(plans.map((plan) => plan.date)).size === plans.length,
+      { message: 'day plans must be unique' },
+    )
+    .optional(),
 });
 
 export const SemesterSchema = z

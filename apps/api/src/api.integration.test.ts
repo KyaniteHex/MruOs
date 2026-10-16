@@ -395,6 +395,19 @@ describe('API integration and user isolation', () => {
     });
   });
 
+  it('keeps the teacher of a class', async () => {
+    const { agent } = await registerAgent('teacher@example.com');
+    const withTeacher = { ...event, teacher: 'Neumann (Dr Lilia)' };
+
+    expect(
+      (await agent.post('/events').send({ id: 'series-t', event: withTeacher }))
+        .status,
+    ).toBe(201);
+    expect((await agent.get('/calendar')).body.events[0].event.teacher).toBe(
+      'Neumann (Dr Lilia)',
+    );
+  });
+
   it('stores the academic calendar with the semester', async () => {
     const { agent } = await registerAgent('calendar@example.com');
     const academicYear = {
@@ -417,6 +430,7 @@ describe('API integration and user isolation', () => {
       daysOff: [
         { date: '2026-11-11', label: 'Narodowe Święto Niepodległości' },
       ],
+      dayPlans: [{ date: '2027-01-28', weekday: 'MO' }],
     };
     const semester = {
       startDate: '2026-10-01',

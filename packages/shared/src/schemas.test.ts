@@ -34,6 +34,17 @@ describe('EventSchema', () => {
     expect(result.success).toBe(true);
   });
 
+  it('keeps an optional teacher, trimmed', () => {
+    expect(EventSchema.parse(validEvent).teacher).toBeUndefined();
+    expect(
+      EventSchema.parse({ ...validEvent, teacher: ' Babula (Dr Elżbieta) ' })
+        .teacher,
+    ).toBe('Babula (Dr Elżbieta)');
+    expect(EventSchema.safeParse({ ...validEvent, teacher: ' ' }).success).toBe(
+      false,
+    );
+  });
+
   it('rejects invalid times, reversed ranges, and unsupported intervals', () => {
     expect(
       EventSchema.safeParse({ ...validEvent, startTime: '25:00' }).success,
@@ -158,6 +169,24 @@ describe('AcademicYearSchema', () => {
       AcademicYearSchema.safeParse({
         ...calendar,
         semesters: [...calendar.semesters, ...calendar.semesters],
+      }).success,
+    ).toBe(false);
+  });
+
+  it('accepts days with another weekday’s plan, once per date', () => {
+    const plan = { date: '2027-01-28', weekday: 'MO' as const };
+
+    expect(
+      AcademicYearSchema.safeParse({ ...year([]), dayPlans: [plan] }).success,
+    ).toBe(true);
+    expect(
+      AcademicYearSchema.safeParse({ ...year([]), dayPlans: [plan, plan] })
+        .success,
+    ).toBe(false);
+    expect(
+      AcademicYearSchema.safeParse({
+        ...year([]),
+        dayPlans: [{ ...plan, weekday: 'XX' }],
       }).success,
     ).toBe(false);
   });

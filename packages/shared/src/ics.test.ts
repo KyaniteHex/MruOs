@@ -88,6 +88,20 @@ describe('calendarIcs', () => {
     expect(text(events[0], 'description')).toBe('Typ zajęć: Wykład');
   });
 
+  it('names the teacher in the description', () => {
+    const event = EventSchema.parse({
+      ...makeEvent('2026-10-05', '2026-10-05'),
+      teacher: 'Babula (Dr Elżbieta)',
+    });
+    const [occurrence] = vevents(
+      calendarIcs(snapshot([{ id: 'maths', event }]), nothing),
+    );
+
+    expect(text(occurrence, 'description')).toBe(
+      'Typ zajęć: Wykład\nProwadzący: Babula (Dr Elżbieta)',
+    );
+  });
+
   it('leaves out cancelled classes and days off', () => {
     const events = vevents(
       calendarIcs(

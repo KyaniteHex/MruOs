@@ -155,6 +155,30 @@ describe('event form model', () => {
     }
   });
 
+  it('keeps the teacher, trimmed, and leaves it out when empty', () => {
+    const draft = {
+      ...createEventFormDraft(undefined, '2026-10-05', '2027-02-14'),
+      subject: 'Makroekonomia I',
+      building: 'Wydział Ekonomiczny UG',
+      room: 'C101',
+    };
+    const build = (teacher: string) =>
+      buildEventFromDraft(
+        { ...draft, teacher },
+        undefined,
+        'series',
+        '2026-10-05',
+        semester,
+      );
+
+    const withTeacher = build('  Neumann (Dr Lilia) ');
+    const without = build('   ');
+    expect(withTeacher.success && withTeacher.event.teacher).toBe(
+      'Neumann (Dr Lilia)',
+    );
+    expect(without.success && 'teacher' in without.event).toBe(false);
+  });
+
   it('rejects an end time before the start time', () => {
     const draft = {
       ...createEventFormDraft(undefined, '2026-10-05', '2027-02-14'),

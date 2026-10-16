@@ -1,4 +1,4 @@
-import type { AssessmentKind, ClassType } from './types.js';
+import type { AssessmentKind, ClassType, Weekday } from './types.js';
 
 // Polish names shown in the app and written into calendar files.
 
@@ -22,3 +22,14 @@ export const assessmentKindMarks: Record<AssessmentKind, string> = {
 };
 
 export const noteMark = '✎';
+
+/** "Zajęcia według planu poniedziałkowego" and so on. */
+export const weekdayPlanNames: Record<Weekday, string> = {
+  MO: 'poniedziałkowego',
+  TU: 'wtorkowego',
+  WE: 'środowego',
+  TH: 'czwartkowego',
+  FR: 'piątkowego',
+  SA: 'sobotniego',
+  SU: 'niedzielnego',
+};

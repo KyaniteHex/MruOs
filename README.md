@@ -5,14 +5,15 @@ Kalendarz studencki do zarządzania planem zajęć (wersja produkcyjna: https://
 ## Funkcje
 
 - Widok tygodnia (domyślny, z „tydzień N semestru” i godzinami dopasowanymi do planu), miesiąca i dnia; kalendarz otwiera się na dzisiejszym dniu i mieści się na ekranie. Zajęcia to bloki z jasnym tłem i paskiem w kolorze zajęć, z czytelnym tekstem na każdym kolorze.
-- Serie zajęć: co tydzień lub co dwa tygodnie, zakres jako daty albo tygodnie semestru.
+- Serie zajęć: co tydzień lub co dwa tygodnie, zakres jako daty albo tygodnie semestru, z opcjonalnym prowadzącym.
 - Edycja „tylko ten termin” (np. zmiana sali) albo „cała seria”, odwoływanie terminów.
 - Ostrzeżenia o kolizjach.
 - Ustawienia w jednym miejscu: rok akademicki, import (JSON, XLSX z planów UMK CM) i eksport (JSON, ICS), kalendarz w telefonie, wygląd (jasny, ciemny albo jak w systemie) i konto.
 - Strona logowania na start; „Wypróbuj bez konta” (plan zapisany w przeglądarce) albo konto: plan na serwerze, przeniesienie lokalnego planu przy pierwszym logowaniu, „Nie wylogowuj mnie” na 30 dni.
 - Konto i prywatność: zmiana hasła (wylogowuje pozostałe urządzenia), wylogowanie innych urządzeń, pobranie i usunięcie swoich danych, czasowa blokada po 10 nieudanych logowaniach, strona „Prywatność”.
 - Import planu z pliku Excel (.xlsx) w formacie siatki dni × godzin z blokami zajęć: wybór grup dla każdego przedmiotu, ostrzeżenia o kolizjach, podgląd i oznaczenie miejsc do poprawy.
-- Harmonogram roku akademickiego: semestry z okresami zajęć, przerw i sesji oraz dni wolne (święta ustawowe wyliczane automatycznie); tygodnie planu liczone według okresów zajęć, dni wolne i przerwy widoczne w kalendarzu.
+- Import planu Wydziału Ekonomicznego UG z PDF (CELCAT): wybór grupy i promotora seminarium, tygodnie I i II liczone jak na UG, jednorazowe spotkania i zmiany sal z uwag w planie, prowadzący przy zajęciach.
+- Harmonogram roku akademickiego: semestry z okresami zajęć, przerw i sesji, dni wolne (święta ustawowe wyliczane automatycznie) i zamiany dni (np. czwartek z zajęciami według planu poniedziałkowego); tygodnie planu liczone według okresów zajęć, dni wolne, przerwy i zamiany widoczne w kalendarzu.
 - Kolokwia, egzaminy i notatki: w czasie zajęć albo w osobnym terminie, oznaczenia w kalendarzu (⚑ kolokwium, ★ egzamin, ✎ notatka), panel „Nadchodzące” z najbliższymi 14 dniami i lista wpisów, które straciły swoje zajęcia.
 - Kopia zapasowa JSON i eksport do kalendarza (.ics) z wyborem: kolokwia i egzaminy z przypomnieniami, notatki w opisach zajęć, dni wolne, przerwy i sesja. Kolokwium lub egzamin w czasie zajęć to jedno wydarzenie z zajęciami.
 - Subskrypcja kalendarza (dla kont): tajny link `/api/ical/<kod>.ics` dla Kalendarza Google, iPhone’a i Maca, który aktualizuje się sam; link widać tylko przy tworzeniu, nowy link unieważnia stary, ustawienia zmienia się bez nowego linku.

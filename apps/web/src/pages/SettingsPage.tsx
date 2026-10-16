@@ -22,7 +22,10 @@ import { MenuButton } from '../MenuButton';
 import { PlanStatusScreen } from '../PlanStatusScreen';
 import { repositoryErrorMessages, usePlan } from '../planContext';
 import { ScheduleImport } from '../ScheduleImport';
-import type { ScheduleImportResult } from '../ScheduleImport';
+import type {
+  ScheduleImportFormat,
+  ScheduleImportResult,
+} from '../ScheduleImport';
 import { readThemePreference, saveThemePreference } from '../theme';
 import type { ThemePreference } from '../theme';
 import { useDialogKeyboard } from '../useDialogKeyboard';
@@ -125,7 +128,8 @@ function Settings() {
   const { eventSeries, semester, entries, storageError, setStorageError } =
     plan;
   const [academicYearOpen, setAcademicYearOpen] = useState(false);
-  const [scheduleImportOpen, setScheduleImportOpen] = useState(false);
+  const [scheduleImportFormat, setScheduleImportFormat] =
+    useState<ScheduleImportFormat | null>(null);
   const [icsExportOpen, setIcsExportOpen] = useState(false);
   const [pendingImport, setPendingImport] = useState<CalendarSnapshot | null>(
     null,
@@ -367,7 +371,11 @@ function Settings() {
                       },
                       {
                         label: 'Format XLSX (UMK CM)',
-                        onSelect: () => setScheduleImportOpen(true),
+                        onSelect: () => setScheduleImportFormat('xlsx-umk'),
+                      },
+                      {
+                        label: 'Format PDF (UG)',
+                        onSelect: () => setScheduleImportFormat('pdf-ug'),
                       },
                     ]}
                   >
@@ -487,16 +495,17 @@ function Settings() {
           onSave={(academicYear) => void saveAcademicYear(academicYear)}
         />
       )}
-      {scheduleImportOpen && (
+      {scheduleImportFormat && (
         <ScheduleImport
+          format={scheduleImportFormat}
           semester={semester}
           existingSeries={eventSeries}
           colorFor={importColor}
           saveError={saveError}
-          onCancel={() => setScheduleImportOpen(false)}
+          onCancel={() => setScheduleImportFormat(null)}
           onImport={(result) => void importSchedule(result)}
           onOpenAcademicYear={() => {
-            setScheduleImportOpen(false);
+            setScheduleImportFormat(null);
             setAcademicYearOpen(true);
           }}
         />

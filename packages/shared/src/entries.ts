@@ -6,12 +6,12 @@ import type {
   EntryRecord,
   Event,
   EventSeries,
-  Semester,
+  SemesterDays,
 } from './types.js';
 
 const zone = 'Europe/Warsaw';
 
-type DaysOff = Pick<Semester, 'daysOff'>;
+type DaysOff = SemesterDays;
 
 /** A class held on a given day, after changes to that single occurrence. */
 export type DatedClass = {

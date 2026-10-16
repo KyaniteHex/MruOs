@@ -1,5 +1,6 @@
 export {
   AcademicDayOffSchema,
+  AcademicDayPlanSchema,
   AcademicPeriodKindSchema,
   AcademicPeriodSchema,
   AcademicSemesterSchema,
@@ -57,6 +58,8 @@ export {
   academicStartYear,
   dayAfter,
   academicWeekCalendar,
+  calendarWeeks,
+  calendarWeeksFrom,
   academicYearDaysOff,
   findSemester,
   semesterAnnotations,
@@ -66,9 +69,14 @@ export {
   teachingDates,
   termForDate,
   todayInWarsaw,
+  weekdayOf,
   weeksToDateRange,
 } from './academicYear.js';
-export type { CalendarAnnotation, WeekCalendar } from './academicYear.js';
+export type {
+  CalendarAnnotation,
+  CalendarWeeks,
+  WeekCalendar,
+} from './academicYear.js';
 export {
   classAnchor,
   classesOn,
@@ -91,6 +99,7 @@ export {
   assessmentKindMarks,
   classTypeLabels,
   noteMark,
+  weekdayPlanNames,
 } from './labels.js';
 export { expandOccurrences } from './recurrence.js';
 export {
@@ -128,6 +137,8 @@ export {
 } from './semester.js';
 export type {
   AcademicDayOff,
+  AcademicDayPlan,
+  SemesterDays,
   AcademicPeriod,
   AcademicPeriodKind,
   AcademicSemester,

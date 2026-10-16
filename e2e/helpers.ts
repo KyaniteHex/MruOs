@@ -239,3 +239,34 @@ export async function fillUmkWinterSemester(dialog: Locator) {
   await fill('Do: Egzaminacyjna sesja zimowa poprawkowa', '2027-02-28');
   await fill('Od: Święto uczelni', '2027-02-19');
 }
+
+/**
+ * Fills the winter semester of UG 2026/2027 (Zarządzenie Rektora nr 26/R/26)
+ * and its Thursday 28.01 with Monday classes.
+ */
+export async function fillUgWinterSemester(dialog: Locator) {
+  const winter = dialog.getByRole('group', { name: 'Semestr zimowy' });
+  const fill = async (label: string, value: string, index = 0) =>
+    winter.getByLabel(label, { exact: true }).nth(index).fill(value);
+
+  await fill('Semestr zimowy: od', '2026-10-01');
+  await fill('Semestr zimowy: do', '2027-02-21');
+  await fill('Od: Inauguracja roku akademickiego', '2026-10-01');
+  await fill('Od: Zajęcia dydaktyczne', '2026-10-01');
+  await fill('Do: Zajęcia dydaktyczne', '2026-12-23');
+  await fill('Od: Wakacje zimowe', '2026-12-24');
+  await fill('Do: Wakacje zimowe', '2027-01-06');
+  await fill('Od: Zajęcia dydaktyczne', '2027-01-07', 1);
+  await fill('Do: Zajęcia dydaktyczne', '2027-01-31', 1);
+  await fill('Od: Egzaminacyjna sesja zimowa', '2027-02-01');
+  await fill('Do: Egzaminacyjna sesja zimowa', '2027-02-14');
+  await fill('Od: Egzaminacyjna sesja zimowa poprawkowa', '2027-02-15');
+  await fill('Do: Egzaminacyjna sesja zimowa poprawkowa', '2027-02-21');
+  await fill('Od: Święto uczelni', '2027-02-19');
+
+  await dialog.getByRole('button', { name: 'Dodaj zamianę dnia' }).click();
+  await dialog.getByLabel('Data zamiany 1').fill('2027-01-28');
+  await dialog
+    .getByLabel('Według planu, zamiana 1')
+    .selectOption({ label: 'według planu poniedziałkowego' });
+}

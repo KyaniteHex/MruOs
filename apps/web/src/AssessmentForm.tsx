@@ -6,7 +6,7 @@ import type {
   AssessmentKind,
   EventSeries,
   Reminder,
-  Semester,
+  SemesterDays,
 } from '@mruos/shared';
 import {
   assessmentKindLabels,
@@ -30,7 +30,7 @@ type AssessmentFormProps = {
   context: EntryContext;
   initial?: Assessment;
   series: readonly EventSeries[];
-  semester: Pick<Semester, 'daysOff'>;
+  semester: SemesterDays;
   onCancel: () => void;
   onSave: (assessment: Assessment) => void;
   onDelete?: () => void;

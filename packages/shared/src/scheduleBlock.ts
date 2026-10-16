@@ -11,13 +11,24 @@ export type ScheduleBlockInput = {
   weekday: Weekday | null;
 };
 
+/**
+ * Every other calendar week, as in "I tydzień" and "II tydzień" of UG plans
+ * (odd and even weeks), or every week ("I i II tydzień").
+ */
+export type WeekParity = 'odd' | 'even' | 'all';
+
 export type ParsedSession = {
   startTime: string | null;
   endTime: string | null;
   weeks: number[];
+  /** Instead of listed weeks: a rhythm over all the semester's weeks. */
+  parity?: WeekParity;
   /** Empty when the session is for everyone, e.g. a lecture. */
   groups: string[];
 };
+
+/** A date without its year, e.g. 5 October written as "5 X". */
+export type DayMonth = { day: number; month: number };
 
 export type RoomChange = {
   day: number;
@@ -34,6 +45,7 @@ export type BlockIssueCode =
   | 'missing-weeks'
   | 'missing-room'
   | 'missing-building'
+  | 'guessed-type'
   | 'unparsed-text';
 
 export type BlockIssue = { code: BlockIssueCode; detail?: string };
@@ -50,6 +62,10 @@ export type ParsedBlock = {
   building: string | null;
   remote: boolean;
   roomChanges: RoomChange[];
+  /** Set when the plan names the teachers, e.g. "Babula (Dr Elżbieta)". */
+  teacher: string | null;
+  /** Only on these dates, e.g. a one-off meeting; empty for every week. */
+  onlyOn: DayMonth[];
   issues: BlockIssue[];
 };
 
@@ -286,6 +302,8 @@ export function parseScheduleBlock(input: ScheduleBlockInput): ParsedBlock {
     building,
     remote,
     roomChanges,
+    teacher: null,
+    onlyOn: [],
     issues,
   };
 }

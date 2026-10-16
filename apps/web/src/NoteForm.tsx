@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import { classAnchor, classesOn, planSubjects } from '@mruos/shared';
-import type { EventSeries, Note, Semester } from '@mruos/shared';
+import type { EventSeries, Note, SemesterDays } from '@mruos/shared';
 import {
   buildNote,
   chosenClass,
@@ -17,7 +17,7 @@ type NoteFormProps = {
   context: EntryContext;
   initial?: Note;
   series: readonly EventSeries[];
-  semester: Pick<Semester, 'daysOff'>;
+  semester: SemesterDays;
   onCancel: () => void;
   onSave: (note: Note) => void;
   onDelete?: () => void;

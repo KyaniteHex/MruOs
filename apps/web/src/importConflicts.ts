@@ -1,5 +1,5 @@
 import { expandOccurrences } from '@mruos/shared/recurrence';
-import type { Event, Semester } from '@mruos/shared';
+import type { Event, SemesterDays } from '@mruos/shared';
 
 // Overlaps between classes of a timetable import and the classes they would
 // sit next to, compared on real dates rather than weekdays alone.
@@ -31,8 +31,6 @@ export type EntryConflict = {
   dates: string[];
 };
 
-type SemesterDaysOff = Pick<Semester, 'daysOff'>;
-
 export type OccurrenceSlot = {
   date: string;
   subject: string;
@@ -43,7 +41,7 @@ export type OccurrenceSlot = {
 /** Dated time slots of a series, with one-day overrides applied. */
 export function eventSlots(
   event: Event,
-  semester: SemesterDaysOff,
+  semester: SemesterDays,
 ): OccurrenceSlot[] {
   return expandOccurrences(
     event,
@@ -62,7 +60,7 @@ export function eventSlots(
 
 export function buildSlotIndex(
   entries: readonly ScheduleEntry[],
-  semester: SemesterDaysOff,
+  semester: SemesterDays,
 ): SlotIndex {
   const index: SlotIndex = new Map();
 
@@ -119,7 +117,7 @@ export function findEntryConflicts(
   id: string,
   event: Event,
   index: SlotIndex,
-  semester: SemesterDaysOff,
+  semester: SemesterDays,
 ): EntryConflict[] {
   return findSlotConflicts(id, eventSlots(event, semester), index);
 }

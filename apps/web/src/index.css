@@ -1080,6 +1080,11 @@ a {
   gap: 4px;
 }
 
+/* A long value, e.g. two teachers, takes the whole row. */
+.event-details dl .event-details-wide {
+  grid-column: 1 / -1;
+}
+
 .event-details dt {
   color: var(--color-text-subtle);
   font-size: 11px;
@@ -1653,6 +1658,13 @@ a.secondary-button {
 .schedule-import > .form-field,
 .schedule-import > .form-grid {
   margin-bottom: 12px;
+}
+
+.import-plan-info {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  font-weight: 650;
 }
 
 .schedule-import .field-hint {

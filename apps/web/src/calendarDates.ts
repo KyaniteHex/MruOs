@@ -7,7 +7,12 @@ import {
   semesterWeeksToDateRange,
   termForDate,
 } from '@mruos/shared';
-import type { EventSeries, ScheduledAssessment, Semester } from '@mruos/shared';
+import type {
+  EventSeries,
+  ScheduledAssessment,
+  Semester,
+  SemesterDays,
+} from '@mruos/shared';
 
 export type CalendarView = 'timeGridWeek' | 'dayGridMonth' | 'timeGridDay';
 
@@ -71,7 +76,7 @@ export function weekendOf(monday: string): [string, string] {
 export function weekendHasItems(
   series: readonly EventSeries[],
   assessments: readonly ScheduledAssessment[],
-  semester: Pick<Semester, 'daysOff'>,
+  semester: SemesterDays,
   monday: string,
 ): boolean {
   const weekend = weekendOf(monday);

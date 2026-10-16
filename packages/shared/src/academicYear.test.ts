@@ -9,6 +9,7 @@ import {
   semesterWeekCalendar,
   semesterWeekNumber,
   teachingDates,
+  weekdayOf,
   termForDate,
   weeksToDateRange,
 } from './academicYear.js';
@@ -116,6 +117,23 @@ describe('academic week numbering', () => {
     expect(week(16, 'TU')).toBeNull();
   });
 
+  it('counts a day with another weekday’s plan for that weekday', () => {
+    const swapped = {
+      ...umk,
+      dayPlans: [{ date: '2027-01-28', weekday: 'MO' as const }],
+    };
+
+    expect(teachingDates(swapped, 'winter', 'MO').slice(-3)).toEqual([
+      '2027-01-25',
+      '2027-01-28',
+      '2027-02-01',
+    ]);
+    expect(teachingDates(swapped, 'winter', 'TH')).not.toContain('2027-01-28');
+    expect(teachingDates(swapped, 'winter', 'TH')).toHaveLength(
+      teachingDates(umk, 'winter', 'TH').length - 1,
+    );
+  });
+
   it('numbers summer weeks from the summer teaching periods', () => {
     const week = academicWeekCalendar(umk, 'summer');
 
@@ -194,9 +212,31 @@ describe('academicAnnotations', () => {
       false,
     );
   });
+
+  it('marks days with another weekday’s plan', () => {
+    const annotations = academicAnnotations({
+      ...umk,
+      dayPlans: [{ date: '2027-01-29', weekday: 'WE' }],
+    });
+
+    expect(annotations).toContainEqual({
+      kind: 'event',
+      label: 'Zajęcia według planu środowego',
+      startDate: '2027-01-29',
+      endDate: '2027-01-29',
+    });
+  });
 });
 
 describe('date helpers', () => {
+  it('names the weekday of a date', () => {
+    expect(['2027-01-25', '2027-01-28', '2027-01-31'].map(weekdayOf)).toEqual([
+      'MO',
+      'TH',
+      'SU',
+    ]);
+  });
+
   it('finds the academic year of a date and the following day', () => {
     expect(academicStartYear('2026-10-04')).toBe(2026);
     expect(academicStartYear('2027-06-30')).toBe(2026);
