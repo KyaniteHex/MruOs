@@ -1,6 +1,6 @@
 # MruOS: plan prac
 
-Zakres MVP: plan zajęć z ręcznym dodawaniem, widok miesiąca i dnia, zapis lokalny, potem backend z kontami. Import z Excela po MVP. Integracje z zewnętrznymi grafikami poza zakresem.
+Zakres MVP: plan zajęć z ręcznym dodawaniem, widok miesiąca i dnia, zapis lokalny, potem backend z kontami. Import z Excela po MVP, później import z PDF i katalog planów uczelni.
 
 ## Etap 0: Fundament
 
@@ -181,7 +181,37 @@ Testy muszą obejmować:
 
 **Gotowe, gdy:** kalendarz otwiera się na bieżącym tygodniu, wszystkie dotychczasowe funkcje (harmonogram, importy, eksporty, subskrypcja, konto) działają z Ustawień, ciemny motyw przechodzi testy kontrastu, a scenariusze E2E przechodzą na desktopie i telefonie.
 
-## Etap 14: Telefon
+## Etap 14: Import planu z UG (PDF)
+
+- [ ] Czytnik PDF bez dodatkowej biblioteki, działający w przeglądarce i w Node: tekst z pozycjami i ramki bloków z planów CELCAT Wydziału Ekonomicznego UG
+- [ ] Rozpoznanie planu: wydział, kierunek, rok, grupy (strony pliku), semestr, wersja; w bloku typ, godziny, tydzień (I, II, I i II, „Tydz. N”), przedmiot, sala, prowadzący, grupy i uwagi („5 X”, „23 X zajęcia w C301”)
+- [ ] Tygodnie I i II liczone jak na UG: nieparzyste i parzyste tygodnie kalendarzowe od tygodnia z początkiem semestru, także przez przerwy
+- [ ] Import: „Import ▾ → Format PDF (UG)”, wybór grupy, wybór promotora seminarium (warianty tego samego przedmiotu u różnych prowadzących), „Blok języków obcych” domyślnie pominięty, „Spotkanie” jako jednorazowy termin, podgląd z kolizjami i miejscami do sprawdzenia
+- [ ] Pole „Prowadzący” w zajęciach: formularz, szczegóły, kopia JSON, konto i .ics
+- [ ] Zamiany dni w harmonogramie („28.01 zajęcia według planu poniedziałkowego”): terminy, „tydzień N semestru”, oznaczenie w kalendarzu i .ics
+- [ ] Przykładowe plany UG jako pliki testowe
+
+**Gotowe, gdy:** dla każdej grupy z przykładowych planów UG import daje właściwe daty (tygodnie I i II, spotkanie 5.10, sala C301 23.10), działa wybór promotora, a scenariusz E2E importuje PDF na desktopie i telefonie.
+
+## Etap 15: Katalog planów i harmonogramów
+
+- [ ] Lista źródeł (`sources.json`: uczelnia, wydział, kierunek, adres planu, rodzaj czytnika) i skrypt `pnpm catalog:update`, który pobiera plany i zapisuje je jako pliki katalogu
+- [ ] Harmonogramy uczelni (UG, UMK) w katalogu, wpisywane raz w roku na podstawie zarządzeń
+- [ ] W aplikacji „Wybierz plan uczelni”: uczelnia → wydział → kierunek i rok → grupa i prowadzący; harmonogram ustawia się sam, w Ustawieniach można go edytować albo wczytać z uczelni
+- [ ] Plan pamięta, z którego wpisu katalogu pochodzi i jakie grupy wybrano; przy każdym planie wersja i link do źródła
+- [ ] Czytnik XLSX (UMK CM) działający także w Node
+
+**Gotowe, gdy:** student wybiera uczelnię, kierunek i grupę bez pobierania plików, a harmonogram i plan wczytują się same.
+
+## Etap 16: Automatyczne aktualizacje planów
+
+- [ ] Cotygodniowe GitHub Actions uruchamiające `catalog:update` i otwierające pull request ze zmianami do przejrzenia
+- [ ] W aplikacji „Nowa wersja planu: Zobacz / Zaktualizuj” (zawsze po kliknięciu), z zachowaniem kolokwiów, notatek i ręcznie dodanych zajęć
+- [ ] Propozycja planu na nowy semestr tego samego kierunku
+
+**Gotowe, gdy:** nowa wersja planu na stronie uczelni trafia do katalogu przez pull request, a student aktualizuje swój plan jednym kliknięciem bez utraty wpisów.
+
+## Etap 17: Telefon
 
 - [ ] Widok „Lista” jako domyślny na telefonie: kolejne dni od dziś z zajęciami, kolokwiami i egzaminami
 - [ ] Tydzień i miesiąc (z kolorowymi kropkami) w wersji na telefon
@@ -191,7 +221,7 @@ Testy muszą obejmować:
 
 **Gotowe, gdy:** na telefonie plan jest widoczny od razu po otwarciu, bez przewijania przycisków, a zajęcia, szczegóły i formularze da się obsłużyć jedną ręką; sprawdzone na prawdziwym iPhonie i Androidzie.
 
-## Etap 15: Aplikacja na telefon (PWA)
+## Etap 18: Aplikacja na telefon (PWA)
 
 - [ ] Instalacja na ekranie głównym: manifest, ikony, podpowiedź dla iPhone’a
 - [ ] Szybki start i podgląd planu bez internetu: ostatni plan zapisany na urządzeniu i kasowany przy wylogowaniu; edycja tylko online
