@@ -9,6 +9,7 @@ import {
 } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ScheduleImport } from './ScheduleImport';
+import type { Semester } from '@mruos/shared';
 import type { ScheduleImportResult } from './ScheduleImport';
 
 async function planFile(name: string): Promise<File> {
@@ -21,13 +22,129 @@ async function planFile(name: string): Promise<File> {
   });
 }
 
+async function pdfFile(name: string): Promise<File> {
+  const bytes = await readFile(
+    join(process.cwd(), '../../e2e/fixtures/plans', name),
+  );
+
+  return new File([bytes], name, { type: 'application/pdf' });
+}
+
+// The winter semester of UG 2026/2027 with its Monday plan on 28.01.
+const ugSemester: Semester = {
+  startDate: '2026-10-01',
+  daysOff: ['2026-11-11'],
+  academicYear: {
+    startYear: 2026,
+    semesters: [
+      {
+        term: 'winter',
+        startDate: '2026-10-01',
+        endDate: '2027-02-21',
+        periods: [
+          {
+            label: 'Zajęcia dydaktyczne',
+            kind: 'teaching',
+            startDate: '2026-10-01',
+            endDate: '2026-12-23',
+          },
+          {
+            label: 'Zajęcia dydaktyczne',
+            kind: 'teaching',
+            startDate: '2027-01-07',
+            endDate: '2027-01-31',
+          },
+        ],
+      },
+    ],
+    daysOff: [{ date: '2026-11-11', label: 'Narodowe Święto Niepodległości' }],
+    dayPlans: [{ date: '2027-01-28', weekday: 'MO' }],
+  },
+};
+
 describe('ScheduleImport', () => {
   afterEach(cleanup);
+
+  it('imports a UG plan for the chosen group and seminar teacher', async () => {
+    const onImport = vi.fn<(result: ScheduleImportResult) => void>();
+    render(
+      <ScheduleImport
+        format="pdf-ug"
+        semester={ugSemester}
+        existingSeries={[]}
+        colorFor={() => '#25745b'}
+        onCancel={vi.fn()}
+        onImport={onImport}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText('Plik planu (.pdf)'), {
+      target: { files: [await pdfFile('15-09-2026-ssl-ib-3.pdf')] },
+    });
+    expect(
+      await screen.findByText(
+        'Wydział Ekonomiczny UG · 3 SS1 IB · semestr zimowy 2026/2027 · wersja z 15 IX',
+      ),
+    ).toBeTruthy();
+    fireEvent.change(screen.getByLabelText('Twoja grupa'), {
+      target: { value: 'B' },
+    });
+    fireEvent.change(
+      screen.getByLabelText("Prowadzący: Bachelor's Seminar · Seminarium"),
+      { target: { value: 'Krzemiński (Dr Maciej)' } },
+    );
+    // Two lectures, three classes of group B and the seminar.
+    fireEvent.click(screen.getByRole('button', { name: 'Importuj 6 zajęć' }));
+
+    await waitFor(() => expect(onImport).toHaveBeenCalledTimes(1));
+    const events = onImport.mock.calls[0]?.[0].events ?? [];
+    expect(
+      events.find((event) => event.subject === "Bachelor's Seminar"),
+    ).toMatchObject({
+      teacher: 'Krzemiński (Dr Maciej)',
+      room: 'B417',
+      building: 'Wydział Ekonomiczny UG',
+      // "II tydzień", up to the Monday plan on Thursday 28.01.
+      recurrence: {
+        byDay: ['MO'],
+        startDate: '2026-10-05',
+        endDate: '2027-01-28',
+      },
+    });
+    expect(
+      events.find((event) => event.subject === 'Market Simulation'),
+    ).toMatchObject({
+      startTime: '15:15',
+      endTime: '16:45',
+      room: 'C205 (lab. komp.)',
+    });
+  });
+
+  it('explains when a PDF is not a UG plan', async () => {
+    render(
+      <ScheduleImport
+        format="pdf-ug"
+        semester={ugSemester}
+        existingSeries={[]}
+        colorFor={() => '#25745b'}
+        onCancel={vi.fn()}
+        onImport={vi.fn()}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText('Plik planu (.pdf)'), {
+      target: { files: [await planFile('260922_Farmacja_rok5_sem9.xlsx')] },
+    });
+    expect((await screen.findByRole('alert')).textContent).toContain(
+      'Nie rozpoznano planu zajęć UG',
+    );
+  });
 
   it('imports the classes of the chosen groups from a real timetable', async () => {
     const onImport = vi.fn<(result: ScheduleImportResult) => void>();
     render(
       <ScheduleImport
+        format="xlsx-umk"
         semester={{ startDate: '2026-10-05', daysOff: [] }}
         existingSeries={[]}
         colorFor={() => '#25745b'}
@@ -82,6 +199,7 @@ describe('ScheduleImport', () => {
   it('explains why a file cannot be imported', async () => {
     render(
       <ScheduleImport
+        format="xlsx-umk"
         semester={{ startDate: '2026-10-05', daysOff: [] }}
         existingSeries={[]}
         colorFor={() => '#25745b'}
@@ -106,6 +224,7 @@ describe('ScheduleImport', () => {
   it('warns about overlapping classes while groups are chosen', async () => {
     render(
       <ScheduleImport
+        format="xlsx-umk"
         semester={{ startDate: '2026-10-05', daysOff: [] }}
         existingSeries={[]}
         colorFor={() => '#25745b'}
@@ -145,6 +264,7 @@ describe('ScheduleImport', () => {
     const onOpenAcademicYear = vi.fn();
     const { rerender } = render(
       <ScheduleImport
+        format="xlsx-umk"
         semester={{ startDate: '2026-10-05', daysOff: [] }}
         existingSeries={[]}
         colorFor={() => '#25745b'}
@@ -161,6 +281,7 @@ describe('ScheduleImport', () => {
 
     rerender(
       <ScheduleImport
+        format="xlsx-umk"
         semester={{
           startDate: '2026-10-01',
           daysOff: [],

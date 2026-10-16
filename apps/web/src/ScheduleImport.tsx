@@ -3,6 +3,8 @@ import type { ChangeEvent } from 'react';
 import {
   academicWeekCalendar,
   buildImportCandidates,
+  calendarWeeks,
+  calendarWeeksFrom,
   defaultSelection,
   parseScheduleBlock,
   semesterWeekCalendar,
@@ -18,11 +20,14 @@ import type {
   Event,
   ImportCandidate,
   ImportIssue,
+  ImportOptions,
   ImportSelection,
+  ParsedBlock,
   Semester,
   SubjectChoice,
   Weekday,
 } from '@mruos/shared';
+import type { UgPlan } from '@mruos/shared/ugSchedule';
 import type { EventSeries } from './calendarEvents';
 import { classTypeLabels } from './eventFormModel';
 import {
@@ -47,7 +52,11 @@ export type ScheduleImportResult = {
   replace: boolean;
 };
 
+/** UMK CM plans drawn in Excel, or UG plans printed to PDF from CELCAT. */
+export type ScheduleImportFormat = 'xlsx-umk' | 'pdf-ug';
+
 type ScheduleImportProps = {
+  format: ScheduleImportFormat;
   semester: Semester;
   /** The current plan, checked for overlaps unless it is replaced. */
   existingSeries: readonly EventSeries[];
@@ -69,6 +78,20 @@ const readErrorMessages: Record<ScheduleReadError | 'read-failed', string> = {
     'W pliku nie znaleziono bloków z zajęciami narysowanych na siatce planu.',
   'read-failed': 'Nie udało się wczytać pliku z dysku.',
 };
+
+const ugReadError =
+  'Nie rozpoznano planu zajęć UG. Wybierz plan w formacie PDF pobrany ze strony Wydziału Ekonomicznego UG.';
+
+const parityLabels = {
+  odd: 'tydzień I',
+  even: 'tydzień II',
+  all: 'co tydzień',
+} as const;
+
+/** Group letters are short; seminar alternatives are named by teachers. */
+function isTeacherChoice(groups: readonly string[]): boolean {
+  return groups.some((group) => group.length > 3);
+}
 
 const weekdayLabels: Record<Weekday, string> = {
   MO: 'Pon',
@@ -96,6 +119,10 @@ function issueMessage(issue: ImportIssue): string {
       return 'Plan nie podaje sali. Uzupełnij ją po imporcie.';
     case 'missing-building':
       return 'Plan nie podaje budynku. Uzupełnij go po imporcie.';
+    case 'guessed-type':
+      return `Typ „${issue.detail ?? ''}” zapisano jako wykład. Sprawdź po imporcie.`;
+    case 'date-unmatched':
+      return `Data ${issue.detail ?? ''} z planu nie pasuje do terminów zajęć.`;
     case 'unparsed-text':
       return `Nierozpoznany tekst: „${issue.detail ?? ''}”.`;
     case 'invalid-event':
@@ -174,6 +201,7 @@ function formatWeeks(weeks: readonly number[]): string {
 }
 
 export function ScheduleImport({
+  format,
   semester,
   existingSeries,
   colorFor,
@@ -185,6 +213,9 @@ export function ScheduleImport({
   useDialogKeyboard(onCancel);
   const [sheets, setSheets] = useState<ScheduleSheet[]>([]);
   const [sheetName, setSheetName] = useState('');
+  const [ugPlan, setUgPlan] = useState<UgPlan | null>(null);
+  const [ugGroup, setUgGroup] = useState('');
+  const isUg = format === 'pdf-ug';
   const [readError, setReadError] = useState<string | null>(null);
   const [reading, setReading] = useState(false);
   const academicYear =
@@ -195,41 +226,64 @@ export function ScheduleImport({
   const [term, setTerm] = useState<AcademicTerm>(
     () => academicYear?.semesters[0]?.term ?? 'winter',
   );
+  const validStart = /^\d{4}-\d{2}-\d{2}$/.test(startDate);
   // Weeks follow the academic calendar when there is one, otherwise 7-day
-  // windows from the start date entered here.
-  const weekDate = useMemo(
-    () =>
-      academicYear
-        ? academicWeekCalendar(academicYear, term)
-        : /^\d{4}-\d{2}-\d{2}$/.test(startDate)
-          ? semesterWeekCalendar({ startDate, daysOff: semester.daysOff })
-          : null,
-    [academicYear, term, startDate, semester.daysOff],
-  );
+  // windows from the start date entered here. UG counts calendar weeks.
+  const weekOptions = useMemo<Pick<
+    ImportOptions,
+    'weekDate' | 'weekDates' | 'weekCount' | 'dayPlans'
+  > | null>(() => {
+    if (isUg) {
+      const weeks = academicYear
+        ? calendarWeeks(academicYear, term)
+        : validStart
+          ? calendarWeeksFrom(startDate)
+          : null;
+      return weeks
+        ? {
+            weekDate: (week, weekday) =>
+              weeks.weekDates(week, weekday)[0] ?? null,
+            weekDates: weeks.weekDates,
+            weekCount: weeks.weekCount,
+            dayPlans: academicYear?.dayPlans ?? [],
+          }
+        : null;
+    }
+    const weekDate = academicYear
+      ? academicWeekCalendar(academicYear, term)
+      : validStart
+        ? semesterWeekCalendar({ startDate, daysOff: semester.daysOff })
+        : null;
+    return weekDate ? { weekDate } : null;
+  }, [isUg, academicYear, term, validStart, startDate, semester.daysOff]);
   const [selection, setSelection] = useState<ImportSelection>({});
   const [excluded, setExcluded] = useState<ReadonlySet<string>>(new Set());
   const [replace, setReplace] = useState(false);
 
   const sheet = sheets.find((candidate) => candidate.name === sheetName);
-  const blocks = useMemo(
-    () => sheet?.blocks.map((block) => parseScheduleBlock(block)) ?? [],
-    [sheet],
+  const blocks = useMemo<ParsedBlock[]>(
+    () =>
+      isUg
+        ? (ugPlan?.blocks ?? [])
+        : (sheet?.blocks.map((block) => parseScheduleBlock(block)) ?? []),
+    [isUg, ugPlan, sheet],
   );
+  const loaded = isUg ? ugPlan !== null : sheet !== undefined;
   const subjects = useMemo(
     () => summarizeSubjects(blocks, sheet?.knownSubjects),
     [blocks, sheet],
   );
   const candidates = useMemo(
     () =>
-      weekDate
+      weekOptions
         ? buildImportCandidates(blocks, {
-            weekDate,
+            ...weekOptions,
             selection,
             colorFor,
             knownSubjects: sheet?.knownSubjects,
           })
         : [],
-    [blocks, weekDate, selection, colorFor, sheet],
+    [blocks, weekOptions, selection, colorFor, sheet],
   );
   const chosen = useMemo(
     () =>
@@ -290,7 +344,7 @@ export function ScheduleImport({
   // semester only, so changing the chosen groups does not rebuild them.
   const groupOptionSlots = useMemo(() => {
     const options = new Map<string, Map<string, OccurrenceSlot[][]>>();
-    if (!weekDate) {
+    if (!weekOptions) {
       return options;
     }
     for (const subject of subjects.filter((s) => s.groups.length > 0)) {
@@ -302,7 +356,7 @@ export function ScheduleImport({
         groups.set(
           group,
           buildImportCandidates(subjectBlocks, {
-            weekDate,
+            ...weekOptions,
             selection: { [subject.key]: { include: true, group } },
             colorFor,
           }).flatMap((option) =>
@@ -314,7 +368,7 @@ export function ScheduleImport({
     }
 
     return options;
-  }, [subjects, blocks, weekDate, semester, colorFor]);
+  }, [subjects, blocks, weekOptions, semester, colorFor]);
 
   // Groups that would overlap the classes chosen for other subjects, so the
   // student sees which groups fit before picking one.
@@ -360,6 +414,49 @@ export function ScheduleImport({
     );
   }
 
+  /** Puts the classes of every subject taught in groups on that group. */
+  function chooseUgGroup(group: string) {
+    setUgGroup(group);
+    setSelection((current) =>
+      Object.fromEntries(
+        Object.entries(current).map(([key, choice]) => {
+          const subject = subjects.find((candidate) => candidate.key === key);
+          const byLetter =
+            subject !== undefined &&
+            subject.groups.length > 0 &&
+            !isTeacherChoice(subject.groups);
+          return [
+            key,
+            byLetter
+              ? {
+                  ...choice,
+                  group: subject.groups.includes(group) ? group : null,
+                }
+              : choice,
+          ];
+        }),
+      ),
+    );
+  }
+
+  async function handleUgFile(file: File) {
+    try {
+      const { readUgPlan } = await import('@mruos/shared/ugSchedule');
+      const plan = await readUgPlan(new Uint8Array(await readFileBytes(file)));
+      setUgPlan(plan);
+      setUgGroup('');
+      setExcluded(new Set());
+      setSelection(defaultSelection(summarizeSubjects(plan.blocks)));
+      const available = academicYear?.semesters.map((s) => s.term) ?? [];
+      if (plan.term && available.includes(plan.term)) {
+        setTerm(plan.term);
+      }
+    } catch {
+      setUgPlan(null);
+      setReadError(ugReadError);
+    }
+  }
+
   async function handleFile(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     event.target.value = '';
@@ -373,6 +470,11 @@ export function ScheduleImport({
 
     setReading(true);
     setReadError(null);
+    if (isUg) {
+      await handleUgFile(file);
+      setReading(false);
+      return;
+    }
     try {
       const result = await readScheduleWorkbook(await readFileBytes(file));
       if (!result.success) {
@@ -417,7 +519,9 @@ export function ScheduleImport({
         <header className="form-header">
           <div>
             <p className="eyebrow">IMPORT PLANU</p>
-            <h2 id="schedule-import-title">Import z Excela</h2>
+            <h2 id="schedule-import-title">
+              {isUg ? 'Import z PDF (UG)' : 'Import z Excela'}
+            </h2>
           </div>
           <button className="icon-close" type="button" onClick={onCancel}>
             Zamknij
@@ -445,9 +549,13 @@ export function ScheduleImport({
             </div>
           )}
           <label className="form-field">
-            <span>Plik planu (.xlsx)</span>
+            <span>{isUg ? 'Plik planu (.pdf)' : 'Plik planu (.xlsx)'}</span>
             <input
-              accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              accept={
+                isUg
+                  ? '.pdf,application/pdf'
+                  : '.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+              }
               autoFocus
               disabled={reading}
               onChange={(event) => void handleFile(event)}
@@ -461,9 +569,38 @@ export function ScheduleImport({
             </p>
           )}
 
-          {sheet && (
+          {loaded && (
             <>
+              {ugPlan && (
+                <p className="import-plan-info">
+                  {[
+                    ugPlan.faculty,
+                    ugPlan.programme,
+                    ugPlan.academicYear &&
+                      `semestr ${ugPlan.term === 'summer' ? 'letni' : 'zimowy'} ${ugPlan.academicYear}`,
+                    ugPlan.version,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </p>
+              )}
               <div className="form-grid">
+                {ugPlan && ugPlan.groups.length > 0 && (
+                  <label className="form-field">
+                    <span>Twoja grupa</span>
+                    <select
+                      onChange={(event) => chooseUgGroup(event.target.value)}
+                      value={ugGroup}
+                    >
+                      <option value="">Wybierz grupę</option>
+                      {ugPlan.groups.map((group) => (
+                        <option key={group} value={group}>
+                          {group}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
                 {sheets.length > 1 && (
                   <label className="form-field">
                     <span>Arkusz</span>
@@ -514,13 +651,17 @@ export function ScheduleImport({
                 )}
               </div>
               <p className="field-hint">
-                {academicYear
-                  ? 'Tydzień N to N-ty dzień zajęć w okresach „Zajęcia” wybranego semestru z harmonogramu roku akademickiego. W dni wolne zajęcia są odwołane.'
-                  : 'Tygodnie z planu liczone są od tej daty. Uzupełnij harmonogram roku akademickiego, aby liczyć je według okresów zajęć.'}
+                {isUg
+                  ? 'Tydzień I i II liczone są jak na UG: nieparzyste i parzyste tygodnie kalendarzowe od tygodnia, w którym zaczynają się zajęcia, także w czasie przerw. W dni wolne zajęcia są odwołane.'
+                  : academicYear
+                    ? 'Tydzień N to N-ty dzień zajęć w okresach „Zajęcia” wybranego semestru z harmonogramu roku akademickiego. W dni wolne zajęcia są odwołane.'
+                    : 'Tygodnie z planu liczone są od tej daty. Uzupełnij harmonogram roku akademickiego, aby liczyć je według okresów zajęć.'}
               </p>
 
               <fieldset className="form-section">
-                <legend>Przedmioty i Twoje grupy</legend>
+                <legend>
+                  {isUg ? 'Przedmioty' : 'Przedmioty i Twoje grupy'}
+                </legend>
                 <ul className="import-subjects">
                   {subjects.map((subject) => {
                     const choice = selection[subject.key] ?? {
@@ -561,7 +702,11 @@ export function ScheduleImport({
                         </label>
                         {subject.groups.length > 0 && (
                           <select
-                            aria-label={`Grupa: ${label}`}
+                            aria-label={`${
+                              isTeacherChoice(subject.groups)
+                                ? 'Prowadzący'
+                                : 'Grupa'
+                            }: ${label}`}
                             disabled={!choice.include}
                             onChange={(event) =>
                               updateChoice(subject.key, {
@@ -570,10 +715,16 @@ export function ScheduleImport({
                             }
                             value={choice.group ?? ''}
                           >
-                            <option value="">Wybierz grupę</option>
+                            <option value="">
+                              {isTeacherChoice(subject.groups)
+                                ? 'Wybierz prowadzącego'
+                                : 'Wybierz grupę'}
+                            </option>
                             {subject.groups.map((group) => (
                               <option key={group} value={group}>
-                                gr. {group}
+                                {isTeacherChoice(subject.groups)
+                                  ? group
+                                  : `gr. ${group}`}
                                 {conflictingGroups.get(subject.key)?.has(group)
                                   ? ' – kolizja'
                                   : ''}
@@ -639,14 +790,21 @@ export function ScheduleImport({
                               {candidate.endTime ?? '?'}
                               {candidate.classType &&
                                 ` · ${classTypeLabels[candidate.classType]}`}
-                              {candidate.group && ` · gr. ${candidate.group}`}
+                              {candidate.group &&
+                                !isTeacherChoice([candidate.group]) &&
+                                ` · gr. ${candidate.group}`}
                             </span>
                             <span>
-                              tyg. {formatWeeks(candidate.weeks) || '?'}
+                              {candidate.parity
+                                ? parityLabels[candidate.parity]
+                                : `tyg. ${formatWeeks(candidate.weeks) || '?'}`}
                               {candidate.event &&
                                 ` (${candidate.event.recurrence.startDate} – ${candidate.event.recurrence.endDate})`}{' '}
                               · {candidate.room} / {candidate.building}
                             </span>
+                            {candidate.teacher && (
+                              <span>{candidate.teacher}</span>
+                            )}
                           </span>
                         </label>
                         {(conflicts.get(candidate.id)?.length ?? 0) > 0 && (
