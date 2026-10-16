@@ -1,5 +1,6 @@
 export {
   AcademicDayOffSchema,
+  AcademicDayPlanSchema,
   AcademicPeriodKindSchema,
   AcademicPeriodSchema,
   AcademicSemesterSchema,
@@ -91,6 +92,7 @@ export {
   assessmentKindMarks,
   classTypeLabels,
   noteMark,
+  weekdayPlanNames,
 } from './labels.js';
 export { expandOccurrences } from './recurrence.js';
 export {
@@ -128,6 +130,8 @@ export {
 } from './semester.js';
 export type {
   AcademicDayOff,
+  AcademicDayPlan,
+  SemesterDays,
   AcademicPeriod,
   AcademicPeriodKind,
   AcademicSemester,

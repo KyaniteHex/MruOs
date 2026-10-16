@@ -125,6 +125,9 @@ export function calendarIcs(
           : subject;
       const description = [
         `Typ zajęć: ${classTypeLabels[occurrence.event.classType]}`,
+        ...(occurrence.event.teacher
+          ? [`Prowadzący: ${occurrence.event.teacher}`]
+          : []),
         ...assessments.map((assessment) =>
           assessment.details
             ? `${assessment.title}: ${assessment.details}`

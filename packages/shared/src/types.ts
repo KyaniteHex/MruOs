@@ -1,6 +1,7 @@
 import type { DateTime } from 'luxon';
 import type {
   AcademicDayOffSchema,
+  AcademicDayPlanSchema,
   AcademicPeriodKindSchema,
   AcademicPeriodSchema,
   AcademicSemesterSchema,
@@ -48,6 +49,7 @@ export type AcademicPeriodKind = z.infer<typeof AcademicPeriodKindSchema>;
 export type AcademicPeriod = z.infer<typeof AcademicPeriodSchema>;
 export type AcademicSemester = z.infer<typeof AcademicSemesterSchema>;
 export type AcademicDayOff = z.infer<typeof AcademicDayOffSchema>;
+export type AcademicDayPlan = z.infer<typeof AcademicDayPlanSchema>;
 export type AcademicYear = z.infer<typeof AcademicYearSchema>;
 export type AccountInfo = z.infer<typeof AccountInfoSchema>;
 export type AccountExport = z.infer<typeof AccountExportSchema>;
@@ -93,3 +95,7 @@ export type Occurrence = {
   end: DateTime;
   event: Event;
 };
+
+/** What expanding a series needs from the semester: days off and day plans. */
+export type SemesterDays = Pick<Semester, 'daysOff'> &
+  Partial<Pick<Semester, 'academicYear'>>;
