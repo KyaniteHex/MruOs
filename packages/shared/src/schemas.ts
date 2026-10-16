@@ -37,6 +37,7 @@ export const ExceptionOverrideSchema = z
     color: z.string().regex(/^#[\da-fA-F]{6}$/),
     building: z.string().trim().min(1),
     room: z.string().trim().min(1),
+    teacher: z.string().trim().min(1).max(300),
     startTime: timeSchema,
     endTime: timeSchema,
   })

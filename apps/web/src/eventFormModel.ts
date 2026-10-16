@@ -23,6 +23,7 @@ export type EventFormDraft = {
   color: string;
   building: string;
   room: string;
+  teacher: string;
   startTime: string;
   endTime: string;
   byDay: Weekday[];
@@ -68,6 +69,7 @@ export function createEventFormDraft(
     color: event?.color ?? defaultClassColors.wyklad,
     building: event?.building ?? '',
     room: event?.room ?? '',
+    teacher: event?.teacher ?? '',
     startTime: event?.startTime ?? '08:00',
     endTime: event?.endTime ?? '10:00',
     byDay: event?.recurrence.byDay ?? ['MO'],
@@ -90,6 +92,8 @@ function messageForIssue(path: PropertyKey[]): string {
       return 'Podaj nazwę budynku.';
     case 'room':
       return 'Podaj salę.';
+    case 'teacher':
+      return 'Prowadzący może mieć najwyżej 300 znaków.';
     case 'startTime':
       return 'Podaj godzinę rozpoczęcia w formacie GG:MM.';
     case 'endTime':
@@ -161,12 +165,14 @@ export function buildEventFromDraft(
     };
   }
 
+  const teacher = draft.teacher.trim();
   const override: ExceptionOverride = {
     subject: draft.subject,
     classType: draft.classType,
     color: draft.color,
     building: draft.building,
     room: draft.room,
+    ...(teacher ? { teacher } : {}),
     startTime: draft.startTime,
     endTime: draft.endTime,
   };
@@ -186,6 +192,7 @@ export function buildEventFromDraft(
     color: draft.color,
     building: draft.building,
     room: draft.room,
+    ...(teacher ? { teacher } : {}),
     startTime: draft.startTime,
     endTime: draft.endTime,
     timezone: 'Europe/Warsaw',

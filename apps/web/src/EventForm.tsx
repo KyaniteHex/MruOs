@@ -240,6 +240,14 @@ export function EventForm({
               />
             </label>
 
+            <label className="form-field form-field-wide">
+              <span>Prowadzący (opcjonalnie)</span>
+              <input
+                onChange={(event) => updateDraft('teacher', event.target.value)}
+                value={draft.teacher}
+              />
+            </label>
+
             <label className="form-field">
               <span>Od</span>
               <input

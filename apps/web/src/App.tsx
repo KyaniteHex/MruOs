@@ -555,6 +555,7 @@ function CalendarPage() {
       room: dated.event.room,
       seriesId: dated.seriesId,
       startTime: dated.event.startTime,
+      ...(dated.event.teacher ? { teacher: dated.event.teacher } : {}),
       title: dated.event.subject,
     });
   }
@@ -770,6 +771,12 @@ function CalendarPage() {
           <dt>Budynek</dt>
           <dd>{selectedEvent.building}</dd>
         </div>
+        {selectedEvent.teacher && (
+          <div className="event-details-wide">
+            <dt>Prowadzący</dt>
+            <dd>{selectedEvent.teacher}</dd>
+          </div>
+        )}
       </dl>
       <div className="details-actions">
         <button

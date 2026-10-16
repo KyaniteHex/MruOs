@@ -37,6 +37,7 @@ export type CalendarEventDetails = {
   room: string;
   seriesId: string;
   startTime: string;
+  teacher?: string;
 };
 
 export function classMarks(
@@ -99,6 +100,9 @@ export function toCalendarEvents(
           room: occurrence.event.room,
           seriesId: id,
           startTime: occurrence.event.startTime,
+          ...(occurrence.event.teacher
+            ? { teacher: occurrence.event.teacher }
+            : {}),
         } satisfies CalendarEventDetails,
       };
     }),
