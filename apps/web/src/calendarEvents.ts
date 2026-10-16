@@ -12,6 +12,7 @@ import type {
   EntryRecord,
   PlacedEntries,
   ScheduledAssessment,
+  SemesterDays,
 } from '@mruos/shared';
 import { expandOccurrences } from '@mruos/shared/recurrence';
 import { semesterWeeksToDateRange } from '@mruos/shared/semester';
@@ -57,7 +58,7 @@ export type EventSeries = {
 export function toCalendarEvents(
   series: readonly EventSeries[],
   range: DateRange,
-  semester?: Pick<Semester, 'daysOff'>,
+  semester?: SemesterDays,
   placed?: Pick<PlacedEntries, 'byClass'>,
 ): EventInput[] {
   const colorsByValue = new Map<string, ClassBlockColors>();

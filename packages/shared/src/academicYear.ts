@@ -1,4 +1,5 @@
 import { DateTime } from 'luxon';
+import { weekdayPlanNames } from './labels.js';
 import { semesterWeekRange } from './semester.js';
 import type {
   AcademicPeriodKind,
@@ -98,7 +99,10 @@ export function semesterFromAcademicYear(
   };
 }
 
-/** Dates of `weekday` inside the teaching periods of a semester, in order. */
+/**
+ * Dates of `weekday` inside the teaching periods of a semester, in order. A
+ * day with another weekday's plan counts for that weekday instead.
+ */
 export function teachingDates(
   year: AcademicYear,
   term: AcademicTerm,
@@ -107,10 +111,19 @@ export function teachingDates(
   const periods = (findSemester(year, term)?.periods ?? [])
     .filter((period) => period.kind === 'teaching')
     .sort((left, right) => left.startDate.localeCompare(right.startDate));
+  const plans = new Map(
+    (year.dayPlans ?? []).map((plan) => [plan.date, plan.weekday]),
+  );
 
   return periods.flatMap((period) =>
     datesInRange(period.startDate, period.endDate)
-      .filter((day) => day.weekday === weekdayNumbers[weekday])
+      .filter((day) => {
+        const date = isoDate(day);
+        const planned = plans.get(date);
+        return planned
+          ? planned === weekday
+          : day.weekday === weekdayNumbers[weekday];
+      })
       .map(isoDate),
   );
 }
@@ -249,8 +262,14 @@ export function academicAnnotations(year: AcademicYear): CalendarAnnotation[] {
     startDate: dayOff.date,
     endDate: dayOff.date,
   }));
+  const dayPlans = (year.dayPlans ?? []).map((plan) => ({
+    kind: 'event' as const,
+    label: `Zajęcia według planu ${weekdayPlanNames[plan.weekday]}`,
+    startDate: plan.date,
+    endDate: plan.date,
+  }));
 
-  return [...periods, ...daysOff].sort((left, right) =>
+  return [...periods, ...daysOff, ...dayPlans].sort((left, right) =>
     left.startDate.localeCompare(right.startDate),
   );
 }

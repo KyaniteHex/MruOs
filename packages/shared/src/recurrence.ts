@@ -3,7 +3,7 @@ import type {
   DateRange,
   Event,
   Occurrence,
-  Semester,
+  SemesterDays,
   Weekday,
 } from './types.js';
 
@@ -35,7 +35,7 @@ function timeParts(value: string): { hour: number; minute: number } {
 export function expandOccurrences(
   event: Event,
   range: DateRange,
-  semester?: Pick<Semester, 'daysOff'>,
+  semester?: SemesterDays,
 ): Occurrence[] {
   const { recurrence } = event;
   const rangeStart = parseDate(range.startDate, event.timezone);
@@ -58,6 +58,13 @@ export function expandOccurrences(
     event.exceptions.map((exception) => [exception.date, exception]),
   );
   const daysOff = new Set(semester?.daysOff ?? []);
+  // Days with classes as on another weekday, e.g. a Thursday as a Monday.
+  const dayPlans = new Map(
+    (semester?.academicYear?.dayPlans ?? []).map((plan) => [
+      plan.date,
+      weekdayNumbers[plan.weekday],
+    ]),
+  );
   const weekdays = recurrence.byDay
     .map((weekday) => weekdayNumbers[weekday])
     .sort((left, right) => left - right);
@@ -70,10 +77,28 @@ export function expandOccurrences(
     weekStart <= finalWeekStart;
     weekStart = weekStart.plus({ weeks: recurrence.interval })
   ) {
+    const classDays: DateTime[] = [];
     for (const weekday of weekdays) {
-      const occurrenceDate = weekStart
-        .plus({ days: weekday - 1 })
-        .startOf('day');
+      const day = weekStart.plus({ days: weekday - 1 }).startOf('day');
+      const planned = dayPlans.get(day.toISODate() ?? '');
+      // A day following another weekday's plan has none of its own classes.
+      if (planned === undefined || planned === weekday) {
+        classDays.push(day);
+      }
+    }
+    for (const [planDate, plannedWeekday] of dayPlans) {
+      const day = parseDate(planDate, event.timezone);
+      if (
+        weekdays.includes(plannedWeekday) &&
+        day.weekday !== plannedWeekday &&
+        +day.startOf('week') === +weekStart
+      ) {
+        classDays.push(day);
+      }
+    }
+    classDays.sort((left, right) => +left - +right);
+
+    for (const occurrenceDate of classDays) {
       const date = occurrenceDate.toISODate();
 
       if (

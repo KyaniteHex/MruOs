@@ -120,4 +120,88 @@ describe('expandOccurrences', () => {
       ),
     ).toBe(true);
   });
+
+  describe('with days that follow another weekday’s plan', () => {
+    // 28.01.2027 is a Thursday with Monday classes (UG 2026/2027).
+    const semester = {
+      daysOff: [],
+      academicYear: {
+        startYear: 2026,
+        semesters: [],
+        daysOff: [],
+        dayPlans: [{ date: '2027-01-28', weekday: 'MO' as const }],
+      },
+    };
+    const lastWeek = { startDate: '2027-01-25', endDate: '2027-01-31' };
+
+    it('holds Monday classes on that day and none of its own', () => {
+      const monday = makeEvent('2027-01-04', '2027-01-31');
+      const thursday = EventSchema.parse({
+        ...monday,
+        recurrence: { ...monday.recurrence, byDay: ['TH'] },
+      });
+
+      expect(
+        expandOccurrences(monday, lastWeek, semester).map(
+          (occurrence) => occurrence.date,
+        ),
+      ).toEqual(['2027-01-25', '2027-01-28']);
+      expect(
+        expandOccurrences(thursday, lastWeek, semester).map(
+          (occurrence) => occurrence.date,
+        ),
+      ).toEqual([]);
+    });
+
+    it('keeps the series rhythm, its end, cancellations and days off', () => {
+      // Every other week from 2027-01-11: the week of 2027-01-25 is in it.
+      expect(
+        expandOccurrences(
+          makeEvent('2027-01-11', '2027-01-31', 2),
+          lastWeek,
+          semester,
+        ).map((occurrence) => occurrence.date),
+      ).toEqual(['2027-01-25', '2027-01-28']);
+      expect(
+        expandOccurrences(
+          makeEvent('2027-01-04', '2027-01-31', 2),
+          lastWeek,
+          semester,
+        ),
+      ).toEqual([]);
+      expect(
+        expandOccurrences(
+          makeEvent('2027-01-04', '2027-01-25'),
+          lastWeek,
+          semester,
+        ).map((occurrence) => occurrence.date),
+      ).toEqual(['2027-01-25']);
+      expect(
+        expandOccurrences(
+          makeEvent('2027-01-04', '2027-01-31', 1, [
+            { date: '2027-01-28', status: 'cancelled' },
+          ]),
+          lastWeek,
+          semester,
+        ).map((occurrence) => occurrence.date),
+      ).toEqual(['2027-01-25']);
+      expect(
+        expandOccurrences(makeEvent('2027-01-04', '2027-01-31'), lastWeek, {
+          ...semester,
+          daysOff: ['2027-01-28'],
+        }).map((occurrence) => occurrence.date),
+      ).toEqual(['2027-01-25']);
+    });
+
+    it('keeps the class times on that day', () => {
+      const [, swapped] = expandOccurrences(
+        makeEvent('2027-01-04', '2027-01-31'),
+        lastWeek,
+        semester,
+      );
+
+      expect(swapped?.start.toISO()).toBe('2027-01-28T08:00:00.000+01:00');
+      expect(swapped?.end.toISO()).toBe('2027-01-28T10:00:00.000+01:00');
+    });
+  });
 });

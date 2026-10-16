@@ -1,5 +1,5 @@
 import { expandOccurrences } from '@mruos/shared/recurrence';
-import type { DateRange, Event, Semester } from '@mruos/shared';
+import type { DateRange, Event, SemesterDays } from '@mruos/shared';
 import type { EventSeries } from './calendarEvents';
 
 export type ScheduleConflict = {
@@ -15,7 +15,7 @@ export function findScheduleConflicts(
   candidate: Event,
   existingSeries: readonly EventSeries[],
   range: DateRange,
-  semester: Pick<Semester, 'daysOff'>,
+  semester: SemesterDays,
   excludedSeriesId?: string,
 ): ScheduleConflict[] {
   const candidateOccurrences = expandOccurrences(candidate, range, semester);
