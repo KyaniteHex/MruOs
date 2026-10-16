@@ -183,13 +183,13 @@ Testy muszą obejmować:
 
 ## Etap 14: Import planu z UG (PDF)
 
-- [ ] Czytnik PDF bez dodatkowej biblioteki, działający w przeglądarce i w Node: tekst z pozycjami i ramki bloków z planów CELCAT Wydziału Ekonomicznego UG
-- [ ] Rozpoznanie planu: wydział, kierunek, rok, grupy (strony pliku), semestr, wersja; w bloku typ, godziny, tydzień (I, II, I i II, „Tydz. N”), przedmiot, sala, prowadzący, grupy i uwagi („5 X”, „23 X zajęcia w C301”)
-- [ ] Tygodnie I i II liczone jak na UG: nieparzyste i parzyste tygodnie kalendarzowe od tygodnia z początkiem semestru, także przez przerwy
-- [ ] Import: „Import ▾ → Format PDF (UG)”, wybór grupy, wybór promotora seminarium (warianty tego samego przedmiotu u różnych prowadzących), „Blok języków obcych” domyślnie pominięty, „Spotkanie” jako jednorazowy termin, podgląd z kolizjami i miejscami do sprawdzenia
-- [ ] Pole „Prowadzący” w zajęciach: formularz, szczegóły, kopia JSON, konto i .ics
-- [ ] Zamiany dni w harmonogramie („28.01 zajęcia według planu poniedziałkowego”): terminy, „tydzień N semestru”, oznaczenie w kalendarzu i .ics
-- [ ] Przykładowe plany UG jako pliki testowe
+- [x] Czytnik PDF bez dodatkowej biblioteki, działający w przeglądarce i w Node: tekst z pozycjami i ramki bloków z planów CELCAT Wydziału Ekonomicznego UG
+- [x] Rozpoznanie planu: wydział, kierunek, rok, grupy (strony pliku), semestr, wersja; w bloku typ, godziny, tydzień (I, II, I i II, „Tydz. N”), przedmiot, sala, prowadzący, grupy i uwagi („5 X”, „23 X zajęcia w C301”)
+- [x] Tygodnie I i II liczone jak na UG: nieparzyste i parzyste tygodnie kalendarzowe od tygodnia z początkiem semestru, także przez przerwy
+- [x] Import: „Import ▾ → Format PDF (UG)”, wybór grupy, wybór promotora seminarium (warianty tego samego przedmiotu u różnych prowadzących), „Blok języków obcych” domyślnie pominięty, „Spotkanie” jako jednorazowy termin, podgląd z kolizjami i miejscami do sprawdzenia
+- [x] Pole „Prowadzący” w zajęciach: formularz, szczegóły, kopia JSON, konto i .ics
+- [x] Zamiany dni w harmonogramie („28.01 zajęcia według planu poniedziałkowego”): terminy, „tydzień N semestru”, oznaczenie w kalendarzu i .ics
+- [x] Przykładowe plany UG jako pliki testowe
 
 **Gotowe, gdy:** dla każdej grupy z przykładowych planów UG import daje właściwe daty (tygodnie I i II, spotkanie 5.10, sala C301 23.10), działa wybór promotora, a scenariusz E2E importuje PDF na desktopie i telefonie.
 
