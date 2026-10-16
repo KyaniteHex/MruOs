@@ -279,4 +279,44 @@ describe('importing a UG plan', () => {
       ),
     ).toEqual(['2026-12-14', '2027-01-11', '2027-01-25', '2027-01-28']);
   });
+
+  it('imports every group of every sample plan without problems', async () => {
+    for (const name of [
+      '15-09-2026-ssl-ek-1.pdf',
+      '15-09-2026-ssl-ib-2.pdf',
+      '15-09-2026-ssl-ib-3.pdf',
+    ]) {
+      const { blocks, groups } = await plan(name);
+      const subjects = summarizeSubjects(blocks);
+      for (const group of groups) {
+        const candidates = await importFor(name, (selection) =>
+          Object.fromEntries(
+            subjects.map((subject) => [
+              subject.key,
+              {
+                include: selection[subject.key]?.include ?? false,
+                // A letter group, or the first teacher of a seminar.
+                group: subject.groups.includes(group)
+                  ? group
+                  : (subject.groups[0] ?? null),
+              },
+            ]),
+          ),
+        );
+        const problems = candidates.flatMap((candidate) => [
+          ...(candidate.event ? [] : [`${candidate.subject}: no dates`]),
+          ...candidate.issues
+            .filter((issue) => issue.code !== 'guessed-type')
+            .map((issue) => `${candidate.subject}: ${issue.code}`),
+        ]);
+
+        expect({ name, group, problems }).toEqual({
+          name,
+          group,
+          problems: [],
+        });
+        expect(candidates.length).toBeGreaterThan(5);
+      }
+    }
+  });
 });
