@@ -393,6 +393,11 @@ export function academicStartYear(date: string): number {
   return day.month >= 9 ? day.year : day.year - 1;
 }
 
+/** The weekday of a date, e.g. "TH" for 2027-01-28. */
+export function weekdayOf(date: string): Weekday {
+  return weekdayCodes[DateTime.fromISO(date, { zone }).weekday - 1] ?? 'MO';
+}
+
 /** The date after `date`, e.g. the exclusive end of an all-day period. */
 export function dayAfter(date: string): string {
   return isoDate(DateTime.fromISO(date, { zone }).plus({ days: 1 }));

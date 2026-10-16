@@ -2,6 +2,7 @@ import {
   AcademicYearSchema,
   academicStartYear,
   polishPublicHolidays,
+  weekdayOf,
 } from '@mruos/shared';
 import type {
   AcademicPeriodKind,
@@ -9,6 +10,7 @@ import type {
   AcademicTerm,
   AcademicYear,
   Semester,
+  Weekday,
 } from '@mruos/shared';
 
 // Editable state of the "Rok akademicki" dialog. Dates may be empty while
@@ -31,10 +33,14 @@ export type SemesterDraft = {
 
 export type DayOffRow = { key: string; date: string; label: string };
 
+/** A date with classes as on another weekday, e.g. Thursday as Monday. */
+export type DayPlanRow = { key: string; date: string; weekday: Weekday };
+
 export type AcademicYearDraft = {
   startYear: number;
   semesters: SemesterDraft[];
   daysOff: DayOffRow[];
+  dayPlans: DayPlanRow[];
 };
 
 export const periodKindLabels: Record<AcademicPeriodKind, string> = {
@@ -117,6 +123,10 @@ export function createAcademicYearDraft(
           : emptySemester(term);
       }),
       daysOff: saved.daysOff.map((dayOff) => ({ ...dayOff, key: rowKey() })),
+      dayPlans: (saved.dayPlans ?? []).map((plan) => ({
+        ...plan,
+        key: rowKey(),
+      })),
     };
   }
 
@@ -132,6 +142,7 @@ export function createAcademicYearDraft(
     startYear,
     semesters: terms.map(emptySemester),
     daysOff: sortDaysOff([...holidays, ...previous]),
+    dayPlans: [],
   };
 }
 
@@ -273,6 +284,24 @@ export function draftToAcademicYear(
     return [{ date: row.date, label: row.label.trim() }];
   });
 
+  const planDates = new Set<string>();
+  const dayPlans = draft.dayPlans.flatMap((row) => {
+    if (!row.date) {
+      errors.push('Zamiany dni: uzupełnij datę lub usuń pozycję.');
+      return [];
+    }
+    if (weekdayOf(row.date) === row.weekday) {
+      errors.push(
+        `Zamiany dni, ${row.date}: wybierz plan innego dnia tygodnia.`,
+      );
+    }
+    if (planDates.has(row.date)) {
+      errors.push(`Zamiany dni: data ${row.date} występuje więcej niż raz.`);
+    }
+    planDates.add(row.date);
+    return [{ date: row.date, weekday: row.weekday }];
+  });
+
   if (errors.length > 0) {
     return { success: false, errors };
   }
@@ -281,6 +310,14 @@ export function draftToAcademicYear(
     startYear: draft.startYear,
     semesters,
     daysOff,
+    // Left out when empty, so older versions of the app still accept it.
+    ...(dayPlans.length > 0
+      ? {
+          dayPlans: dayPlans.sort((left, right) =>
+            left.date.localeCompare(right.date),
+          ),
+        }
+      : {}),
   });
 
   return parsed.success

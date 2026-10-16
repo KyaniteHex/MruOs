@@ -9,6 +9,7 @@ import {
   semesterWeekCalendar,
   semesterWeekNumber,
   teachingDates,
+  weekdayOf,
   termForDate,
   weeksToDateRange,
 } from './academicYear.js';
@@ -228,6 +229,14 @@ describe('academicAnnotations', () => {
 });
 
 describe('date helpers', () => {
+  it('names the weekday of a date', () => {
+    expect(['2027-01-25', '2027-01-28', '2027-01-31'].map(weekdayOf)).toEqual([
+      'MO',
+      'TH',
+      'SU',
+    ]);
+  });
+
   it('finds the academic year of a date and the following day', () => {
     expect(academicStartYear('2026-10-04')).toBe(2026);
     expect(academicStartYear('2027-06-30')).toBe(2026);

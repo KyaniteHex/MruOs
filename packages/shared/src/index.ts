@@ -69,6 +69,7 @@ export {
   teachingDates,
   termForDate,
   todayInWarsaw,
+  weekdayOf,
   weeksToDateRange,
 } from './academicYear.js';
 export type {

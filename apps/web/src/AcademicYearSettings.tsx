@@ -1,6 +1,12 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import type { AcademicPeriodKind, AcademicYear, Semester } from '@mruos/shared';
+import { weekdayPlanNames } from '@mruos/shared';
+import type {
+  AcademicPeriodKind,
+  AcademicYear,
+  Semester,
+  Weekday,
+} from '@mruos/shared';
 import {
   changeAcademicYear,
   createAcademicYearDraft,
@@ -13,6 +19,7 @@ import {
 import type {
   AcademicYearDraft,
   DayOffRow,
+  DayPlanRow,
   PeriodRow,
   SemesterDraft,
 } from './academicYearForm';
@@ -27,6 +34,7 @@ type AcademicYearSettingsProps = {
 };
 
 const periodKinds = Object.keys(periodKindLabels) as AcademicPeriodKind[];
+const weekdays = Object.keys(weekdayPlanNames) as Weekday[];
 
 export function AcademicYearSettings({
   semester,
@@ -80,6 +88,15 @@ export function AcademicYearSettings({
     setDraft((current) => ({
       ...current,
       daysOff: current.daysOff.map((row) =>
+        row.key === key ? { ...row, ...change } : row,
+      ),
+    }));
+  }
+
+  function updateDayPlan(key: string, change: Partial<DayPlanRow>) {
+    setDraft((current) => ({
+      ...current,
+      dayPlans: current.dayPlans.map((row) =>
         row.key === key ? { ...row, ...change } : row,
       ),
     }));
@@ -332,6 +349,78 @@ export function AcademicYearSettings({
                 onClick={() => setDraft(restoreHolidays)}
               >
                 Przywróć święta ustawowe
+              </button>
+            </div>
+          </fieldset>
+
+          <fieldset className="form-section">
+            <legend>Zamiany dni</legend>
+            <p className="field-hint">
+              Dni, w które zajęcia odbywają się według planu innego dnia, np.
+              28.01 według planu poniedziałkowego. Zajęcia z danego dnia
+              tygodnia wtedy nie odbywają się.
+            </p>
+            {draft.dayPlans.length > 0 && (
+              <ul className="academic-rows">
+                {draft.dayPlans.map((row, index) => (
+                  <li className="academic-row academic-day-off" key={row.key}>
+                    <input
+                      aria-label={`Data zamiany ${index + 1}`}
+                      onChange={(event) =>
+                        updateDayPlan(row.key, { date: event.target.value })
+                      }
+                      type="date"
+                      value={row.date}
+                    />
+                    <select
+                      aria-label={`Według planu, zamiana ${index + 1}`}
+                      onChange={(event) =>
+                        updateDayPlan(row.key, {
+                          weekday: event.target.value as Weekday,
+                        })
+                      }
+                      value={row.weekday}
+                    >
+                      {weekdays.map((weekday) => (
+                        <option key={weekday} value={weekday}>
+                          według planu {weekdayPlanNames[weekday]}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      aria-label={`Usuń zamianę ${index + 1}`}
+                      className="remove-day-off"
+                      type="button"
+                      onClick={() =>
+                        setDraft((current) => ({
+                          ...current,
+                          dayPlans: current.dayPlans.filter(
+                            (candidate) => candidate.key !== row.key,
+                          ),
+                        }))
+                      }
+                    >
+                      Usuń
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="academic-actions">
+              <button
+                className="secondary-button"
+                type="button"
+                onClick={() =>
+                  setDraft((current) => ({
+                    ...current,
+                    dayPlans: [
+                      ...current.dayPlans,
+                      { key: rowKey(), date: '', weekday: 'MO' },
+                    ],
+                  }))
+                }
+              >
+                Dodaj zamianę dnia
               </button>
             </div>
           </fieldset>

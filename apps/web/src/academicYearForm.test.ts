@@ -151,6 +151,40 @@ describe('draftToAcademicYear', () => {
     expect(result.academicYear.daysOff).toHaveLength(14);
   });
 
+  it('saves days with another weekday’s plan only when there are some', () => {
+    const plain = draftToAcademicYear(umkWinter(draft));
+    expect(plain.success && 'dayPlans' in plain.academicYear).toBe(false);
+
+    const swapped = draftToAcademicYear({
+      ...umkWinter(draft),
+      dayPlans: [
+        { key: 'b', date: '2027-01-29', weekday: 'WE' },
+        { key: 'a', date: '2027-01-28', weekday: 'MO' },
+      ],
+    });
+    expect(swapped.success && swapped.academicYear.dayPlans).toEqual([
+      { date: '2027-01-28', weekday: 'MO' },
+      { date: '2027-01-29', weekday: 'WE' },
+    ]);
+  });
+
+  it('explains wrong day swaps', () => {
+    const result = draftToAcademicYear({
+      ...umkWinter(draft),
+      dayPlans: [
+        { key: 'a', date: '2027-01-28', weekday: 'TH' },
+        { key: 'b', date: '2027-01-28', weekday: 'MO' },
+        { key: 'c', date: '', weekday: 'MO' },
+      ],
+    });
+
+    expect(result.success ? [] : result.errors).toEqual([
+      'Zamiany dni, 2027-01-28: wybierz plan innego dnia tygodnia.',
+      'Zamiany dni: data 2027-01-28 występuje więcej niż raz.',
+      'Zamiany dni: uzupełnij datę lub usuń pozycję.',
+    ]);
+  });
+
   it('lists what is missing or wrong', () => {
     const filled = umkWinter(draft);
     const [winter, summer] = filled.semesters;
